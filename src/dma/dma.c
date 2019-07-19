@@ -15,37 +15,46 @@
 //	Driver interface
 //---
 
+/* dma_get_channel_address()- returns address of the specified DMA channel */
+static sh7305_dma_channel_t *dma_get_channel_address(int num=0)
+{return (void*)(0xfe008020+16*x);}
+
+
 /* dma_setup() - Setup the DMA in interrupt or no-interrupt mode.
    The first parameters are as for dma_transfer() and dma_transfer_noint(). The
    last parameter indicates whether interrupts should be used.
    Returns non-zero if the DMA is busy or a configuration error occurs. */
+
+
 static int dma_setup(dma_size_t size, uint blocks,
 	void *src, dma_address_t src_mode,
 	void *dst, dma_address_t dst_mode,
-	int interrupts)
+	int interrupts,
+	int channel=0)
 {
+	sh7305_dma_channel_t* used_dma= dma_get_channel_address(channel);
 	/* Safety guard: only start a transfer if there's not one running */
-	if(DMA.DMA0.CHCR.DE) return 1;
+	if(used_dma->CHCR.DE) return 1;
 
 	/* Disable DMA0 and disable the master DMA switch */
-	DMA.DMA0.CHCR.DE = 0;
+	used_dma->CHCR.DE = 0;
 	DMA.OR.DME = 0;
 
 	/* Set DMA source and target address */
-	DMA.DMA0.SAR = (uint32_t)src & 0x1fffffff;
-	DMA.DMA0.DAR = (uint32_t)dst & 0x1fffffff;
+	used_dma->SAR = (uint32_t)src & 0x1fffffff;
+	used_dma->DAR = (uint32_t)dst & 0x1fffffff;
 
 	/* Set the number of blocks to be transferred */
-	DMA.DMA0.TCR = blocks;
+	used_dma->TCR = blocks;
 
 	/* Fill in CHCR. Set RS=0100 (auto-request) and the user-provided
 	   values for TS (transfer size), DM and SM (address modes) */
-	DMA.DMA0.CHCR.lword = 0x00000400;
-	DMA.DMA0.CHCR.TS_32 = (size >> 2);
-	DMA.DMA0.CHCR.TS_10 = (size & 3);
-	DMA.DMA0.CHCR.DM = dst_mode;
-	DMA.DMA0.CHCR.SM = src_mode;
-	DMA.DMA0.CHCR.IE = !!interrupts;
+	used_dma->CHCR.lword = 0x00000400;
+	used_dma->CHCR.TS_32 = (size >> 2);
+	used_dma->CHCR.TS_10 = (size & 3);
+	used_dma->CHCR.DM = dst_mode;
+	used_dma->CHCR.SM = src_mode;
+	used_dma->CHCR.IE = !!interrupts;
 
 	/* Prepare DMAOR by enabling the master switch and clearing the
 	   blocking flags. */
@@ -59,38 +68,42 @@ static int dma_setup(dma_size_t size, uint blocks,
 /* dma_transfer() - Perform a data transfer */
 void dma_transfer(dma_size_t size, uint blocks,
 	void *src, dma_address_t src_mode,
-	void *dst, dma_address_t dst_mode)
+	void *dst, dma_address_t dst_mode,
+	int channel=0)
 {
-	if(dma_setup(size, blocks, src, src_mode, dst, dst_mode, 1)) return;
+	sh7305_dma_channel_t* used_dma=dma_get_channel_address(channel);
+	if(dma_setup(size, blocks, src, src_mode, dst, dst_mode, 1, channel)) return;
 
 	/* Enable channel 0, starting the DMA transfer. */
-	DMA.DMA0.CHCR.DE = 1;
+	used_dma->CHCR.DE = 1;
 }
 
 /* dma_transfer_wait() - Wait for a transfer on channel 0 to finish */
-void dma_transfer_wait(void)
+void dma_transfer_wait(int channel=0)
 {
 	/* The master switch is cut when the transfer ends */
-	while(DMA.OR.DME) sleep();
+	while(DMA.OR.DME) sleep(); // i think we can replace it by while(used_dma->CHCR.DE)
 }
 
 /* dma_transfer_noint() - Perform a data transfer without interruptions */
 void dma_transfer_noint(dma_size_t size, uint blocks,
 	void *src, dma_address_t src_mode,
-	void *dst, dma_address_t dst_mode)
+	void *dst, dma_address_t dst_mode,
+	int channel=0)
 {
-	if(dma_setup(size, blocks, src, src_mode, dst, dst_mode, 0)) return;
+	sh7305_dma_channel_t* used_dma=dma_get_channel_address(channel);
+	if(dma_setup(size, blocks, src, src_mode, dst, dst_mode, 0,channel)) return;
 
 	/* Enable channel 0, starting the DMA transfer. */
-	DMA.DMA0.CHCR.DE = 1;
+	used_dma->CHCR.DE = 1;
 
 	/* Actively wait until the transfer is finished */
-	while(!DMA.DMA0.CHCR.TE);
+	while(!used_dma->CHCR.TE);
 
 	/* Disable the channel and clear the TE flag. Disable the channel first
 	   as clearing the TE flag will allow the transfer to restart */
-	DMA.DMA0.CHCR.DE = 0;
-	DMA.DMA0.CHCR.TE = 0;
+	used_dma->CHCR.DE = 0;
+	used_dma->CHCR.TE = 0;
 
 	/* Clear the AE and NMIF status flags and cut the master switch */
 	DMA.OR.DME = 0;
@@ -107,11 +120,9 @@ static void init(void)
 	/* This driver is not implemented on SH3 */
 	if(isSH3()) return;
 
-	/* Install the interrupt handler from dma/inth.s */
+	/* Install the interrupt handler from dma/inth.s and set priority to 3*/
 	extern void inth_dma_dma0(void);
 	gint_inthandler(0x800, inth_dma_dma0, 32);
-
-	/* Set interrupt priority to 3 */
 	gint_intlevel(16, 3);
 
 	/* Unmask the DMA0 interrupt */
