@@ -19,3 +19,11 @@ GWEAK char *strncpy(char *dst, const char *src, size_t n)
 	while(i < n && (dst[i] = src[i])) i++;
 	return dst;
 }
+
+GWEAK char *strcat(char *dest, const char *src)
+{
+    unsigned long fin_dest = strlen(dest);
+    unsigned int i;
+    for (i = 0 ; i <= strlen(src) ; i++) dest[fin_dest + i] = src[i];
+    return dest;
+}
