@@ -248,6 +248,7 @@ typedef volatile struct
 	sh7305_port_data_register_t PUDR;
 	sh7305_port_data_register_t PVDR;
 
+	//Missing ports ? 
 	//sh7305_port_data_register_t PWDR;
 	//sh7305_port_data_register_t PXDR;
 	//sh7305_port_data_register_t PYDR;
@@ -262,19 +263,7 @@ typedef volatile struct
 	sh7305_module_function_select_register_t MSELCRA;
 	sh7305_module_function_select_register_t MSELCRB;
 
-/*	
-	// PULL-UP CONTROL REGISTER (PULCR)
-	word_union( PULCR,
-		uint16_t PUL15 :1;
-		uint16_t reserved : 15;
-	);
 
-	// List of all IO BUFFER DRIVE CONTROL REGISTERS (DRVCRs)
-	sh7305_IO_buffer_drive_control_register_t DRVCRA;
-	sh7305_IO_buffer_drive_control_register_t DRVCRB;
-	sh7305_IO_buffer_drive_control_register_t DRVCRC;
-
-*/
 } sh7305_pfc_t;
 
 #define SH7305_PFC (*((sh7305_pfc_t *)0xa4050100))

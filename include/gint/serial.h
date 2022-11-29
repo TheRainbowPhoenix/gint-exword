@@ -15,6 +15,8 @@ extern "C" {
 #include <gint/defs/call.h>
 
 
+// Prototypes of functions expected to appear in the serial module
+// aims at reproducing the OS syscalls
 
 int gint_serial_read_one_byte(unsigned char *dest);
 
