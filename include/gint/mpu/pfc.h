@@ -197,13 +197,6 @@ typedef volatile struct
 	sh7305_Port_Control_Register_t PQCR;
 	sh7305_Port_Control_Register_t PRCR;
 	sh7305_Port_Control_Register_t PSCR;
-	sh7305_Port_Control_Register_t PTCR;
-	sh7305_Port_Control_Register_t PUCR;
-	sh7305_Port_Control_Register_t PVCR;
-	sh7305_Port_Control_Register_t PWCR;
-	sh7305_Port_Control_Register_t PXCR;
-	sh7305_Port_Control_Register_t PYCR;
-	sh7305_Port_Control_Register_t PZCR;
 
 	// List of all PORT DATA REGISTERS (PDRs)
 	sh7305_port_data_register_t PADR;
@@ -222,24 +215,54 @@ typedef volatile struct
 	sh7305_port_data_register_t PQDR;
 	sh7305_port_data_register_t PRDR;
 	sh7305_port_data_register_t PSDR;
-	sh7305_port_data_register_t PTDR;
-	sh7305_port_data_register_t PUDR;
-	sh7305_port_data_register_t PVDR;
-	sh7305_port_data_register_t PWDR;
-	sh7305_port_data_register_t PXDR;
-	sh7305_port_data_register_t PYDR;
-	sh7305_port_data_register_t PZDR;
+
+	sh7305_Port_Control_Register_t PTCR;
+	sh7305_Port_Control_Register_t PUCR;
+	sh7305_Port_Control_Register_t PVCR;
+
+	//Missing ports ?
+	//sh7305_Port_Control_Register_t PWCR;
+	//sh7305_Port_Control_Register_t PXCR;
+	//sh7305_Port_Control_Register_t PYCR;
+	//sh7305_Port_Control_Register_t PZCR;
+	pad( 0x08 );
+
+	// List of all PIN SELECT REGISTERS (PSELs)
+	sh7305_pin_select_register_t PSELA;
+	sh7305_pin_select_register_t PSELB;
+	sh7305_pin_select_register_t PSELC;
+	sh7305_pin_select_register_t PSELD;
+	sh7305_pin_select_register_t PSELE;
 
 	// List of all IO BUFFER HI-Z CONTROL REGISTERS (HIZCRs)
 	sh7305_IO_buffer_hiz_control_register_t HIZCRA;
 	sh7305_IO_buffer_hiz_control_register_t HIZCRB;
 	sh7305_IO_buffer_hiz_control_register_t HIZCRC;
-	sh7305_IO_buffer_hiz_control_register_t HIZCRD;
+
+	// the next one is not clearly listed, can be aither PSELF or HIZCRD so we skip it with pad
+	//sh7305_pin_select_register_t PSELF;
+	//sh7305_IO_buffer_hiz_control_register_t HIZCRD;
+	pad( 0x02 );
+
+	sh7305_port_data_register_t PTDR;
+	sh7305_port_data_register_t PUDR;
+	sh7305_port_data_register_t PVDR;
+
+	//sh7305_port_data_register_t PWDR;
+	//sh7305_port_data_register_t PXDR;
+	//sh7305_port_data_register_t PYDR;
+	//sh7305_port_data_register_t PZDR;
+	pad( 0x08 );
+
+
+	pad( 20 ); // jump from address 0xa405016c to 0xa4050180
+
 
 	// List of all MODULE FUNCTION SELECT REGISTERS (MSELs)
 	sh7305_module_function_select_register_t MSELCRA;
 	sh7305_module_function_select_register_t MSELCRB;
-	
+
+/*	
 	// PULL-UP CONTROL REGISTER (PULCR)
 	word_union( PULCR,
 		uint16_t PUL15 :1;
@@ -251,6 +274,7 @@ typedef volatile struct
 	sh7305_IO_buffer_drive_control_register_t DRVCRB;
 	sh7305_IO_buffer_drive_control_register_t DRVCRC;
 
+*/
 } sh7305_pfc_t;
 
 #define SH7305_PFC (*((sh7305_pfc_t *)0xa4050100))
