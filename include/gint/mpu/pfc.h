@@ -256,7 +256,7 @@ typedef volatile struct
 	pad( 0x08 );
 
 
-	pad( 20 ); // jump from address 0xa405016c to 0xa4050180
+	pad( 0x12 ); // jump from address 0xa405016e to 0xa4050180
 
 
 	// List of all MODULE FUNCTION SELECT REGISTERS (MSELs)

@@ -5,6 +5,7 @@
 #include <gint/serial.h>
 
 #define SCIF SH7305_SCIF
+#define PFC  SH7305_PFC
 
 
 int gint_serial_read_one_byte(unsigned char *dest)

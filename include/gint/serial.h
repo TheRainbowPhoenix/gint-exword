@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #include <gint/mpu/scif.h>
+#include <gint/mpu/pfc.h>
 #include <gint/hardware.h>
 #include <gint/defs/types.h>
 #include <gint/defs/call.h>
