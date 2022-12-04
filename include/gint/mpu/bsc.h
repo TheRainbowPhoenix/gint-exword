@@ -13,6 +13,84 @@ extern "C" {
 #include <gint/defs/types.h>
 
 //---
+// SH7705 But State Controller. Refer to:
+//   Renesas SH7705 Group Hardware Manual
+//   Section 7: Bus State Controller (BSC)
+//---
+
+typedef volatile lword_union(sh7705_bsc_CSnBCR_t,
+	uint32_t	:2;
+	uint32_t IWW	:2;
+	uint32_t	:1;
+	uint32_t IWRWD	:2;
+	uint32_t	:1;
+	uint32_t IWRWS	:2;
+	uint32_t	:1;
+	uint32_t IWRRD	:2;
+	uint32_t	:1;
+	uint32_t IWRRS	:2;
+	uint32_t	:1;
+	uint32_t TYPE	:3;
+	uint32_t	:1;
+	uint32_t BSZ	:2;
+	uint32_t	:9;
+);
+
+typedef volatile lword_union(sh7705_bsc_CSnWCR_t,
+	uint32_t	:13;
+	uint32_t WW :3;
+	uint32_t 	:3;
+	uint32_t SW	:2;
+	uint32_t WR	:4;
+	uint32_t WM	:1;
+	uint32_t	:4;
+	uint32_t HW	:2;
+);
+
+
+typedef volatile struct
+{
+	lword_union(CMNCR,
+		uint32_t :24;	/* reserved */
+		uint32_t DMAIW : 2; /* Wait State*/
+		uint32_t DMAIWA : 1; /* Method of Inserting Wait state bewteen cycles */ 
+		uint32_t :1; /* reserved */
+		uint32_t ENDIAN : 1; /* Endian Flag*/
+		uint32_t :1; /* reserved */
+		uint32_t HIZMEM : 1; /* High Z memory Control*/
+		uint32_t HIZCNT : 1; /* High Z Control*/
+	);
+
+	sh7705_bsc_CSnBCR_t CS0BCR;
+	sh7705_bsc_CSnBCR_t CS2BCR;
+	sh7705_bsc_CSnBCR_t CS3BCR;
+	sh7705_bsc_CSnBCR_t CS4BCR;
+	sh7705_bsc_CSnBCR_t CS5ABCR;
+	sh7705_bsc_CSnBCR_t CS5BBCR;
+	sh7705_bsc_CSnBCR_t CS6ABCR;
+	sh7705_bsc_CSnBCR_t CS6BBCR;
+
+
+	sh7705_bsc_CSnWCR_t CS0WCR;
+	sh7705_bsc_CSnWCR_t CS2WCR;
+	sh7705_bsc_CSnWCR_t CS3WCR;
+	sh7705_bsc_CSnWCR_t CS4WCR;
+	sh7705_bsc_CSnWCR_t CS5AWCR;
+	sh7705_bsc_CSnWCR_t CS5BWCR;
+	sh7705_bsc_CSnWCR_t CS6AWCR;	
+	sh7705_bsc_CSnWCR_t CS6BWCR;
+
+	/* TODO : there are several other registers not described yet
+	as they are not used for overclocking the SH7705 processor.
+	To be done later on when needed.*/
+
+
+} GPACKED(4) sh7705_bsc_t;
+
+#define SH7705_BSC (*(sh7705_bsc_t *)0xa4fd0000)
+
+
+//---
 // SH7305 But State Controller. Refer to:
 //   Renesas SH7730 Group Hardware Manual
 //   Section 11: Bus State Controller (BSC)

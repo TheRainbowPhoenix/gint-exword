@@ -79,6 +79,199 @@ typedef volatile struct
 //	TODO: Document the SH7305 Pin Function Controller
 //---
 
+typedef volatile word_union( sh7305_Port_Control_Register_t,
+	uint16_t    P7MD :2;
+	uint16_t    P6MD :2;
+	uint16_t    P5MD :2;
+	uint16_t    P4MD :2;
+	uint16_t    P3MD :2;
+	uint16_t    P2MD :2;
+	uint16_t    P1MD :2;
+	uint16_t    P0MD :2;
+);
+
+typedef volatile byte_union( sh7305_port_data_register_t,
+	uint8_t    P7DT :1;
+	uint8_t    P6DT :1;
+	uint8_t    P5DT :1;
+	uint8_t    P4DT :1;
+	uint8_t    P3DT :1;
+	uint8_t    P2DT :1;
+	uint8_t    P1DT :1;
+	uint8_t    P0DT :1;
+);
+
+typedef volatile word_union( sh7305_pin_select_register_t,
+	uint16_t    PS15 :1;
+	uint16_t    PS14 :1;
+	uint16_t    PS13 :1;
+	uint16_t    PS12 :1;
+	uint16_t    PS11 :1;
+	uint16_t    PS10 :1;
+	uint16_t    PS9 :1;
+	uint16_t    PS8 :1;
+	uint16_t    PS7 :1;
+	uint16_t    PS6 :1;
+	uint16_t    PS5 :1;
+	uint16_t    PS4 :1;
+	uint16_t    PS3 :1;
+	uint16_t    PS2 :1;
+	uint16_t    PS1 :1;
+	uint16_t    PS0 :1;
+);
+
+typedef volatile word_union( sh7305_IO_buffer_hiz_control_register_t,
+	uint16_t    HIZ15 :1;
+	uint16_t    HIZ14 :1;
+	uint16_t    HIZ13 :1;
+	uint16_t    HIZ12 :1;
+	uint16_t    HIZ11 :1;
+	uint16_t    HIZ10 :1;
+	uint16_t    HIZ9 :1;
+	uint16_t    HIZ8 :1;
+	uint16_t    HIZ7 :1;
+	uint16_t    HIZ6 :1;
+	uint16_t    HIZ5 :1;
+	uint16_t    HIZ4 :1;
+	uint16_t    HIZ3 :1;
+	uint16_t    HIZ2 :1;
+	uint16_t    HIZ1 :1;
+	uint16_t    HIZ0 :1;
+);
+
+typedef volatile word_union( sh7305_module_function_select_register_t,
+	uint16_t    MSEL15 :1;
+	uint16_t    MSEL14 :1;
+	uint16_t    MSEL13 :1;
+	uint16_t    MSEL12 :1;
+	uint16_t    MSEL11 :1;
+	uint16_t    MSEL10 :1;
+	uint16_t    MSEL9 :1;
+	uint16_t    MSEL8 :1;
+	uint16_t    MSEL7 :1;
+	uint16_t    MSEL6 :1;
+	uint16_t    MSEL5 :1;
+	uint16_t    MSEL4 :1;
+	uint16_t    MSEL3 :1;
+	uint16_t    MSEL2 :1;
+	uint16_t    MSEL1 :1;
+	uint16_t    MSEL0 :1;
+);
+
+typedef volatile word_union( sh7305_IO_buffer_drive_control_register_t,
+	uint16_t    DRV15 :1;
+	uint16_t    DRV14 :1;
+	uint16_t    DRV13 :1;
+	uint16_t    DRV12 :1;
+	uint16_t    DRV11 :1;
+	uint16_t    DRV10 :1;
+	uint16_t    DRV9 :1;
+	uint16_t    DRV8 :1;
+	uint16_t    DRV7 :1;
+	uint16_t    DRV6 :1;
+	uint16_t    DRV5 :1;
+	uint16_t    DRV4 :1;
+	uint16_t    DRV3 :1;
+	uint16_t    DRV2 :1;
+	uint16_t    DRV1 :1;
+	uint16_t    DRV0 :1;
+);
+
+
+typedef volatile struct
+{
+	// List of all PORT CONTROL REGISTERS (PCRs)
+	sh7305_Port_Control_Register_t PACR;
+	sh7305_Port_Control_Register_t PBCR;
+	sh7305_Port_Control_Register_t PCCR;
+	sh7305_Port_Control_Register_t PDCR;
+	sh7305_Port_Control_Register_t PECR;
+	sh7305_Port_Control_Register_t PFCR;
+	sh7305_Port_Control_Register_t PGCR;
+	sh7305_Port_Control_Register_t PHCR;
+	sh7305_Port_Control_Register_t PJCR;
+	sh7305_Port_Control_Register_t PKCR;
+	sh7305_Port_Control_Register_t PLCR;
+	sh7305_Port_Control_Register_t PMCR;
+	sh7305_Port_Control_Register_t PNCR;
+	sh7305_Port_Control_Register_t PQCR;
+	sh7305_Port_Control_Register_t PRCR;
+	sh7305_Port_Control_Register_t PSCR;
+
+	// List of all PORT DATA REGISTERS (PDRs)
+	sh7305_port_data_register_t PADR;
+	sh7305_port_data_register_t PBDR;
+	sh7305_port_data_register_t PCDR;
+	sh7305_port_data_register_t PDDR;
+	sh7305_port_data_register_t PEDR;
+	sh7305_port_data_register_t PFDR;
+	sh7305_port_data_register_t PGDR;
+	sh7305_port_data_register_t PHDR;
+	sh7305_port_data_register_t PJDR;
+	sh7305_port_data_register_t PKDR;
+	sh7305_port_data_register_t PLDR;
+	sh7305_port_data_register_t PMDR;
+	sh7305_port_data_register_t PNDR;
+	sh7305_port_data_register_t PQDR;
+	sh7305_port_data_register_t PRDR;
+	sh7305_port_data_register_t PSDR;
+
+	sh7305_Port_Control_Register_t PTCR;
+	sh7305_Port_Control_Register_t PUCR;
+	sh7305_Port_Control_Register_t PVCR;
+
+	//Missing ports ?
+	//sh7305_Port_Control_Register_t PWCR;
+	//sh7305_Port_Control_Register_t PXCR;
+	//sh7305_Port_Control_Register_t PYCR;
+	//sh7305_Port_Control_Register_t PZCR;
+	pad( 0x08 );
+
+	// List of all PIN SELECT REGISTERS (PSELs)
+	sh7305_pin_select_register_t PSELA;
+	sh7305_pin_select_register_t PSELB;
+	sh7305_pin_select_register_t PSELC;
+	sh7305_pin_select_register_t PSELD;
+	sh7305_pin_select_register_t PSELE;
+
+	// List of all IO BUFFER HI-Z CONTROL REGISTERS (HIZCRs)
+	sh7305_IO_buffer_hiz_control_register_t HIZCRA;
+	sh7305_IO_buffer_hiz_control_register_t HIZCRB;
+	sh7305_IO_buffer_hiz_control_register_t HIZCRC;
+
+	// the next one is not clearly listed, can be aither PSELF or HIZCRD so we skip it with pad
+	//sh7305_pin_select_register_t PSELF;
+	//sh7305_IO_buffer_hiz_control_register_t HIZCRD;
+	pad( 0x02 );
+
+	sh7305_port_data_register_t PTDR;
+	sh7305_port_data_register_t PUDR;
+	sh7305_port_data_register_t PVDR;
+
+	//Missing ports ? 
+	//sh7305_port_data_register_t PWDR;
+	//sh7305_port_data_register_t PXDR;
+	//sh7305_port_data_register_t PYDR;
+	//sh7305_port_data_register_t PZDR;
+	pad( 0x08 );
+
+
+	pad( 0x12 ); // jump from address 0xa405016e to 0xa4050180
+
+
+	// List of all MODULE FUNCTION SELECT REGISTERS (MSELs)
+	sh7305_module_function_select_register_t MSELCRA;
+	sh7305_module_function_select_register_t MSELCRB;
+
+
+} sh7305_pfc_t;
+
+#define SH7305_PFC (*((sh7305_pfc_t *)0xa4050100))
+
+
+
+
+
 #ifdef __cplusplus
 }
 #endif
