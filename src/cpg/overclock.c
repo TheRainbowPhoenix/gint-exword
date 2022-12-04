@@ -271,3 +271,11 @@ void clock_set_speed(int level)
 }
 
 #endif
+
+
+#ifdef FX9860G
+
+
+
+
+#endif
