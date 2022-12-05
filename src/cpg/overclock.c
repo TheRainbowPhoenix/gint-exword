@@ -75,8 +75,6 @@ void cpg_set_overclock_setting(struct cpg_overclock_setting const *s)
 // Predefined clock speeds
 //---
 
-#ifdef FXCG50
-
 #define PLL_32x  0b011111
 #define PLL_26x  0b011001
 #define PLL_16x  0b001111
@@ -86,6 +84,7 @@ void cpg_set_overclock_setting(struct cpg_overclock_setting const *s)
 #define DIV_16   3
 #define DIV_32   4
 
+/*settings for the fxcg50 / G90+E*/
 static struct cpg_overclock_setting settings_cg50[5] = {
     /* CLOCK_SPEED_F1 */
     { .FLLFRQ  = 0x00004000 + 900,
@@ -144,6 +143,7 @@ static struct cpg_overclock_setting settings_cg50[5] = {
       .CS5aWCR = 0x000203C1 },
 };
 
+/*settings for the prizm fxcg10/20*/
 static struct cpg_overclock_setting settings_cg20[5] = {
     /* CLOCK_SPEED_F1 */
     { .FLLFRQ  = 0x00004000 + 900,
@@ -202,17 +202,145 @@ static struct cpg_overclock_setting settings_cg20[5] = {
       .CS5aWCR = 0x00010240 },
 };
 
+/*settings for the fx9860GII*/
+static struct cpg_overclock_setting settings_fx9860gII[5] = {
+    /* CLOCK_SPEED_F1 */
+    { .FLLFRQ  = 0x00004384,
+      .FRQCR   = 0x0F202203,
+      .CS0BCR  = 0x24920400,
+      .CS2BCR  = 0x24923400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x224A0200,
+      .CS0WCR  = 0x000005C0,
+      .CS2WCR  = 0x00000140,
+      .CS3WCR  = 0x000024D0,
+      .CS5aWCR = 0x00000D41 },
+    /* CLOCK_SPEED_F2 */
+    { .FLLFRQ  = 0x00004384,
+      .FRQCR   = PLL_16x<<24)+(DIV_4<<20)+(DIV_8<<12)+(DIV_8<<8)+DIV16,
+      .CS0BCR  = 0x24920400,
+      .CS2BCR  = 0x24923400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x224A0200,
+      .CS0WCR  = 0x000001C0,
+      .CS2WCR  = 0x00000140,
+      .CS3WCR  = 0x000024D0,
+      .CS5aWCR = 0x00000D41 },
+    /* CLOCK_SPEED_F3 */
+    { .FLLFRQ  = 0x00004384,
+      .FRQCR   = PLL_16x<<24)+(DIV_8<<20)+(DIV_8<<12)+(DIV_8<<8)+DIV16,
+      .CS0BCR  = 0x04900400,
+      .CS2BCR  = 0x04903400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x24920200,
+      .CS0WCR  = 0x00000140,
+      .CS2WCR  = 0x00000140,
+      .CS3WCR  = 0x000024D0,
+      .CS5aWCR = 0x00000D41 },
+    /* CLOCK_SPEED_F4 */
+    { .FLLFRQ  = 0x00004384,
+      .FRQCR   = (PLL_32x<<24)+(DIV_4<<20)+(DIV_8<<12)+(DIV_8<<8)+DIV16,
+      .CS0BCR  = 0x04900400,
+      .CS2BCR  = 0x04903400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x224A0200,
+      .CS0WCR  = 0x000001C0,
+      .CS2WCR  = 0x00020140,
+      .CS3WCR  = 0x000024D0,
+      .CS5aWCR = 0x00000D41 },
+    /* CLOCK_SPEED_F5 */
+    { .FLLFRQ  = 0x00004384,
+      .FRQCR   = (PLL_32x<<24)+(DIV_2<<20)+(DIV_4<<12)+(DIV_4<<8)+DIV16,
+      .CS0BCR  = 0x14900400,
+      .CS2BCR  = 0x04903400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x224A0200,
+      .CS0WCR  = 0x000003C0,
+      .CS2WCR  = 0x000302C0,
+      .CS3WCR  = 0x000024D0,
+      .CS5aWCR = 0x00000D41 },
+};
+
+/*settings for the fx9860GII-2 / G35+EII*/
+static struct cpg_overclock_setting settings_fx9860gII2[5] = {
+    /* CLOCK_SPEED_F1 */
+    { .FLLFRQ  = 0x00004384,
+      .FRQCR   = 0x0F202203,
+      .CS0BCR  = 0x24920400,
+      .CS2BCR  = 0x24923400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x224A0200,
+      .CS0WCR  = 0x000005C0,
+      .CS2WCR  = 0x00000140,
+      .CS3WCR  = 0x000024D0,
+      .CS5aWCR = 0x00000D41 },
+    /* CLOCK_SPEED_F2 */
+    { .FLLFRQ  = 0x00004384,
+      .FRQCR   = (PLL_16x<<24)+(DIV_4<<20)+(DIV_8<<12)+(DIV_8<<8)+DIV16,
+      .CS0BCR  = 0x24920400,
+      .CS2BCR  = 0x24923400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x224A0200,
+      .CS0WCR  = 0x000001C0,
+      .CS2WCR  = 0x00000140,
+      .CS3WCR  = 0x000024D0,
+      .CS5aWCR = 0x00000D41 },
+    /* CLOCK_SPEED_F3 */
+    { .FLLFRQ  = 0x00004384,
+      .FRQCR   = (PLL_16x<<24)+(DIV_8<<20)+(DIV_8<<12)+(DIV_8<<8)+DIV16,
+      .CS0BCR  = 0x04900400,
+      .CS2BCR  = 0x04903400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x224A0200,
+      .CS0WCR  = 0x00000140,
+      .CS2WCR  = 0x00000140,
+      .CS3WCR  = 0x000024D0,
+      .CS5aWCR = 0x00000D41 },
+    /* CLOCK_SPEED_F4 */
+    { .FLLFRQ  = 0x00004384,
+      .FRQCR   = (PLL_32x<<24)+(DIV_4<<20)+(DIV_8<<12)+(DIV_8<<8)+DIV16,
+      .CS0BCR  = 0x04900400,
+      .CS2BCR  = 0x04903400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x224A0200,
+      .CS0WCR  = 0x000001C0,
+      .CS2WCR  = 0x00020140,
+      .CS3WCR  = 0x000024D0,
+      .CS5aWCR = 0x00031340 },
+    /* CLOCK_SPEED_F5 */
+    { .FLLFRQ  = 0x00004384,
+      .FRQCR   = (PLL_32x<<24)+(DIV_2<<20)+(DIV_4<<12)+(DIV_8<<8)+DIV16,
+      .CS0BCR  = 0x14900400,
+      .CS2BCR  = 0x04903400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x224A0200,
+      .CS0WCR  = 0x000001C0,
+      .CS2WCR  = 0x00020140,
+      .CS3WCR  = 0x000024D0,
+      .CS5aWCR = 0x00031340 },
+};
+
 static struct cpg_overclock_setting *get_settings(void)
 {
     if(gint[HWCALC] == HWCALC_FXCG50)
         return settings_cg50;
     if(gint[HWCALC] == HWCALC_PRIZM)
         return settings_cg20;
+    if(gint[HWCALC] == HWCALC_G35PE2)
+        return settings_fx9860gII2;
+    if(gint[HWCALC] == HWCALC_FX9860G_SH4)
+        return settings_fx9860gII;
     return NULL;
 }
 
 int clock_get_speed(void)
 {
+    /* TODO : Add SH3 cases just hereafter*/
+    if(!isSH4())
+        return CLOCK_SPEED_UNKNOWN;
+    
+
+    /* All SH4-based FXCGs and FX9860Gs should be handled by this part */
     struct cpg_overclock_setting *settings = get_settings();
     if(!settings)
         return CLOCK_SPEED_UNKNOWN;
@@ -269,13 +397,3 @@ void clock_set_speed(int level)
 
     cpu_atomic_end();
 }
-
-#endif
-
-
-#ifdef FX9860G
-
-
-
-
-#endif
