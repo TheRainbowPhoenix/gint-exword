@@ -74,10 +74,14 @@ enum {
       On SH4 fx-9860G-likr:
         (Not supported yet)
 
-      On the fx G-III series:
-        (Not supported yet)
+      On the fx 9860G-II series: (taken from Sentaro21's README)
+		  F1:  CPU @  29 MHz,  BFC @  29 MHz    [Default speed]
+		  F2:  CPU @  58 MHz,  BFC @  29 MHz    [Same as fx-CG10/20]
+		  F3:  CPU @  29 MHz,  BFC @  29 MHz    [Same as SH3]
+		  F4:  CPU @ 118 MHz,  BFC @  59 MHz    [Fastest CPU option]
+		  F5:  CPU @ 236 MHz,  BFC @  118 MHz   [Fastest CPU option]
 
-	   On fx-CG 10/20:
+      On fx-CG 10/20:
 		  F1:  CPU @  58 MHz,  BFC @  29 MHz    [Default speed]
 		  F2:  CPU @  58 MHz,  BFC @  29 MHz    [Improved memory speed]
 		  F3:  CPU @ 118 MHz,  BFC @  58 MHz    [Faster than F2]
@@ -100,7 +104,6 @@ enum {
 	CLOCK_SPEED_DEFAULT = CLOCK_SPEED_F1,
 };
 
-#ifdef FXCG50
 /* clock_get_speed(): Determine the current clock speed
 
    This function compares the current hardware state with the settings for each
@@ -123,7 +126,6 @@ int clock_get_speed(void);
    Currently the clock speed is not reset during a world switch nor when
    leaving the add-in. */
 void clock_set_speed(int speed);
-#endif
 
 //---
 //	Sleep functions
