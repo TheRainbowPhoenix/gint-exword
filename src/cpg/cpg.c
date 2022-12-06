@@ -26,10 +26,7 @@ const clock_frequency_t *clock_freq(void)
 //	SH7705 Clock signals
 //---
 
-//#if defined(FX9860G) || (!defined(FX9860G) && !defined(FXCG50))
-//#define CPGSH3 SH7705_CPG
-
-void sh7705_probe(void)
+static void sh7705_probe(void)
 {
 	/* According to Sentaro21 in the sources of Ftune 1.0.1, the clock mode
 	   is thought to be 5, which means that:
@@ -69,14 +66,10 @@ void sh7705_probe(void)
 	freq.Pphi_f = (pdiv == 3) ? ckio_3 : ckio >> pdiv;
 }
 
-//#undef CPG
-//#endif /* FX9860G and platform-agnostic */
 
 //---
 //	SH7305 clock signals
 //---
-
-//#define CPGSH4 SH7305_CPG
 
 static void sh7305_probe(void)
 {
@@ -112,9 +105,6 @@ static void sh7305_probe(void)
 	freq.Iphi_f   = base >> (divi + 1);
 	freq.Pphi_f   = base >> (divp + 1);
 }
-
-//#undef CPG
-
 
 //---
 // Initialization

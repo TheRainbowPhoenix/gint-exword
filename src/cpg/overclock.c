@@ -99,8 +99,8 @@ void cpg_set_overclock_setting(struct cpg_overclock_setting const *s)
     if(isSH3())
     {
       SH7705_WDT.WTCNT.WRITE = 0;
-      SH7705_WDT.WTCNT.WRITE = 0x65;
-      SH7705_CPG.FRQCR.word = 0x1000 | (uint16_t) s->FRQCR;
+      SH7705_WDT.WTCSR.WRITE = 0x65;
+      SH7705_CPG.FRQCR.word = (uint16_t) (0x1000 | ((uint16_t) s->FRQCR));
       SH7705_BSC.CS0BCR.lword = s->CS0BCR;
       SH7705_BSC.CS0WCR.lword = s->CS0WCR;
       SH7705_BSC.CS2BCR.lword = s->CS2BCR;
