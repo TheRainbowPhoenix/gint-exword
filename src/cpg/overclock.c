@@ -73,7 +73,8 @@ void cpg_get_overclock_setting(struct cpg_overclock_setting *s)
       s->CS5aBCR = BSCSH3.CS5ABCR.lword;
       s->CS5aWCR = BSCSH3.CS5AWCR.lword;
     }
-    else if(isSH4())
+    
+    if(isSH4())
     {
       s->FLLFRQ = CPG.FLLFRQ.lword;
       s->FRQCR = CPG.FRQCR.lword;
@@ -87,7 +88,8 @@ void cpg_get_overclock_setting(struct cpg_overclock_setting *s)
       s->CS5aBCR = BSC.CS5ABCR.lword;
       s->CS5aWCR = BSC.CS5AWCR.lword;
     }
-    else return;
+    
+    return;
 }
 
 void cpg_set_overclock_setting(struct cpg_overclock_setting const *s)
@@ -106,7 +108,8 @@ void cpg_set_overclock_setting(struct cpg_overclock_setting const *s)
       BSCSH3.CS5ABCR.lword = s->CS5aBCR;
       BSCSH3.CS5AWCR.lword = s->CS5aWCR;
     }
-    else if(isSH4())
+    
+    if(isSH4())
     {
       BSC.CS0WCR.WR = 11; /* 18 cycles */
 
@@ -130,7 +133,8 @@ void cpg_set_overclock_setting(struct cpg_overclock_setting const *s)
       BSC.CS5ABCR.lword = s->CS5aBCR;
       BSC.CS5AWCR.lword = s->CS5aWCR;
     }
-    else return;
+    
+    return;
 }
 
 /*settings for the fxcg50 / G90+E*/
@@ -446,21 +450,35 @@ static struct cpg_overclock_setting *get_settings(void)
 
 int clock_get_speed(void)
 {
-    /* TODO : Add SH3 cases just hereafter*/
-    if(!isSH4())
-        return CLOCK_SPEED_UNKNOWN;
-    
+  struct cpg_overclock_setting *settings = get_settings();
+  if(!settings)
+    return CLOCK_SPEED_UNKNOWN;
 
-    /* All SH4-based FXCGs and FX9860Gs should be handled by this part */
-    struct cpg_overclock_setting *settings = get_settings();
-    if(!settings)
-        return CLOCK_SPEED_UNKNOWN;
+  if(isSH3())
+  {
+    for(int i = 0; i < 5; i++) {
+        struct cpg_overclock_setting *s = &settings[i];
 
+        if(CPGSH3.FRQCR.word == s->FRQCR         // FRQCR is a uint16_t for SH3
+            && BSCSH3.CS0BCR.lword == s->CS0BCR
+            && BSCSH3.CS2BCR.lword == s->CS2BCR
+            && BSCSH3.CS3BCR.lword == s->CS3BCR
+            && BSCSH3.CS5ABCR.lword == s->CS5aBCR
+            && BSCSH3.CS0WCR.lword == s->CS0WCR
+            && BSCSH3.CS2WCR.lword == s->CS2WCR
+            && BSCSH3.CS3WCR.lword == s->CS3WCR
+            && BSCSH3.CS5AWCR.lword == s->CS5aWCR)
+            return CLOCK_SPEED_F1 + i;
+    }
+  }
+  
+  if(isSH4())
+  {
     for(int i = 0; i < 5; i++) {
         struct cpg_overclock_setting *s = &settings[i];
 
         if(CPG.FLLFRQ.lword == s->FLLFRQ
-            && CPG.FRQCR.lword == s->FRQCR
+            && CPG.FRQCR.lword == s->FRQCR         // FRQCR is a uint32_t for SH4
             && BSC.CS0BCR.lword == s->CS0BCR
             && BSC.CS2BCR.lword == s->CS2BCR
             && BSC.CS3BCR.lword == s->CS3BCR
@@ -471,8 +489,9 @@ int clock_get_speed(void)
             && BSC.CS5AWCR.lword == s->CS5aWCR)
             return CLOCK_SPEED_F1 + i;
     }
+  }
 
-    return CLOCK_SPEED_UNKNOWN;
+  return CLOCK_SPEED_UNKNOWN;
 }
 
 void clock_set_speed(int level)
