@@ -149,16 +149,16 @@ static void hsave(cpg_state_t *s)
 {
 	if(isSH4()) {
 		s->SSCGCR = SH7305_CPG.SSCGCR.lword;
-		cpg_get_overclock_setting(&s->speed);
 	}
+	cpg_get_overclock_setting(&s->speed);
 }
 
 static void hrestore(cpg_state_t const *s)
 {
 	if(isSH4()) {
 		SH7305_CPG.SSCGCR.lword = s->SSCGCR;
-		cpg_set_overclock_setting(&s->speed);
 	}
+	cpg_set_overclock_setting(&s->speed);
 }
 
 gint_driver_t drv_cpg = {

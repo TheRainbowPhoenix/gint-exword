@@ -72,7 +72,7 @@ enum {
 	   thoug many more are involved.
 
       On SH4 fx-9860G-likr:
-        (Not supported yet)
+        (Not tested yet)
 
       On the fx 9860G-II series: (taken from Sentaro21's README)
 		  F1:  CPU @  29 MHz,  BFC @  29 MHz    [Default speed]
