@@ -26,8 +26,8 @@ const clock_frequency_t *clock_freq(void)
 //	SH7705 Clock signals
 //---
 
-#if defined(FX9860G) || (!defined(FX9860G) && !defined(FXCG50))
-#define CPG SH7705_CPG
+//#if defined(FX9860G) || (!defined(FX9860G) && !defined(FXCG50))
+//#define CPGSH3 SH7705_CPG
 
 void sh7705_probe(void)
 {
@@ -41,11 +41,11 @@ void sh7705_probe(void)
 	int ckio = xtal * pll2;
 
 	/* This signal is multiplied by the PLL1 circuit */
-	int pll1 = CPG.FRQCR.STC + 1;
+	int pll1 = SH7705_CPG.FRQCR.STC + 1;
 
 	/* Iphi and Pphi have dividers (Bphi is always equal to CKIO) */
-	int idiv = CPG.FRQCR.IFC;
-	int pdiv = CPG.FRQCR.PFC;
+	int idiv = SH7705_CPG.FRQCR.IFC;
+	int pdiv = SH7705_CPG.FRQCR.PFC;
 
 	/* Fill in the setting structure */
 	freq.PLL1 = pll1;
@@ -69,33 +69,33 @@ void sh7705_probe(void)
 	freq.Pphi_f = (pdiv == 3) ? ckio_3 : ckio >> pdiv;
 }
 
-#undef CPG
-#endif /* FX9860G and platform-agnostic */
+//#undef CPG
+//#endif /* FX9860G and platform-agnostic */
 
 //---
 //	SH7305 clock signals
 //---
 
-#define CPG SH7305_CPG
+//#define CPGSH4 SH7305_CPG
 
 static void sh7305_probe(void)
 {
 	/* The meaning of the PLL setting on SH7305 differs from the
 	   documentation of SH7224; the value must not be doubled. */
-	int pll = CPG.FRQCR.STC + 1;
+	int pll = SH7305_CPG.FRQCR.STC + 1;
 	freq.PLL = pll;
 
 	/* The FLL ratio is the value of the setting, halved if SELXM=1 */
-	int fll = CPG.FLLFRQ.FLF;
-	if(CPG.FLLFRQ.SELXM == 1) fll >>= 1;
+	int fll = SH7305_CPG.FLLFRQ.FLF;
+	if(SH7305_CPG.FLLFRQ.SELXM == 1) fll >>= 1;
 	freq.FLL = fll;
 
 	/* On SH7724, the divider ratio is given by 1 / (setting + 1), but on
 	   the SH7305 it is 1 / (2^setting + 1). */
 
-	int divb = CPG.FRQCR.BFC;
-	int divi = CPG.FRQCR.IFC;
-	int divp = CPG.FRQCR.P1FC;
+	int divb = SH7305_CPG.FRQCR.BFC;
+	int divi = SH7305_CPG.FRQCR.IFC;
+	int divp = SH7305_CPG.FRQCR.P1FC;
 
 	freq.Bphi_div = 1 << (divb + 1);
 	freq.Iphi_div = 1 << (divi + 1);
@@ -103,8 +103,8 @@ static void sh7305_probe(void)
 
 	/* Deduce the input frequency of divider 1 */
 	int base = 32768;
-	if(CPG.PLLCR.FLLE) base *= fll;
-	if(CPG.PLLCR.PLLE) base *= pll;
+	if(SH7305_CPG.PLLCR.FLLE) base *= fll;
+	if(SH7305_CPG.PLLCR.PLLE) base *= pll;
 
 	/* And the frequency of all other input clocks */
 	freq.RTCCLK_f = 32768;
@@ -113,7 +113,7 @@ static void sh7305_probe(void)
 	freq.Pphi_f   = base >> (divp + 1);
 }
 
-#undef CPG
+//#undef CPG
 
 
 //---
@@ -124,10 +124,14 @@ void cpg_compute_freq(void)
 {
 	/* This avoids warnings about sh7705_probe() being undefined when
 	   building for fxcg50 */
+	
+	/*
 	#if defined(FX9860G) || (!defined(FX9860G) && !defined(FXCG50))
 	isSH3() ? sh7705_probe() :
 	#endif
 	sh7305_probe();
+	*/
+	isSH3() ? sh7705_probe() : sh7305_probe();
 }
 
 static void configure(void)

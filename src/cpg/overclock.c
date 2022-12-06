@@ -16,12 +16,14 @@
 #include <gint/mpu/bsc.h>
 #include <gint/mpu/wdt.h>
 
+/*
 #define CPG SH7305_CPG
 #define BSC SH7305_BSC
 
-#define CPGSH3 SH7705_CPG
-#define BSCSH3 SH7705_BSC
-#define WDTSH3 SH7705_WDT
+#define SH7705_CPG SH7705_CPG
+#define SH7705_BSC SH7705_BSC
+#define SH7705_WDT SH7705_WDT
+*/
 
 //---
 // Low-level clock speed access
@@ -62,31 +64,31 @@ void cpg_get_overclock_setting(struct cpg_overclock_setting *s)
     if(isSH3())
     {
       s->FLLFRQ = 0xFFFFFFF;    // not used for SH3 MPUs
-      s->FRQCR = CPGSH3.FRQCR.word;
+      s->FRQCR = (uint32_t) SH7705_CPG.FRQCR.word;
 
-      s->CS0BCR = BSCSH3.CS0BCR.lword;
-      s->CS0WCR = BSCSH3.CS0WCR.lword;
-      s->CS2BCR = BSCSH3.CS2BCR.lword;
-      s->CS2WCR = BSCSH3.CS2WCR.lword;
-      s->CS3BCR = BSCSH3.CS3BCR.lword;
-      s->CS3WCR = BSCSH3.CS3WCR.lword;
-      s->CS5aBCR = BSCSH3.CS5ABCR.lword;
-      s->CS5aWCR = BSCSH3.CS5AWCR.lword;
+      s->CS0BCR = SH7705_BSC.CS0BCR.lword;
+      s->CS0WCR = SH7705_BSC.CS0WCR.lword;
+      s->CS2BCR = SH7705_BSC.CS2BCR.lword;
+      s->CS2WCR = SH7705_BSC.CS2WCR.lword;
+      s->CS3BCR = SH7705_BSC.CS3BCR.lword;
+      s->CS3WCR = SH7705_BSC.CS3WCR.lword;
+      s->CS5aBCR = SH7705_BSC.CS5ABCR.lword;
+      s->CS5aWCR = SH7705_BSC.CS5AWCR.lword;
     }
     
     if(isSH4())
     {
-      s->FLLFRQ = CPG.FLLFRQ.lword;
-      s->FRQCR = CPG.FRQCR.lword;
+      s->FLLFRQ = SH7305_CPG.FLLFRQ.lword;
+      s->FRQCR = SH7305_CPG.FRQCR.lword;
 
-      s->CS0BCR = BSC.CS0BCR.lword;
-      s->CS0WCR = BSC.CS0WCR.lword;
-      s->CS2BCR = BSC.CS2BCR.lword;
-      s->CS2WCR = BSC.CS2WCR.lword;
-      s->CS3BCR = BSC.CS3BCR.lword;
-      s->CS3WCR = BSC.CS3WCR.lword;
-      s->CS5aBCR = BSC.CS5ABCR.lword;
-      s->CS5aWCR = BSC.CS5AWCR.lword;
+      s->CS0BCR = SH7305_BSC.CS0BCR.lword;
+      s->CS0WCR = SH7305_BSC.CS0WCR.lword;
+      s->CS2BCR = SH7305_BSC.CS2BCR.lword;
+      s->CS2WCR = SH7305_BSC.CS2WCR.lword;
+      s->CS3BCR = SH7305_BSC.CS3BCR.lword;
+      s->CS3WCR = SH7305_BSC.CS3WCR.lword;
+      s->CS5aBCR = SH7305_BSC.CS5ABCR.lword;
+      s->CS5aWCR = SH7305_BSC.CS5AWCR.lword;
     }
     
     return;
@@ -96,42 +98,42 @@ void cpg_set_overclock_setting(struct cpg_overclock_setting const *s)
 {
     if(isSH3())
     {
-      WDTSH3.WTCNT.WRITE = 0;
-      WDTSH3.WTCNT.WRITE = 0x65;
-      CPGSH3.FRQCR.word = 0x1000 | s->FRQCR;
-      BSCSH3.CS0BCR.lword = s->CS0BCR;
-      BSCSH3.CS0WCR.lword = s->CS0WCR;
-      BSCSH3.CS2BCR.lword = s->CS2BCR;
-      BSCSH3.CS2WCR.lword = s->CS2WCR;
-      BSCSH3.CS3BCR.lword = s->CS3BCR;
-      BSCSH3.CS3WCR.lword = s->CS3WCR;
-      BSCSH3.CS5ABCR.lword = s->CS5aBCR;
-      BSCSH3.CS5AWCR.lword = s->CS5aWCR;
+      SH7705_WDT.WTCNT.WRITE = 0;
+      SH7705_WDT.WTCNT.WRITE = 0x65;
+      SH7705_CPG.FRQCR.word = 0x1000 | (uint16_t) s->FRQCR;
+      SH7705_BSC.CS0BCR.lword = s->CS0BCR;
+      SH7705_BSC.CS0WCR.lword = s->CS0WCR;
+      SH7705_BSC.CS2BCR.lword = s->CS2BCR;
+      SH7705_BSC.CS2WCR.lword = s->CS2WCR;
+      SH7705_BSC.CS3BCR.lword = s->CS3BCR;
+      SH7705_BSC.CS3WCR.lword = s->CS3WCR;
+      SH7705_BSC.CS5ABCR.lword = s->CS5aBCR;
+      SH7705_BSC.CS5AWCR.lword = s->CS5aWCR;
     }
     
     if(isSH4())
     {
-      BSC.CS0WCR.WR = 11; /* 18 cycles */
+      SH7305_BSC.CS0WCR.WR = 11; /* 18 cycles */
 
-      CPG.FLLFRQ.lword = s->FLLFRQ;
-      CPG.FRQCR.lword = s->FRQCR;
-      CPG.FRQCR.KICK = 1;
-      while(CPG.LSTATS != 0) {}
+      SH7305_CPG.FLLFRQ.lword = s->FLLFRQ;
+      SH7305_CPG.FRQCR.lword = s->FRQCR;
+      SH7305_CPG.FRQCR.KICK = 1;
+      while(SH7305_CPG.LSTATS != 0) {}
 
-      BSC.CS0BCR.lword = s->CS0BCR;
-      BSC.CS0WCR.lword = s->CS0WCR;
-      BSC.CS2BCR.lword = s->CS2BCR;
-      BSC.CS2WCR.lword = s->CS2WCR;
-      BSC.CS3BCR.lword = s->CS3BCR;
-      BSC.CS3WCR.lword = s->CS3WCR;
+      SH7305_BSC.CS0BCR.lword = s->CS0BCR;
+      SH7305_BSC.CS0WCR.lword = s->CS0WCR;
+      SH7305_BSC.CS2BCR.lword = s->CS2BCR;
+      SH7305_BSC.CS2WCR.lword = s->CS2WCR;
+      SH7305_BSC.CS3BCR.lword = s->CS3BCR;
+      SH7305_BSC.CS3WCR.lword = s->CS3WCR;
 
-      if(BSC.CS3WCR.A3CL == 1)
+      if(SH7305_BSC.CS3WCR.A3CL == 1)
           *SDMR3_CL2 = 0;
       else
           *SDMR3_CL3 = 0;
 
-      BSC.CS5ABCR.lword = s->CS5aBCR;
-      BSC.CS5AWCR.lword = s->CS5aWCR;
+      SH7305_BSC.CS5ABCR.lword = s->CS5aBCR;
+      SH7305_BSC.CS5AWCR.lword = s->CS5aWCR;
     }
     
     return;
@@ -254,7 +256,6 @@ static struct cpg_overclock_setting settings_prizm[5] = {
       .CS3WCR  = 0x000024D0,
       .CS5aWCR = 0x00010240 },
 };
-
 
 /*settings for the fx9860G SH3 based*/
 static struct cpg_overclock_setting settings_fx9860g_sh3[5] = {
@@ -459,15 +460,15 @@ int clock_get_speed(void)
     for(int i = 0; i < 5; i++) {
         struct cpg_overclock_setting *s = &settings[i];
 
-        if(CPGSH3.FRQCR.word == s->FRQCR         // FRQCR is a uint16_t for SH3
-            && BSCSH3.CS0BCR.lword == s->CS0BCR
-            && BSCSH3.CS2BCR.lword == s->CS2BCR
-            && BSCSH3.CS3BCR.lword == s->CS3BCR
-            && BSCSH3.CS5ABCR.lword == s->CS5aBCR
-            && BSCSH3.CS0WCR.lword == s->CS0WCR
-            && BSCSH3.CS2WCR.lword == s->CS2WCR
-            && BSCSH3.CS3WCR.lword == s->CS3WCR
-            && BSCSH3.CS5AWCR.lword == s->CS5aWCR)
+        if(SH7705_CPG.FRQCR.word == (uint16_t) s->FRQCR         // FRQCR is a uint16_t for SH3
+            && SH7705_BSC.CS0BCR.lword == s->CS0BCR
+            && SH7705_BSC.CS2BCR.lword == s->CS2BCR
+            && SH7705_BSC.CS3BCR.lword == s->CS3BCR
+            && SH7705_BSC.CS5ABCR.lword == s->CS5aBCR
+            && SH7705_BSC.CS0WCR.lword == s->CS0WCR
+            && SH7705_BSC.CS2WCR.lword == s->CS2WCR
+            && SH7705_BSC.CS3WCR.lword == s->CS3WCR
+            && SH7705_BSC.CS5AWCR.lword == s->CS5aWCR)
             return CLOCK_SPEED_F1 + i;
     }
   }
@@ -477,16 +478,16 @@ int clock_get_speed(void)
     for(int i = 0; i < 5; i++) {
         struct cpg_overclock_setting *s = &settings[i];
 
-        if(CPG.FLLFRQ.lword == s->FLLFRQ
-            && CPG.FRQCR.lword == s->FRQCR         // FRQCR is a uint32_t for SH4
-            && BSC.CS0BCR.lword == s->CS0BCR
-            && BSC.CS2BCR.lword == s->CS2BCR
-            && BSC.CS3BCR.lword == s->CS3BCR
-            && BSC.CS5ABCR.lword == s->CS5aBCR
-            && BSC.CS0WCR.lword == s->CS0WCR
-            && BSC.CS2WCR.lword == s->CS2WCR
-            && BSC.CS3WCR.lword == s->CS3WCR
-            && BSC.CS5AWCR.lword == s->CS5aWCR)
+        if(SH7305_CPG.FLLFRQ.lword == s->FLLFRQ
+            && SH7305_CPG.FRQCR.lword == s->FRQCR         // FRQCR is a uint32_t for SH4
+            && SH7305_BSC.CS0BCR.lword == s->CS0BCR
+            && SH7305_BSC.CS2BCR.lword == s->CS2BCR
+            && SH7305_BSC.CS3BCR.lword == s->CS3BCR
+            && SH7305_BSC.CS5ABCR.lword == s->CS5aBCR
+            && SH7305_BSC.CS0WCR.lword == s->CS0WCR
+            && SH7305_BSC.CS2WCR.lword == s->CS2WCR
+            && SH7305_BSC.CS3WCR.lword == s->CS3WCR
+            && SH7305_BSC.CS5AWCR.lword == s->CS5aWCR)
             return CLOCK_SPEED_F1 + i;
     }
   }
