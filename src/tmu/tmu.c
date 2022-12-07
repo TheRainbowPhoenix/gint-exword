@@ -21,10 +21,6 @@ static etmu_t *ETMU = SH7305_ETMU;
 /* TSTR register for standard timers */
 static volatile uint8_t *TSTR = &SH7305_TMU.TSTR;
 
-/* This is to support OC timer recalibration on SH3*/
-static tmu_t *SH3TMU = SH7705_TMU.TMU;
-
-
 /* Shortcut to set registers that are slow to update */
 #define set(lval, rval) do(lval = rval); while(rval != lval)
 
@@ -272,38 +268,18 @@ void timer_rescale(uint32_t old_Pphi, uint32_t new_Pphi_0)
 {
 	uint64_t new_Pphi = new_Pphi_0;
 
-	if(isSH3())
+	for(int id = 0; id < 3; id++)
 	{
-		+for(int id = 0; id < 3; id++)
-		{
-			
-			/* Skip timers that are not running */
-			if(T->TCNT == 0xffffffff && T->TCOR == 0xffffffff)
-				continue;
+		tmu_t *T = &TMU[id];
+		/* Skip timers that are not running */
+		if(T->TCNT == 0xffffffff && T->TCOR == 0xffffffff)
+			continue;
 
-			/* For libprof: keep timers with max TCOR as they are */
-			if(T->TCOR != 0xffffffff) {
-				T->TCOR = ((uint64_t)T->TCOR * new_Pphi) / old_Pphi;
-			}
-			T->TCNT = ((uint64_t)T->TCNT * new_Pphi) / old_Pphi;
+		/* For libprof: keep timers with max TCOR as they are */
+		if(T->TCOR != 0xffffffff) {
+			T->TCOR = ((uint64_t)T->TCOR * new_Pphi) / old_Pphi;
 		}
-	}
-
-	if(isSH4())
-	{
-		for(int id = 0; id < 3; id++)
-		{
-			tmu_t *T = &TMU[id];
-			/* Skip timers that are not running */
-			if(T->TCNT == 0xffffffff && T->TCOR == 0xffffffff)
-				continue;
-
-			/* For libprof: keep timers with max TCOR as they are */
-			if(T->TCOR != 0xffffffff) {
-				T->TCOR = ((uint64_t)T->TCOR * new_Pphi) / old_Pphi;
-			}
-			T->TCNT = ((uint64_t)T->TCNT * new_Pphi) / old_Pphi;
-		}
+		T->TCNT = ((uint64_t)T->TCNT * new_Pphi) / old_Pphi;
 	}
 }
 
