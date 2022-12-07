@@ -460,7 +460,7 @@ int clock_get_speed(void)
     for(int i = 0; i < 5; i++) {
         struct cpg_overclock_setting *s = &settings[i];
 
-        if(SH7705_CPG.FRQCR.word == (uint16_t) s->FRQCR         // FRQCR is a uint16_t for SH3
+        if(SH7705_CPG.FRQCR.word == (uint16_t) (s->FRQCR | 0x1000)       // FRQCR is a uint16_t for SH3
             && SH7705_BSC.CS0BCR.lword == s->CS0BCR
             && SH7705_BSC.CS2BCR.lword == s->CS2BCR
             && SH7705_BSC.CS3BCR.lword == s->CS3BCR
