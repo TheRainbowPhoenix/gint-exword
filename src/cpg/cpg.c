@@ -28,6 +28,7 @@ const clock_frequency_t *clock_freq(void)
 
 static void sh7705_probe(void)
 {
+
 	/* According to Sentaro21 in the sources of Ftune 1.0.1, the clock mode
 	   is thought to be 5, which means that:
 	   - CPG input is XTAL         (14.745'600 MHz)
@@ -39,6 +40,8 @@ static void sh7705_probe(void)
 
 	/* This signal is multiplied by the PLL1 circuit */
 	int pll1 = SH7705_CPG.FRQCR.STC + 1;
+
+	int base = ckio * pll1;
 
 	/* Iphi and Pphi have dividers (Bphi is always equal to CKIO) */
 	int idiv = SH7705_CPG.FRQCR.IFC;
@@ -56,14 +59,19 @@ static void sh7705_probe(void)
 
 	/* Exchange the setting values 2 and 3 (corresponding to /3 and /4)
 	   This means that /1, /2, /4 are now 0, 1, 2, which is perfect for a
-	   quick bit shift */
-	idiv = idiv ^ (idiv >> 1);
-	pdiv = pdiv ^ (pdiv >> 1);
+	   quick bit shift*/
+	//idiv = idiv ^ (idiv >> 1);
+	//pdiv = pdiv ^ (pdiv >> 1);
 
 	freq.CKIO_f = ckio;
 	freq.Bphi_f = ckio;
-	freq.Iphi_f = (idiv == 3) ? ckio_3 : ckio >> idiv;
-	freq.Pphi_f = (pdiv == 3) ? ckio_3 : ckio >> pdiv;
+	//freq.Iphi_f = (idiv == 3) ? ckio_3 : ckio >> idiv;
+	//freq.Pphi_f = (pdiv == 3) ? ckio_3 : ckio >> pdiv;
+
+	freq.Iphi_f = base / freq.Iphi_div;
+	freq.Pphi_f = base / freq.Pphi_div;
+
+
 }
 
 
