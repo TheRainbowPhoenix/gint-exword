@@ -70,10 +70,11 @@ typedef volatile struct
 
     // Serial FIFO Control
     word_union(SCFCR,
-        uint16_t        :8; //Reserved
+        uint16_t        :5; //Reserved
+        uint16_t RSTRG  :3; // ??? from CGplayer
         uint16_t RTRG   :2; //Receive FIFO Data Trigger
         uint16_t TTRG   :2; //Transmit FIFO Data Trigger
-        uint16_t        :1; //Reserved
+        uint16_t MCE    :1; // ??? from CGplayer
         uint16_t TFRST  :1; //Transmit FIFO Data Register Reset
         uint16_t RFRST  :1; //Receive FIFO Data Register Reset 
         uint16_t LOOP   :1; //Loopback Test
@@ -87,7 +88,7 @@ typedef volatile struct
         uint16_t        :3; //Reserved
         uint16_t RFDC   :5; //Number of Data Bytes in Receive FIFO
     );
-    pad(0x2);
+    pad(0x6);
 
     // Serial Line Status
     word_union(SCLSR,
