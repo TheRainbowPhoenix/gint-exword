@@ -59,6 +59,11 @@
 #define SH3_DIV_4 3 //0b0011	// 1/4
 
 
+
+static struct cpg_overclock_setting save_parameters_at_start = {0};
+static bool is_initial_state_saved = false;
+
+
 void cpg_get_overclock_setting(struct cpg_overclock_setting *s)
 {
     if(isSH3())
@@ -138,6 +143,19 @@ void cpg_set_overclock_setting(struct cpg_overclock_setting const *s)
     
     return;
 }
+
+void clock_save_state(void)
+{
+  cpg_get_overclock_setting( &save_parameters_at_start );
+  is_initial_state_saved = true;
+}
+
+void clock_restore_state(void)
+{
+  if(is_initial_state_saved==true)
+    cpg_set_overclock_setting( &save_parameters_at_start );
+}
+
 
 /*settings for the fxcg50 / G90+E*/
 static struct cpg_overclock_setting settings_fxcg50[5] = {
@@ -453,7 +471,7 @@ int clock_get_speed(void)
 {
   struct cpg_overclock_setting *settings = get_settings();
   if(!settings)
-    return CLOCK_SPEED_UNKNOWN;
+    return CLOCK_ERROR;
 
   if(isSH3())
   {
@@ -492,6 +510,7 @@ int clock_get_speed(void)
     }
   }
 
+  clock_save_state();
   return CLOCK_SPEED_UNKNOWN;
 }
 

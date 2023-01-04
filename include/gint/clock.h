@@ -65,6 +65,8 @@ void cpg_compute_freq(void);
    gint. These are always the settings from Ftune/Ptune, which are the most
    widely tested and gint treats as the standard. */
 enum {
+	/* Something went wrong during the overclocking process*/
+	CLOCK_ERROR = 99,
 	/* Combinations of hardware settings that are none of Ftune's levels */
 	CLOCK_SPEED_UNKNOWN = 0,
 
@@ -110,6 +112,10 @@ enum {
    speed level and returns the current one. If the hardware state does not
    correspond to any of Ftune's settings, CLOCK_SPEED_UNKNOWN is returned. */
 int clock_get_speed(void);
+
+void clock_save_state(void);
+
+void clock_restore_state(void);
 
 /* clock_set_speed(): Set the current clock speed
 

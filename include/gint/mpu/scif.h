@@ -99,7 +99,7 @@ typedef volatile struct
 
 } GPACKED(4) sh7305_scif_t;
 
-#define SH7305_SCIF (*((sh7305_scif_t *)0x0xa4410000))
+#define SH7305_SCIF (*((sh7305_scif_t *)0xa4410000))
 
 
 typedef volatile struct
@@ -200,7 +200,7 @@ typedef volatile struct
     uint8_t SCFRDR; // Serial Receive Data FIFO (64 Bytes-long)
 } GPACKED(4) sh7705_scif_t;
 
-#define SH7705_SCIF (*((sh7705_scif_t *)0x0xa4410000))
+#define SH7705_SCIF (*((sh7705_scif_t *)0xa4410000))
 
 
 #ifdef __cplusplus
