@@ -245,6 +245,10 @@ set(SOURCES_CG
   src/render-cg/image/image_p4_dye.c
 )
 
+set(SOURCES_FXASCG
+  # R61524 driver
+)
+
 set(ASSETS_FX src/font5x7.png)
 set(ASSETS_CG src/font8x9.png)
 fxconv_declare_assets(${ASSETS_FX} ${ASSETS_CG})
@@ -270,6 +274,17 @@ if("${FXSDK_PLATFORM_LONG}" STREQUAL fxCG50)
     "${CMAKE_CURRENT_BINARY_DIR}/fxcg50.ld"
     "${CMAKE_CURRENT_BINARY_DIR}/fxcg50_fastload.ld")
   add_library(gint-cg STATIC ${SOURCES_COMMON} ${SOURCES_CG} ${ASSETS_CG}
+    ${LINKER_SCRIPTS})
+endif()
+
+if("${FXSDK_PLATFORM_LONG}" STREQUAL fx9860G_AS_CG)
+  add_compile_options(-DFX9860G)  
+  add_compile_definitions(FX9860G_AS_CG)
+  set(NAME "gint-fxascg")
+  set(LINKER_SCRIPTS
+    "${CMAKE_CURRENT_BINARY_DIR}/fxcg50.ld"
+    "${CMAKE_CURRENT_BINARY_DIR}/fxcg50_fastload.ld")
+  add_library(gint-fxascg STATIC ${SOURCES_COMMON} ${SOURCES_FX} ${SOURCES_FXASCG} ${ASSETS_FX}
     ${LINKER_SCRIPTS})
 endif()
 
