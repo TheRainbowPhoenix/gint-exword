@@ -11,7 +11,6 @@
 //---
 // Interrupt controllers
 //---
-
 GRODATA3 sh7705_intc_t const SH7705_INTC = {
 	.IPR = {
 		(void *)0xfffffee2, (void *)0xfffffee4,

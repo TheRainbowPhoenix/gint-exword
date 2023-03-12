@@ -9,9 +9,16 @@
 #include "topti-asm.h"
 
 /* Default font */
-extern font_t gint_font8x9;
-font_t const * gint_default_font = &gint_font8x9;
-font_t const * topti_font = &gint_font8x9;
+#if(FX9860G_AS_CG)
+	extern font_t gint_font5x7;
+	font_t const * gint_default_font = &gint_font5x7;
+	font_t const * topti_font = &gint_font5x7;
+#else
+	extern font_t gint_font8x9;
+	font_t const * gint_default_font = &gint_font8x9;
+	font_t const * topti_font = &gint_font8x9;
+#endif
+
 
 /* topti_glyph(): Render a glyph on the VRAM
    Prints a glyph naively using word accesses, because for most fonts with a

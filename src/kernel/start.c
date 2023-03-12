@@ -26,7 +26,7 @@ extern uint32_t
 	lilram, silram, rilram,		/* IL memory section */
 	lxyram, sxyram, rxyram,		/* X and Y memory section */
 	sbss, rbss;			/* User's BSS section */
-#ifdef FX9860G
+#if defined(FX9860G) && !defined(FX9860G_AS_CG)
 extern uint32_t
 	lgmapped, sgmapped,		/* Permanently mapped functions */
 	lreloc, sreloc;			/* Relocatable references */
@@ -136,7 +136,7 @@ static int start2(int isappli, int optnum)
 	   1.00 and the fx-9860G emulator) is not clear yet, so gint can't load
 	   pages dynamically. Load everything preventively (works only if the
 	   add-in is small enough) */
-	#ifdef FX9860G
+	#if defined(FX9860G) && !defined(FX9860G_AS_CG)
 	if(isSH3())
 	{
 		/* Try to map every ROM address up to _srom */
@@ -159,7 +159,7 @@ static int start2(int isappli, int optnum)
 
 	gint_load_onchip_sections();
 
-	#ifdef FX9860G
+	#if defined(FX9860G) && !defined(FX9860G_AS_CG)
 	/* Copy permanently-mapped code to start of user RAM (on fx-CG 50 it
 	   is loaded along ILRAM contents) */
 	void *rgmapped = mmu_uram();
