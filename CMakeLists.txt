@@ -246,7 +246,34 @@ set(SOURCES_CG
 )
 
 set(SOURCES_FXASCG
-  # R61524 driver
+  # Gray engine
+  src/gray/engine.c
+  src/gray/gclear.c
+  src/gray/ggetpixel.c
+  src/gray/gint_gline.c
+  src/gray/gpixel.c
+  src/gray/grect.c
+  src/gray/gsubimage.c
+  src/gray/gtext.c
+  # Rendering
+  src/render-fx/bopti-asm-gray-scsp.s
+  src/render-fx/bopti-asm-gray.s
+  src/render-fx/bopti-asm-mono-scsp.s
+  src/render-fx/bopti-asm.s
+  src/render-fx/bopti.c
+  src/render-fx/dclear.c
+  src/render-fx/dgetpixel.c
+  src/render-fx/dpixel.c
+  src/render-fx/drect.c
+  src/render-fx/dsubimage.c
+  src/render-fx/gint_dline.c
+  src/render-fx/masks.c
+  src/render-fx/topti-asm.s
+  src/render-fx/topti.c
+  #special dupdate functions to treat a FX VRAM and convert to a CG VRAM
+  src/render-fxascg/dupdate.c
+  # R61524 driver as we are working with a CG50
+  src/r61524/r61524.c
 )
 
 set(ASSETS_FX
@@ -290,7 +317,7 @@ if("${FXSDK_PLATFORM_LONG}" STREQUAL fx9860G_AS_CG)
   set(LINKER_SCRIPTS
     "${CMAKE_CURRENT_BINARY_DIR}/fxcg50.ld"
     "${CMAKE_CURRENT_BINARY_DIR}/fxcg50_fastload.ld")
-  add_library(gint-fxascg STATIC ${SOURCES_COMMON} ${SOURCES_CG} ${SOURCES_FXASCG} ${ASSETS_FX}
+  add_library(gint-fxascg STATIC ${SOURCES_COMMON} ${SOURCES_FXASCG} ${ASSETS_FX}
     ${LINKER_SCRIPTS})
 endif()
 

@@ -15,7 +15,7 @@
 #ifndef GINT_DISPLAY_CG
 #define GINT_DISPLAY_CG
 
-#ifdef FXCG50
+#if defined(FXCG50) && !defined(FX9860G_AS_CG)
 
 #ifdef __cplusplus
 extern "C" {

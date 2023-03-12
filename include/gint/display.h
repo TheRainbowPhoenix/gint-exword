@@ -19,11 +19,11 @@ extern "C" {
 /* Platform-specific functions include VRAM management and the definition of
    the color_t type. */
 
-#ifdef FX9860G
+#if defined(FX9860G) || defined(FX9860G_AS_CG)
 #include <gint/display-fx.h>
 #endif
 
-#ifdef FXCG50
+#if defined(FXCG50) && ! defined(FX9860G_AS_CG)
 #include <gint/display-cg.h>
 #endif
 
