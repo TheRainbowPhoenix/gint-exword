@@ -54,14 +54,15 @@ void dgetvram(uint16_t **ptr_vram_1, uint16_t **ptr_vram_2)
 
 inline drawupscale( int x, int y, int color )
 {
-    int u=y*396*3*2;
+    int u=y*396*3;
+    int v=x*3;
 
     uint16_t colorcg;
     
     if (color==C_WHITE) colorcg=0xFFFF;
     else colorcg=0x0000;
 
-    int baseindex = (396*16+6+x+u);          // 16 lines on top/bottom remain black and 6 columns on left/right remain black
+    int baseindex = (396*16+6+v+u);          // 16 lines on top/bottom remain black and 6 columns on left/right remain black
     cg_vram[baseindex] = colorcg;
     cg_vram[baseindex+1] = colorcg;
     cg_vram[baseindex+2] = colorcg;
