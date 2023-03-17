@@ -292,7 +292,6 @@ int gupdate(void)
 	}
 
 
-
     uint32_t *light, *dark;
 	dgray_getvram(&light, &dark);
 
@@ -309,6 +308,34 @@ int gupdate(void)
 
 			gdrawupscale( i, j, color );        // really not optimised; just to check if OK
         } 
+    }
+
+
+    //draw a black layer around the screen
+    int base1 = 0;
+    int base2 = (64*3+16)*396;
+    for(int u = 0; u<16; u++)
+    {
+        for(int v = 0; v<396; v++)
+		{
+             cg_vram_gray[base1+v] = 0;
+			cg_vram_gray[base2+v] = 0;
+		}
+		base1+=396;
+		base2+=396;
+    }
+
+    base1 = 16*396;
+    base2 = 16*396+6+128*3;
+    for(int u = 0; u<64*3; u++)
+    {
+        for(int v = 0; v<6; v++)
+		{
+            cg_vram_gray[base1+v] = 0;
+			cg_vram_gray[base2+v] = 0;
+		}
+		base1+=396;
+		base2+=396;
     }
 
 	r61524_display(cg_vram_gray, 0, 224, R61524_DMA_WAIT );

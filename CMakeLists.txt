@@ -247,7 +247,7 @@ set(SOURCES_CG
 
 set(SOURCES_FXASCG
   # Gray engine
-  src/gray/engine_fxascg.c
+  src/render-fxascg/engine_fxascg.c
   src/gray/gclear.c
   src/gray/ggetpixel.c
   src/gray/gint_gline.c

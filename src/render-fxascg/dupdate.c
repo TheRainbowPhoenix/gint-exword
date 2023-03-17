@@ -81,16 +81,55 @@ inline drawupscale( int x, int y, int color )
 /* dupdate(): Push the video RAM to the display driver */
 void dupdate(void)
 {
+	bool run_default = true;
 
-    for( int j=0; j<DHEIGHT; j++ )          // 64 lines
-    {
-        for( int i=0; i<DWIDTH; i++ )       // 128 column
+    if(dmode && dmode->dupdate)
+	{
+		/* Call the overridden dupdate(), but continue if it returns
+		   non-zero (this is used when stopping the gray engine) */
+		int rc = dmode->dupdate();
+		run_default = (rc != 0);
+	}
+
+	if(run_default)
+	{
+        for( int j=0; j<DHEIGHT; j++ )          // 64 lines
         {
-            drawupscale( i, j, dgetpixel(i,j) );        // really not optimised; just to check if OK
-        } 
-    }
+            for( int i=0; i<DWIDTH; i++ )       // 128 column
+            {
+                drawupscale( i, j, dgetpixel(i,j) );        // really not optimised; just to check if OK
+            } 
+        }
 
-	r61524_display(cg_vram, 0, 224, R61524_DMA_WAIT );
+        //draw a black layer around the screen
+        int base1 = 0;
+        int base2 = (64*3+16)*396;
+        for(int u = 0; u<16; u++)
+        {
+            for(int v = 0; v<396; v++)
+            {
+                cg_vram[base1+v] = 0;
+                cg_vram[base2+v] = 0;
+            }
+            base1+=396;
+            base2+=396;
+        }
+
+        base1 = 16*396;
+        base2 = 16*396+6+128*3;
+        for(int u = 0; u<64*3; u++)
+        {
+            for(int v = 0; v<6; v++)
+            {
+                cg_vram[base1+v] = 0;
+                cg_vram[base2+v] = 0;
+            }
+            base1+=396;
+            base2+=396;
+        }
+
+        r61524_display(cg_vram, 0, 224, R61524_DMA_WAIT );
+    }
 
 	gint_call(dupdate_get_hook());
 }
