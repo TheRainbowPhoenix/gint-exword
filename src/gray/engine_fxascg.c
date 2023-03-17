@@ -233,9 +233,6 @@ int dgray(int mode)
 }
 
 
-#define C_RGB(r,g,b) (((r) << 11) | ((g) << 6) | (b))
-
-
 inline gdrawupscale( int x, int y, int color )
 {
     int u=y*396*3;
@@ -243,10 +240,11 @@ inline gdrawupscale( int x, int y, int color )
 
     uint16_t colorcg;
     
-    if (color==C_WHITE) colorcg=0xFFFF;
-	else if (color==C_LIGHT) colorcg=C_RGB(20,20,20);
-	else if (color==C_DARK) colorcg=C_RGB(10,10,10);
-	else colorcg=0x0000;
+    if (color==0b00) colorcg=0xFFFF;
+	else if (color==0b01) colorcg=0xAD55;
+	else if (color==0b10) colorcg=0x528A;
+	else if (color==0b11) colorcg=0x0000;
+	else color=0xf800;						// unrecognized pixels are red
 
     int baseindex = (396*16+6+v+u);          // 16 lines on top/bottom remain black and 6 columns on left/right remain black
     cg_vram_gray[baseindex] = colorcg;
@@ -295,11 +293,21 @@ int gupdate(void)
 
 
 
+    uint32_t *light, *dark;
+	dgray_getvram(&light, &dark);
+
     for( int j=0; j<DHEIGHT; j++ )          // 64 lines
     {
         for( int i=0; i<DWIDTH; i++ )       // 128 column
         {
-            gdrawupscale( i, j, ggetpixel(i,j) );        // really not optimised; just to check if OK
+            int offset = (j << 2) + (i >> 5);
+            uint32_t mask = 1 << (~i & 31);
+            int l = (light[offset] & mask) !=0 ? 1 : 0;
+            int d = (dark [offset] & mask) !=0 ? 1 : 0;
+
+            int color = (d << 1) | l;
+
+			gdrawupscale( i, j, color );        // really not optimised; just to check if OK
         } 
     }
 
