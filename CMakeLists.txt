@@ -247,7 +247,6 @@ set(SOURCES_CG
 
 set(SOURCES_FXASCG
   # Gray engine
-  src/render-fxascg/engine_fxascg.c
   src/gray/gclear.c
   src/gray/ggetpixel.c
   src/gray/gint_gline.c
@@ -272,6 +271,7 @@ set(SOURCES_FXASCG
   src/render-fx/topti.c
   #special dupdate functions to treat a FX VRAM and convert to a CG VRAM
   src/render-fxascg/dupdate.c
+  src/render-fxascg/engine_fxascg.c
   # R61524 driver as we are working with a CG50
   src/r61524/r61524.c
 )

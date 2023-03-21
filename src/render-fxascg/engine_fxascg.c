@@ -6,7 +6,7 @@
 #include <gint/drivers/r61524.h>
 #include <gint/gray.h>
 #include <gint/display.h>
-#include <gint/timer.h>
+//#include <gint/timer.h>
 
 #include <stdlib.h>
 
@@ -15,27 +15,27 @@
 /* Three additional video RAMS, allocated statically if --static-gray was set
    at configure time, or with malloc() otherwise. */
 #ifdef GINT_STATIC_GRAY
-GBSS static uint32_t gvrams[3][256];
+GBSS static uint32_t gvrams[1][256];
 #endif
 
 uint16_t *cg_vram_gray;
 
 /* Four VRAMs: two to draw and two to display */
-static uint32_t *vrams[4] = { NULL, NULL, NULL, NULL };
+static uint32_t *vrams[2] = { NULL, NULL };
 
-/* Current VRAM pair used for drawing; the value can either be 0 (draws to
-   VRAMs 0 and 1) or 2 (draws to VRAMs 2 and 3). */
-static int volatile st = 0;
 /* Timer ID, always equal to GRAY_TIMER except if initialization fails */
-static int timer = -1;
+//static int timer = -1;
 /* Whether the engine is scheduled to run at the next frame */
 static int runs = 0;
 
 /* Underlying timer, set to count at P_phi/64 */
-#define GRAY_TIMER 0
-#define GRAY_CLOCK TIMER_Pphi_64
+//#define GRAY_TIMER 0
+//#define GRAY_CLOCK TIMER_Pphi_64
 /* Delays of the light and dark frames for the above setting */
-GBSS static int delays[2];
+//GBSS static int delays[2];
+
+extern struct rendering_mode const *dmode;
+
 
 /* The alternate rendering mode structure used to override d*() */
 static struct rendering_mode const gray_mode = {
@@ -65,13 +65,14 @@ static struct rendering_mode const gray_exit_mode = {
 //	Engine control (init/quit and start/stop)
 //---
 
-static int gray_int(void);
+//static int gray_int(void);
 static void gray_quit(void);
 
 /* gray_isinit(): Check whether the engine is initialized and ready to run */
 static int gray_isinit(void)
 {
-	return (vrams[0] && vrams[1] && vrams[2] && vrams[3] && timer >= 0);
+	//return (vrams[0] && vrams[1] && vrams[2] && vrams[3] && timer >= 0);
+	return (vrams[0] && vrams[1] >= 0);
 }
 
 
@@ -116,31 +117,11 @@ GCONSTRUCTOR static void gray_init(void)
 
 	#ifdef GINT_STATIC_GRAY
 	vrams[1] = gvrams[0];
-	vrams[2] = gvrams[1];
-	vrams[3] = gvrams[2];
 	#else
 	vrams[1] = malloc(1024);
-	vrams[2] = malloc(1024);
-	vrams[3] = malloc(1024);
 	#endif /* GINT_STATIC_GRAY */
 
-	/* Default delays from Graph 35+E II are different from other models */
-	if(gint[HWCALC] == HWCALC_G35PE2)
-	{
-		delays[0] = 762;
-		delays[1] = 1311;
-	}
-	else
-	{
-		delays[0] = 923;
-		delays[1] = 1742;
-	}
-
 	dvram_init_gray();
-
-	/* Try to obtain the timer right away */
-	timer = timer_configure(GRAY_TIMER | GRAY_CLOCK, 1000,
-		GINT_CALL(gray_int));
 
 	/* On failure, release the resources that we obtained */
 	if(!gray_isinit()) gray_quit();
@@ -151,33 +132,20 @@ GDESTRUCTOR static void gray_quit(void)
 {
 	#ifndef GINT_STATIC_GRAY
 	if(vrams[1]) free(vrams[1]);
-	if(vrams[2]) free(vrams[2]);
-	if(vrams[3]) free(vrams[3]);
-
 	vrams[1] = NULL;
-	vrams[2] = NULL;
-	vrams[3] = NULL;
 	#endif /* GINT_STATIC_GRAY */
-
-	if(timer >= 0) timer_stop(timer);
-	timer = -1;
 }
 
 /* gray_start(): Start the gray engine */
 static void gray_start(void)
 {
-	st = 2;
-	timer_reload(GRAY_TIMER, delays[0]);
-	timer_start(GRAY_TIMER);
 	runs = 1;
 }
 
 /* gray_stop(): Stop the gray engine */
 static void gray_stop(void)
 {
-	timer_pause(GRAY_TIMER);
 	runs = 0;
-	st = 0;
 }
 
 //---
@@ -232,47 +200,46 @@ int dgray(int mode)
 	return 0;
 }
 
-
-inline gdrawupscale( int x, int y, int color )
+/* convert the gray scale into RGB565 and draw in the virutal VRAMthe 3x3 pixels upscaled and centered */
+inline gdrawupscale( int x, int y, int color_fx )
 {
     int u=y*396*3;
     int v=x*3;
 
-    uint16_t colorcg;
+    uint16_t color_cg;
     
-    if (color==0b00) colorcg=0xFFFF;
-	else if (color==0b01) colorcg=0xAD55;
-	else if (color==0b10) colorcg=0x528A;
-	else if (color==0b11) colorcg=0x0000;
-	else color=0xf800;						// unrecognized pixels are red
+    if (color_fx==C_WHITE) 		  color_cg=0xFFFF;
+	else if (color_fx==C_LIGHT)   color_cg=0xAD55;
+	else if (color_fx==C_DARK) 	  color_cg=0x528A;
+	else 						  color_cg=0x0000;
 
     int baseindex = (396*16+6+v+u);          // 16 lines on top/bottom remain black and 6 columns on left/right remain black
-    cg_vram_gray[baseindex] = colorcg;
-    cg_vram_gray[baseindex+1] = colorcg;
-    cg_vram_gray[baseindex+2] = colorcg;
+    cg_vram_gray[baseindex] 	= color_cg;		 // draw 3 pixels side by side
+    cg_vram_gray[baseindex+1] 	= color_cg;
+    cg_vram_gray[baseindex+2] 	= color_cg;
 
-    baseindex+=396;
-    cg_vram_gray[baseindex] = colorcg;
-    cg_vram_gray[baseindex+1] = colorcg;
-    cg_vram_gray[baseindex+2] = colorcg;
+    baseindex+=396;							 // same for the line below (line #2)
+    cg_vram_gray[baseindex] 	= color_cg;
+    cg_vram_gray[baseindex+1] 	= color_cg;
+    cg_vram_gray[baseindex+2] 	= color_cg;
 
-    baseindex+=396;
-    cg_vram_gray[baseindex] = colorcg;
-    cg_vram_gray[baseindex+1] = colorcg;
-    cg_vram_gray[baseindex+2] = colorcg;
+    baseindex+=396;							 // same for the line below (line #3)
+    cg_vram_gray[baseindex] 	= color_cg;
+    cg_vram_gray[baseindex+1] 	= color_cg;
+    cg_vram_gray[baseindex+2] 	= color_cg;
 }
 
 
 /* gray_int(): Interrupt handler */
-int gray_int(void)
-{
-	//t6k11_display(vrams[st ^ 2], 0, 64, 16);
-	timer_reload(GRAY_TIMER, delays[(st ^ 3) & 1]);
-	
-	st ^= 1;
-
-	return TIMER_CONTINUE;
-}
+//int gray_int(void)
+//{
+//	//t6k11_display(vrams[st ^ 2], 0, 64, 16);
+//	timer_reload(GRAY_TIMER, delays[(st ^ 3) & 1]);
+//	
+//	st ^= 1;
+//
+//	return TIMER_CONTINUE;
+//}
 
 /* gupdate(): Push the current VRAMs to the screen */
 int gupdate(void)
@@ -293,7 +260,7 @@ int gupdate(void)
 
 
     uint32_t *light, *dark;
-	dgray_getvram(&light, &dark);
+	dgray_getscreen(&light, &dark);
 
     for( int j=0; j<DHEIGHT; j++ )          // 64 lines
     {
@@ -304,9 +271,9 @@ int gupdate(void)
             int l = (light[offset] & mask) !=0 ? 1 : 0;
             int d = (dark [offset] & mask) !=0 ? 1 : 0;
 
-            int color = (d << 1) | l;
+            int color_fx = (d << 1) | l;
 
-			gdrawupscale( i, j, color );        // really not optimised; just to check if OK
+			gdrawupscale( i, j, color_fx );        // really not optimised; just to check if OK
         } 
     }
 
@@ -318,7 +285,7 @@ int gupdate(void)
     {
         for(int v = 0; v<396; v++)
 		{
-             cg_vram_gray[base1+v] = 0;
+            cg_vram_gray[base1+v] = 0;
 			cg_vram_gray[base2+v] = 0;
 		}
 		base1+=396;
@@ -341,7 +308,6 @@ int gupdate(void)
 	r61524_display(cg_vram_gray, 0, 224, R61524_DMA_WAIT );
 
 	/* When the engine is running, swap frames */
-	st ^= 2;
 	return 0;
 }
 
@@ -358,31 +324,27 @@ int dgray_enabled(void)
 /* dgray_setdelays(): Set the gray engine delays */
 void dgray_setdelays(uint32_t light, uint32_t dark)
 {
-	delays[0] = light;
-	delays[1] = dark;
+//	delays[0] = light;
+//	delays[1] = dark;
 }
 
 /* dgray_getdelays(): Get the gray engine delays */
 void dgray_getdelays(uint32_t *light, uint32_t *dark)
 {
-	if(light) *light = delays[0];
-	if(dark) *dark = delays[1];
+//	if(light) *light = delays[0];
+//	if(dark) *dark = delays[1];
 }
 
 /* dgray_getvram(): Get the current VRAM pointers */
 void dgray_getvram(uint32_t **light, uint32_t **dark)
 {
-	int base = st;
-
-	if(light) *light = vrams[base & 2];
-	if(dark) *dark = vrams[base | 1];
+	if(light) *light = vrams[0];
+	if(dark) *dark = vrams[1];
 }
 
 /* dgray_getscreen(): Get the current screen pointers */
 void dgray_getscreen(uint32_t **light, uint32_t **dark)
 {
-	int base = st ^ 2;
-
-	if(light) *light = vrams[base & 2];
-	if(dark) *dark = vrams[base | 1];
+	if(light) *light = vrams[0];
+	if(dark) *dark = vrams[1];
 }
