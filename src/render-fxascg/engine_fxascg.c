@@ -6,7 +6,6 @@
 #include <gint/drivers/r61524.h>
 #include <gint/gray.h>
 #include <gint/display.h>
-//#include <gint/timer.h>
 
 #include <stdlib.h>
 
@@ -20,19 +19,11 @@ GBSS static uint32_t gvrams[1][256];
 
 uint16_t *cg_vram_gray;
 
-/* Four VRAMs: two to draw and two to display */
+/* two VRAMs: two to draw and two to display */
 static uint32_t *vrams[2] = { NULL, NULL };
 
-/* Timer ID, always equal to GRAY_TIMER except if initialization fails */
-//static int timer = -1;
 /* Whether the engine is scheduled to run at the next frame */
 static int runs = 0;
-
-/* Underlying timer, set to count at P_phi/64 */
-//#define GRAY_TIMER 0
-//#define GRAY_CLOCK TIMER_Pphi_64
-/* Delays of the light and dark frames for the above setting */
-//GBSS static int delays[2];
 
 extern struct rendering_mode const *dmode;
 
@@ -248,10 +239,9 @@ int gupdate(void)
 	if(dmode == &gray_mode && !runs)
 	{
 		gray_start();
-		return 0;
 	}
 	/* At the last gupdate(), stop the engine */
-	if(dmode == &gray_exit_mode)
+	else if(dmode == &gray_exit_mode)
 	{
 		gray_stop();
 		dmode = NULL;
