@@ -274,6 +274,8 @@ set(SOURCES_FXASCG
   src/render-fxascg/engine_fxascg.c
   # R61524 driver as we are working with a CG50
   src/r61524/r61524.c
+  
+  src/usb/classes/ff-bulk-gray.c
 )
 
 set(ASSETS_FX

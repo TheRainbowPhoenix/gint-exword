@@ -44,12 +44,6 @@ extern usb_interface_t const usb_ff_bulk;
 // Sending standard messages
 //---
 
-/* usb_fxlink_text(): Send raw text
-   Send a string; fxlink will display it in the terminal. This can be used to
-   back stdout/stderr. Sending lots of small messages can be slow; if that's a
-   problem, fill in message manually. If size is 0, uses strlen(text). */
-void usb_fxlink_text(char const *text, int size);
-
 /* usb_fxlink_screenshot(): Take a screenshot
 
    This function sends a copy of the VRAM to fxlink. This is best used just
@@ -63,6 +57,27 @@ void usb_fxlink_text(char const *text, int size);
    display (it's usually slow and currently not even implemented). */
 void usb_fxlink_screenshot(bool onscreen);
 
+#if defined(FX9860G) || defined(FX9860G_AS_CG)
+/* usb_fxlink_screenshot_gray(): Take a gray screenshot on fx-9860G
+
+   This function is similar to usb_fxlink_screenshot(), but it takes a gray
+   screenshot. It depends on the gray engine so if you use your add-in will
+   automatically have the gray engine, that's why it's separate. */
+void usb_fxlink_screenshot_gray(bool onscreen);
+#endif
+
+/* usb_fxlink_text(): Send raw text
+
+   This function sends a string with the "text" type, which fxlink prints on
+   the terminal. It will send a full fxlink message (with a commit), which is
+   inefficient if there is a lot of text to send. For better speed, send the
+   message manually by filling the header and doing the writes and commit
+   manually.
+
+   This function sends the text by blocks of 4 bytes or 2 bytes when alignment
+   and size allow, and 1 byte otherwise. If size is 0, strlen(text) is used. */
+void usb_fxlink_text(char const *text, int size);
+
 /* usb_fxlink_videocapture(): Send a frame for a video recording
 
    This function is essentially the same as usb_fxlink_screenshot(). It sends a
@@ -74,12 +89,9 @@ void usb_fxlink_screenshot(bool onscreen);
    automatically send new frames to fxlink. */
 void usb_fxlink_videocapture(bool onscreen);
 
-#ifdef FX9860G
-/* Similar to usb_fxlink_screenshot(), but takes a gray screenshot if the gray
-   engine is currently running. */
-void usb_fxlink_screenshot_gray(bool onscreen);
-
-/* Like usb_fxlink_videocapture(), but uses VRAM data from the gray engine. */
+#if defined(FX9860G) || defined(FX9860G_AS_CG)
+/* usb_fxlink_videocapture_gray(): Send a gray frame for a video recording
+   Like usb_fxlink_videocapture(), but uses VRAM data from the gray engine. */
 void usb_fxlink_videocapture_gray(bool onscreen);
 #endif
 

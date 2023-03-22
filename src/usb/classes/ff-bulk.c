@@ -104,12 +104,12 @@ static void capture_vram(GUNUSED bool onscreen, char const *type)
 	void *source = gint_vram;
 	int size, format;
 
-	#ifdef FX9860G
+	#if defined(FX9860G) || defined(FX9860G_AS_CG)
 	size = 1024;
 	format = USB_FXLINK_IMAGE_MONO;
 	#endif
 
-	#ifdef FXCG50
+	#if defined(FXCG50) && !defined(FX9860G_AS_CG)
 	if(onscreen) {
 		uint16_t *main, *secondary;
 		dgetvram(&main, &secondary);

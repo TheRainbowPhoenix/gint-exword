@@ -1,4 +1,4 @@
-#ifdef FX9860G
+#if defined(FX9860G) || defined(FX9860G_AS_CG)
 
 #include <gint/usb.h>
 #include <gint/usb-ff-bulk.h>
