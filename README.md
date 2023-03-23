@@ -105,6 +105,22 @@ The available options are:
 % fxsdk build-cg install
 ```
 
+**"Cross-Building" a fx-9860G II project for fx-CG 50**
+
+fx-9860G II sources can be automatically converted to run on fx-CG 50, provided no
+low level function/specific hardware manipulation/or syscall is used by the program.
+
+The command is very similar to fx-9860G II one, except it is `fxsdk build-fx-as-cg`
+instead of `fxsdk build-fx`.
+
+The available options are:
+
+```
+% fxsdk build-fx-as-cg
+% fxsdk build-fx-as-cg install
+```
+
+
 ## Using in CMake-based add-ins
 
 Find the `Gint` module and link against `Gint::Gint`. gint declares the include
@@ -124,6 +140,10 @@ using the fxSDK, you will need to:
 * Build with `-ffreestanding -fstrict-volatile-bitfields`;
 * Link with `-T fx9860g.ld -lgint-fx -lopenlibm -lc` on fx-9860G;
 * Link with `-T fxcg50.ld -lgint-cg -lopenlibm -lc` on fx-CG 50.
+
+Manually building a fx-9860G project to run on a fx-CG50 can be done :
+* Build with `-m4-nofpu -mb -DFXCG50 -DFX9860G_AS_CG`;
+* Link with `-T fxcg50.ld -lgint-fxascg -lopenlibm -lc`.
 
 If you don't have a standard library such as
 [Memallox's port of newlib](/PlaneteCasio/libc), you also need `-nostdlib`. I
