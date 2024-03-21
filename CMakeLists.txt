@@ -312,14 +312,14 @@ if("${FXSDK_PLATFORM_LONG}" STREQUAL fxCG50)
     ${LINKER_SCRIPTS})
 endif()
 
-if("${FXSDK_PLATFORM_LONG}" STREQUAL fx9860G_AS_CG)
+if("${FXSDK_PLATFORM_LONG}" STREQUAL fx9860G_G3A)
   add_compile_options(-DFXCG50)  
   add_compile_definitions(FX9860G_AS_CG)
-  set(NAME "gint-fxascg")
+  set(NAME "gint-fxg3a")
   set(LINKER_SCRIPTS
     "${CMAKE_CURRENT_BINARY_DIR}/fxcg50.ld"
     "${CMAKE_CURRENT_BINARY_DIR}/fxcg50_fastload.ld")
-  add_library(gint-fxascg STATIC ${SOURCES_COMMON} ${SOURCES_FXASCG} ${ASSETS_FX}
+  add_library(gint-fxg3a STATIC ${SOURCES_COMMON} ${SOURCES_FXASCG} ${ASSETS_FX}
     ${LINKER_SCRIPTS})
 endif()
 

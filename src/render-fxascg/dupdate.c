@@ -2,7 +2,7 @@
 #include <gint/kmalloc.h>
 #include <gint/config.h>
 #include <gint/drivers/r61524.h>
-#include "../render-fx/render-fx.h"
+#include "../render/render.h"
 
 /* The destination VRAM for upscaling + centering + conversion B&W --> 16bits RGB565  */
 uint16_t *cg_vram; // set to 0 at initialisation
@@ -48,11 +48,11 @@ bool dvram_init( void )
 
 void dgetvram(uint16_t **ptr_vram_1, uint16_t **ptr_vram_2)
 {
-	if(ptr_vram_1) *ptr_vram_1 = &cg_vram;
-	if(ptr_vram_2) *ptr_vram_2 = &cg_vram;
+	if(ptr_vram_1) *ptr_vram_1 = cg_vram;
+	if(ptr_vram_2) *ptr_vram_2 = cg_vram;
 }
 
-inline drawupscale( int x, int y, int color )
+void drawupscale( int x, int y, int color )
 {
     int u=y*396*3;
     int v=x*3;

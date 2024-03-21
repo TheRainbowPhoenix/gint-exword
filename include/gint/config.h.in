@@ -20,7 +20,7 @@
 #if defined(FX9860G)
 # define GINT_HW_FX 1
 # define GINT_HW_CG 0
-#elif defined(FXCG50)
+#elif defined(FXCG50) || defined(FX9860G_AS_CG)
 # define GINT_HW_FX 0
 # define GINT_HW_CG 1
 #endif
@@ -57,6 +57,10 @@
 
 /* GINT_RENDER_DMODE: Selects whether the dmode override is available on
    rendering functions. */
-#define GINT_RENDER_DMODE GINT_HW_FX
+#if defined(FX9860G_AS_CG)
+# define GINT_RENDER_DMODE 1
+#else
+# define GINT_RENDER_DMODE GINT_HW_FX
+#endif
 
 #endif /* GINT_CONFIG */

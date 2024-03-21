@@ -6,9 +6,11 @@
 #include <gint/drivers/r61524.h>
 #include <gint/gray.h>
 #include <gint/display.h>
+#include <gint/kmalloc.h>
 
 #include <stdlib.h>
 
+#include "../render/render.h"
 #include "../render-fx/render-fx.h"
 
 /* Three additional video RAMS, allocated statically if --static-gray was set
@@ -63,7 +65,7 @@ static void gray_quit(void);
 static int gray_isinit(void)
 {
 	//return (vrams[0] && vrams[1] && vrams[2] && vrams[3] && timer >= 0);
-	return (vrams[0] && vrams[1] >= 0);
+	return (vrams[0] && vrams[1]);
 }
 
 
@@ -192,7 +194,7 @@ int dgray(int mode)
 }
 
 /* convert the gray scale into RGB565 and draw in the virutal VRAMthe 3x3 pixels upscaled and centered */
-inline gdrawupscale( int x, int y, int color_fx )
+void gdrawupscale( int x, int y, int color_fx )
 {
     int u=y*396*3;
     int v=x*3;
