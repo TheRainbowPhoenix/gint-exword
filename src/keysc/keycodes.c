@@ -21,3 +21,35 @@ int keycode_digit(int keycode)
 
 	return -1;
 }
+
+/* keycode_alpha(): Identify ASCII characters */
+uint8_t keycode_alpha(int keycode)
+{
+	const int Row = keycode >> 4;
+	const int Column = keycode & 0xf;
+
+	switch (Row)
+	{
+		case 6: return 'A' + Column - 1;
+		case 5: return 'G' + Column - 1;
+		case 4:
+			switch (Column)
+			{
+				case 1:
+				case 2:
+				case 3: return 'M' + Column - 1;
+				default: -1;
+			}
+		case 3: return 'P' + Column - 1;
+		case 2: return 'U' + Column - 1;
+		case 1:
+			switch (Column)
+			{
+				case 1: return 'Z';
+				case 2: return ' ';
+				case 3: return '\"';
+				default: return -1;
+			}
+		default: return -1;
+	}
+}

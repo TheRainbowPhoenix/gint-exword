@@ -332,6 +332,12 @@ int keycode_function(int keycode);
    returns 7 for KEY_7) and -1 for other keys. */
 int keycode_digit(int keycode);
 
+/* keycode_alpha(): Identify keys A .. Z, space, double quotes
+   This function returns the ASCII character associated with keycodes when
+   ALPHA modifier is active.
+   Other keycodes, including "r" and "θ", return -1 (255). */
+uint8_t keycode_alpha(int keycode);
+
 #ifdef __cplusplus
 }
 #endif
