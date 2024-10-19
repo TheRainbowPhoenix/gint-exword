@@ -90,10 +90,10 @@ void hw_detect(void)
 		gint[HWFS] = HWFS_CASIOWIN;
 	}
 
-	/* Detect RAM by checking if 8804'0000 is the same as 8800'0000. */
+	/* Detect RAM by checking if a804'0000 is the same as a800'0000. */
 
-	volatile uint8_t *R4 = (void *)0x88040000;
-	volatile uint8_t *R0 = (void *)0x88000000;
+	volatile uint8_t *R4 = (void *)0xa8040000;
+	volatile uint8_t *R0 = (void *)0xa8000000;
 
 	/* Make backups */
 	uint8_t b0 = *R0;
