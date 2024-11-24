@@ -18,4 +18,7 @@ void kinit(void);
 /* kquit(): Quit gint and give back control to the system */
 void kquit(void);
 
+/* Select the CASIOWIN API for syscalls. */
+void gint_set_CASIOWIN_API(int API);
+
 #endif /* GINT_CORE_KERNEL */

@@ -40,6 +40,9 @@ void *gint_stack_top = NULL;
 /* kinit(): Install and start gint */
 void kinit(void)
 {
+	/* Figure out which CASIOWIN API to use based on the OS type. */
+	gint_set_CASIOWIN_API(0);
+
 	#if GINT_HW_FX
 	/* On fx-9860G, VBR is loaded at the end of the user RAM. On SH4, the
 	   end of the user RAM hosts the stack, for which we leave 12 kB

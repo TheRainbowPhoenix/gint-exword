@@ -122,11 +122,6 @@ void gint_osmenu_native(void)
 	}
 	#endif
 
-	/* Mysteriously crashes when coming back; might be useful another time
-	   instead of GetKeyWait()
-	int C=0x04, R=0x09;
-	__SpecialMatrixCodeProcessing(&C, &R); */
-
 	__osmenu_id = __Timer_Install(0, __osmenu_handler, 0 /* ms */);
 	if(__osmenu_id <= 0) return;
 	__Timer_Start(__osmenu_id);
