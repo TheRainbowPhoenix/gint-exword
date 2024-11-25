@@ -13,7 +13,6 @@ int   __Timer_Deinstall(int id);
 int   __PutKeyCode(int row, int column, int keycode);
 int   __GetKeyWait(int *col,int *row,int type,int time,int menu,uint16_t *key);
 void  __ClearKeyBuffer(void); /* ? */
-void  __ConfigureStatusArea(int mode);
 void __SetQuitHandler(void (*callback)(void));
 
 #if !GINT_OS_CP
@@ -102,9 +101,6 @@ void gint_osmenu_native(void)
 	gint_copy_vram();
 
 	#if GINT_OS_CG
-	/* Unfortunately ineffective (main menu probably reenables it)
-	__ConfigureStatusArea(3); */
-
 	/* Try to use the internal function directly if we could figure out its
 	   address by dynamically disassembling */
 	os_menu_function_t *fun = find_os_menu_function();

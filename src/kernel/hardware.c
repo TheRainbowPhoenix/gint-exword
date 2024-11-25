@@ -11,6 +11,7 @@
 #include <gint/config.h>
 
 #include <string.h>
+#include "kernel.h"
 
 /* Holds information about the current platform */
 GBSS uint32_t gint[HW_KEYS];
