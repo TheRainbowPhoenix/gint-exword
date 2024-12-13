@@ -11,8 +11,4 @@ void gint_tlbh(void);
 void gint_inth_7705(void);
 void gint_inth_7305(void);
 
-/* Size of exception and TLB handlers */
-extern char gint_exch_size;
-extern char gint_tlbh_size;
-
 #endif /* GINT_CORE_VBR */

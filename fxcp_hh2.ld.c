@@ -68,12 +68,12 @@ SECTIONS
 		. = ALIGN(0x10);
 		_gint_exch_start = . ;
 		*(.gint.exch)
-		_gint_exch_size = ABSOLUTE(. - _gint_exch_start);
+		_gint_exch_end = . ;
 
 		. = ALIGN(0x10);
 		_gint_tlbh_start = . ;
 		*(.gint.tlbh)
-		_gint_tlbh_size = ABSOLUTE(. - _gint_tlbh_start);
+		_gint_tlbh_end = . ;
 
 		*(.text .text.*)
 	} > ram AT> bin

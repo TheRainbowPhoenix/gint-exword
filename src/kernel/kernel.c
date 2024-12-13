@@ -76,9 +76,15 @@ void kinit(void)
 	#endif
 
 	/* Event handler entry points */
+	extern uint32_t gint_exch_start;
+	extern uint32_t gint_exch_end;
+	extern uint32_t gint_tlbh_start;
+	extern uint32_t gint_tlbh_end;
 	void *inth_entry = isSH3() ? gint_inth_7705 : gint_inth_7305;
-	uint32_t exch_size = (uint32_t)&gint_exch_size;
-	uint32_t tlbh_size = (uint32_t)&gint_tlbh_size;
+	uint32_t exch_size = \
+		(uint32_t)&gint_exch_end - (uint32_t)&gint_exch_start;
+	uint32_t tlbh_size = \
+		(uint32_t)&gint_tlbh_end - (uint32_t)&gint_tlbh_start;
 
 	/* Load the event handler entry points into memory */
 	memcpy((void *)VBR + 0x100, gint_exch, exch_size);
