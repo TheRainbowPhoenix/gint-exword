@@ -12,6 +12,7 @@
 #define GINT_DEFS_CALL
 
 #include <stdbool.h>
+#include <gint/defs/attributes.h>
 
 #ifdef __cplusplus
 extern "C" {
