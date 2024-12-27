@@ -95,6 +95,11 @@ static os_menu_function_t *find_os_menu_function(void)
 
 void gint_osmenu_native(void)
 {
+#if GINT_OS_CG
+	if(gint[HWCALC] == HWCALC_FXCG100)
+		return;
+#endif
+
 // TODO: OS menu on fx-CP
 #if !GINT_OS_CP
 	__ClearKeyBuffer();

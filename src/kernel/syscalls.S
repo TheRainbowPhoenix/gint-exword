@@ -217,7 +217,7 @@ _gint_get_CASIOWIN_API:
 	.long 0x1dab, 0x8024003c  /* BFile_GetPos */
 	.long 0x1daf, 0x8024025e  /* BFile_Write */
 	.long 0x1dac, 0x80240082  /* BFile_Read */
-	.long 0x1db6, 0           /* BFile_FindFirst */
+	.long 0x1db6, 0x80240888  /* BFile_FindFirst */
 	.long 0x1db8, 0x80240b06  /* BFile_FindNext */
 	.long 0x1dba, 0x80240c10  /* BFile_FindClose */
 	.long 0x08d9, 0x800b130c  /* Timer_Install */
@@ -227,7 +227,7 @@ _gint_get_CASIOWIN_API:
 	.long 0x12c6, 0           /* PutKeyCode */
 	.long 0x12bf, 0x8017be56  /* GetKeyWait */
 	.long 0x12c7, 0           /* ClearKeyBuffer */
-	.long 0x01e6, 0           /* GetVRAMAddress */
+	.long 0x01e6, 0x8004579a  /* GetVRAMAddress */
 	.long 0x1e6e, 0           /* SetQuitHandler */
 	.long 0x1839, 0           /* PowerOff */
 	.long 0x1187, 0           /* Reset */

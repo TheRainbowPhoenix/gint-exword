@@ -118,16 +118,18 @@ void kinit(void)
 
 	/* Create an arena in the OS stack as well, for VRAM and more data */
 	#if GINT_HW_CG && !defined(GINT_NO_OS_STACK)
-	static kmalloc_arena_t os_stack = { 0 };
-	os_stack.name = "_ostk";
-	os_stack.is_default = true;
-	if(gint[HWCALC] == HWCALC_PRIZM || gint[HWCALC] == HWCALC_FXCG_MANAGER)
-		os_stack.start = (void *)0x880f0000;
-	else
-		os_stack.start = (void *)0x8c0f0000;
-	os_stack.end = os_stack.start + (350 * 1024);
-	kmalloc_init_arena(&os_stack, true);
-	kmalloc_add_arena(&os_stack);
+	if(gint[HWCALC] != HWCALC_FXCG100) {
+		static kmalloc_arena_t os_stack = { 0 };
+		os_stack.name = "_ostk";
+		os_stack.is_default = true;
+		if(gint[HWCALC] == HWCALC_PRIZM || gint[HWCALC] == HWCALC_FXCG_MANAGER)
+			os_stack.start = (void *)0x880f0000;
+		else
+			os_stack.start = (void *)0x8c0f0000;
+		os_stack.end = os_stack.start + (350 * 1024);
+		kmalloc_init_arena(&os_stack, true);
+		kmalloc_add_arena(&os_stack);
+	}
 	#endif
 
 	/* Allocate world buffers for the OS and for gint */

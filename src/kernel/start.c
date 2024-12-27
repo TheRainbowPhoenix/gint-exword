@@ -42,8 +42,9 @@ int8_t gint_restart = 0;
 /* gint_setrestart(): Set whether to restart the add-in after exiting */
 void gint_setrestart(int restart)
 {
-	/* There is now return-to-menu so no restart on CP */
-	gint_restart = restart && !GINT_OS_CP;
+	/* No restart on the machines for which there is no return-to-menu, i.e. on
+	   fx-CP and on the fx-CG 100. */
+	gint_restart = restart && !GINT_OS_CP && gint[HWCALC] != HWCALC_FXCG100;
 }
 
 /* Return value of main() */
