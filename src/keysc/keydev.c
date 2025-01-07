@@ -263,6 +263,14 @@ key_event_t keydev_unqueue_event(keydev_t *d)
 	if(!queue_poll(d, &ev))
 		return ev;
 
+	/* Compatibility combinations can transform the .key attribute */
+#if GINT_HW_CG
+	if(gint[HWCALC] == HWCALC_FXCG100) {
+		if(keydev_keydown(d, KEY_CATALOG) && ev.row == 6)
+			ev.key = KEY_F1 + (6 - ev.col);
+	}
+#endif
+
 	/* Update the event state accordingly */
 	int mask = 1 << ev.col;
 
