@@ -9,7 +9,6 @@
 extern "C" {
 #endif
 
-/* Raw matrix codes */
 enum {
 	KEY_F1		= 0x91,
 	KEY_F2		= 0x92,
@@ -87,7 +86,23 @@ enum {
 	KEY_EQUALS	= 0xa5,
 	KEY_CLEAR       = KEY_EXIT,
 
-	/* Key aliases (handle with care =D) */
+	/* Key codes for the CG-100 */
+	KEY_ON		= 0xa6,
+	KEY_HOME        = KEY_MENU,
+	KEY_PREVTAB     = 0xa7,
+	KEY_NEXTTAB     = 0xa8,
+	KEY_PAGEUP      = 0xa9,
+	KEY_PAGEDOWN    = 0xaa,
+	KEY_SETTINGS    = 0xab,
+	KEY_BACK        = KEY_EXIT,
+	KEY_OK          = 0xac,
+	KEY_CATALOG     = 0xad,
+	KEY_TOOLS       = KEY_OPTN,
+	KEY_FORMAT      = KEY_FD,
+	KEY_SQRT        = 0xae,
+	KEY_EXPFUN      = 0xaf,
+
+	/* Key aliases (deprecated--no more will be added) */
 	KEY_X2		= KEY_SQUARE,
 	KEY_CARET	= KEY_POWER,
 	KEY_SWITCH	= KEY_FD,

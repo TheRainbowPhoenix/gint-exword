@@ -114,16 +114,25 @@ extern "C" {
    * 0xffff is "just before" 0x0000, not "long after". */
 typedef struct
 {
-	uint time	:16;	/* Time of event, unique over short periods */
+	/* Time of event, unique over short periods */
+	u16 time;
 
 	uint		:2;	/* Reserved for future use */
-
 	uint mod	:1;	/* Whether modifiers are used */
 	uint shift	:1;	/* If mod=1, whether SHIFT was pressed */
 	uint alpha	:1;	/* If mod=1, whether ALPHA was pressed */
-
 	uint type	:3;	/* Type of key event */
-	uint key	:8;	/* Hit key */
+
+	/* Key that was pressed or released. */
+	u8 key;
+
+	// The following attributes will be union'd with touch info on the CP.
+
+	/* Matrix code: physical location of the key being it. */
+	u8 row, col;
+
+	/* Reserved for future use. */
+	uint :16;
 
 } GPACKED(4) key_event_t;
 

@@ -184,6 +184,8 @@ typedef struct {
 
 	/* Candidate key for repeats (or 0 if no key is candidate yet) */
 	int16_t rep_key;
+        /* Matrix code for rep_key, if rep_key is not 0. */
+        uint8_t rep_row, rep_col;
 	/* Number of repeats already sent */
 	int16_t rep_count;
 	/* Time since key was first pressed (us) */
