@@ -79,8 +79,16 @@ static void keycode_to_keymatrix(int keycode, int *row, int *col)
 			}
 		}
 	}
+
 	*row = keycode >> 4;
 	*col = 7 - (keycode & 7);
+
+	if(gint[HWCALC] == HWCALC_FXCG100 &&
+		(*row > 4 || (*row == 1 && *col == 3))) {
+		// key that doesn't exist
+		*row = 0;
+		*col = 1;
+	}
 }
 #endif
 
