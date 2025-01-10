@@ -40,8 +40,8 @@ void *gint_stack_top = NULL;
 /* kinit(): Install and start gint */
 void kinit(void)
 {
-    /* Figure out which CASIOWIN API to use based on the OS type. */
-    #if GINT_OS_CG
+	/* Figure out which CASIOWIN API to use based on the OS type. */
+	#if GINT_OS_CG
 	char *version = (void *)0x80020020;
 	if(!memcmp(version, "01.00", 5))
 		gint_set_CASIOWIN_API(1);
