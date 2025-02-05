@@ -33,7 +33,9 @@ static usb_dc_device_t dc_device = {
 	.bMaxPacketSize0      = 64,
 	.idVendor             = htole16(0x07cf), /* Casio Computer Co., Ltd. */
 	.idProduct            = htole16(ID_PRODUCT),
-	.bcdDevice            = htole16(0x0100),
+	/* CASIO sets bcdDevice to 0x0100. Use a different value so that Windows
+	   won't rely on cached registry entries and check for WCID support. */
+	.bcdDevice            = htole16(0x0177),
 	.iManufacturer        = 0,
 	.iProduct             = 0,
 	.iSerialNumber        = 0,
@@ -53,6 +55,65 @@ static usb_dc_string_t dc_string0 = {
 	.bLength              = 4,
 	.bDescriptorType      = USB_DC_STRING,
 	.data                 = { htole16(0x0409) }, /* English (US) */
+};
+
+struct MOS1_String_0xEE_Descriptor {
+	usb_dc_string_t dc;
+	u16 signature[7];
+	u8 bMS_VendorCode;
+	u8 bPad;
+};
+static struct MOS1_String_0xEE_Descriptor dc_string_ee = {
+	.dc = { .bLength = 18, .bDescriptorType = USB_DC_STRING },
+	.signature = { 0x4D00, 0x5300, 0x4600, 0x5400, 0x3100, 0x3000, 0x3000 },
+	.bMS_VendorCode = 0x7b, /* Arbitrarily-chosen value */
+	.bPad = 0,
+};
+
+struct MOS1_Extended_Compat_ID_Function_Section {
+	u8 bFirstInterfaceNumber;
+	u8 bReserved1;
+	u8 compatibleID[8];
+	u8 subcompatibleID[8];
+	u8 bReserved2[6];
+};
+struct MOS1_Extended_Compat_ID_Descriptor {
+	// 16 byte header
+	u32 dwLength;
+	u16 bcdVersion;
+	u16 wIndex;
+	u8 bCount;
+	u8 bReserved[7];
+
+	// hardcoded to size 1 for convenience here
+	struct MOS1_Extended_Compat_ID_Function_Section f;
+};
+static struct MOS1_Extended_Compat_ID_Descriptor dc_compatid = {
+	.dwLength = htole32(0x10 + 24 * 1),
+	.bcdVersion = htole16(0x0100),
+	.wIndex = htole16(0x0004),
+	.bCount = 1,
+	.f = {
+		.bFirstInterfaceNumber = 0,
+		.bReserved1 = 0x01,
+		.compatibleID = { 0x57, 0x49, 0x4e, 0x55, 0x53, 0x42, 0x00, 0x00 },
+		.subcompatibleID = { 0 },
+		.bReserved2 = { 0 },
+	},
+};
+
+struct MOS1_Extended_Properties_Descriptor {
+	// 10 byte header
+	u32 dwLength;
+	u16 bcdVersion;
+	u16 wIndex;
+	u16 wCount;
+};
+static struct MOS1_Extended_Properties_Descriptor dc_extprops = {
+	.dwLength = htole32(10),
+	.bcdVersion = htole16(0x0100),
+	.wIndex = htole16(0x0005),
+	.wCount = htole16(0),
 };
 
 GCONSTRUCTOR static void set_strings(void)
@@ -139,9 +200,37 @@ static void req_get_descriptor(int wValue, int wLength)
 
 	else if(type == USB_DC_STRING)
 	{
-		usb_dc_string_t *dc = usb_dc_string_get(num);
+		usb_dc_string_t *dc;
+		if(num == 0xee) {
+			dc = &dc_string_ee.dc;
+			USB_LOG("Selecting MOS1 string descriptor\n");
+		}
+		else
+			dc = usb_dc_string_get(num);
 		if(dc) dcp_write(dc, dc->bLength);
 		else USB.DCPCTR.PID = 2;
+	}
+}
+
+static void req_get_MOS_feature_descriptor(int wValue, int wIndex, int wLength)
+{
+	int intf = (wValue >> 8) & 0xff;
+	int page = (wValue & 0xff);
+
+	USB_LOG("GET_MS_DESCRIPTOR: i%d p%d #%d len:%d\n", intf, page, wIndex, wLength);
+
+	if(wIndex == 0x0004) {
+		/* Extended Compat ID descriptor */
+		dcp_write(&dc_compatid, wLength);
+		USB_LOG("Compat ID descriptor given\n");
+	}
+	else if(wIndex == 0x0005) {
+		/* Extended Properties descriptor */
+		dcp_write(&dc_extprops, wLength);
+		USB_LOG("Extended properties descriptor given\n");
+	}
+	else {
+		USB_LOG("Unknown MS descriptor!\n");
 	}
 }
 
@@ -156,6 +245,12 @@ static void req_set_configuration(int wValue)
 	USB_LOG("SET_CONFIGURATION: %d\n", wValue);
 	/* Ok for (wValue == 1) only */
 	USB.DCPCTR.PID = (wValue == 1) ? 1 : 2;
+}
+
+static void req_get_device_status(void)
+{
+	USB_LOG("GET_STATUS device -> 0x0001\n");
+	dcp_write("\x01\x00", 2);
 }
 
 void usb_req_setup(void)
@@ -180,6 +275,19 @@ void usb_req_setup(void)
 
 	else if(bmRequestType == 0x00 && bRequest == SET_CONFIGURATION)
 		req_set_configuration(wValue);
+
+	else if(bmRequestType == 0x80 && bRequest == GET_STATUS)
+		req_get_device_status();
+	// 0x81 / GET_STATUS : get intf status
+	// 0x82 / GET_STATUS : get endpoint status
+
+	// CESG502 initial 0x01 comm
+	// else if(bmRequestType == 0x41 && bRequest == 0x01)
+	// 	USB.DCPCTR.PID = 1;
+
+	else if((bmRequestType == 0xc0 || bmRequestType == 0xc1)
+		&& bRequest == 0x7b)
+		req_get_MOS_feature_descriptor(wValue, wIndex, wLength);
 
 	/* TODO: Other standard SETUP requests */
 	else USB_LOG("SETUP: bRequest=%02x bmRequestType=%02x wValue=%04x\n"
