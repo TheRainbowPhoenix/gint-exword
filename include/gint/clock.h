@@ -35,6 +35,7 @@ typedef struct
 	int Bphi_div;
 	int Iphi_div;
 	int Pphi_div;
+	int Sphi_div;
 
 	union {
 		int CKIO_f;
@@ -44,6 +45,7 @@ typedef struct
 	int Bphi_f;
 	int Iphi_f;
 	int Pphi_f;
+	int Sphi_f;
 
 } clock_frequency_t;
 
