@@ -38,7 +38,6 @@ The library also offers powerful higher-level features:
 
 A couple of libraries extend these features, including:
 
-* [libprof](/Lephenixnoir/libprof): Profiling and performance evaluation
 * [libimg](/Lephenixnoir/libimg): Versatile image transformations
 * [OpenLibm](/Lephenixnoir/OpenLibm): A port of the standard math library
   (actually needed by gint)

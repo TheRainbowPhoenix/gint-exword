@@ -148,6 +148,8 @@ set(SOURCES
   src/kmalloc/kmalloc.c
   # MMU driver
   src/mmu/mmu.c
+  # Profiling
+  src/prof/prof.c
   # R61523 display driver
   src/r61523/r61523.c
   # R61524 display driver
