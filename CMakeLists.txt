@@ -253,6 +253,8 @@ set(SOURCES
   src/usb/write4.S
   # Video driver interface
   src/video/video.c
+  # Profiling
+  src/prof/prof.c
 )
 
 set(ASSETS_FX src/font5x7.png src/gdb/icons-i1msb.png)
