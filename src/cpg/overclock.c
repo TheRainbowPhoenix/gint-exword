@@ -12,6 +12,7 @@
 #include <gint/clock.h>
 #include <gint/gint.h>
 #include <gint/hardware.h>
+#include <gint/drivers.h>
 #include <gint/mpu/cpg.h>
 #include <gint/mpu/bsc.h>
 #include <gint/mpu/wdt.h>
@@ -140,6 +141,17 @@ void cpg_set_overclock_setting(struct cpg_overclock_setting const *s)
     timer_rescale(old_Pphi, new_Pphi);
 
     cpu_atomic_end();
+}
+
+void cpg_set_overclock_permanent(bool permanent)
+{
+    extern gint_driver_t drv_cpg;
+    int i = &drv_cpg - gint_drivers;
+
+    if(permanent)
+        gint_driver_flags[i] |= GINT_DRV_SHARED;
+    else
+        gint_driver_flags[i] &= ~GINT_DRV_SHARED;
 }
 
 #if GINT_HW_FX

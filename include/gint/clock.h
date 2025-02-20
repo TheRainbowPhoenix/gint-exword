@@ -157,6 +157,11 @@ void cpg_get_overclock_setting(struct cpg_overclock_setting *s);
 /* Applies the specified overclock setting. */
 void cpg_set_overclock_setting(struct cpg_overclock_setting const *s);
 
+/* Sets whether or node CPG parameters are retained when world switching, i.e.
+   mostly whether overclock setting will remain while in the OS world and when
+   leaving the add-in. */
+void cpg_set_overclock_permanent(bool permanent);
+
 //---
 //	Sleep functions
 //---
