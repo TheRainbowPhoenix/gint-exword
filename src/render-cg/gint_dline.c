@@ -15,14 +15,19 @@ void gint_dhline(int x1, int x2, int y, int color)
 	int offset = DWIDTH * y;
 
 	/* Use longwords to do the copy, but first paint the endpoints to heed
-	   for odd x1 and x2. Checking the parity may be a waste of time. */
-    if (color != C_INVERT) {
-	    gint_vram[offset + x1] = color;
-	    gint_vram[offset + x2] = color;
-    } else {
-	    gint_vram[offset + x1] ^= 0xffff;
-	    gint_vram[offset + x2] ^= 0xffff;
-    }
+	   for odd x1 and x2. Checking the parity may be a waste of time for
+	   "real" color, but must be checked when C_INVERT in involved to
+	   avoid "cancelling" invert effect with potential overdraw of the
+	   next operation. */
+	if (color != C_INVERT) {
+		gint_vram[offset + x1] = color;
+		gint_vram[offset + x2] = color;
+	} else {
+		if (x1 & 1)
+			gint_vram[offset + x1] ^= 0xffff;
+		if (x2 & 1)
+			gint_vram[offset + x2] ^= 0xffff;
+	}
 
 	/* Now round to longword boundaries and copy everything in-between with
 	   longwords */
@@ -32,12 +37,12 @@ void gint_dhline(int x1, int x2, int y, int color)
 	uint32_t *start = (void *)(gint_vram + offset + x1);
 	uint32_t *end   = (void *)(gint_vram + offset + x2);
 
-    if (color != C_INVERT) {
-	    uint32_t op = (color << 16) | color;
-	    while(end > start) *--end = op;
-    } else {
-	    while(end > start) *--end ^= 0xffffffff;
-    }
+	if (color != C_INVERT) {
+		uint32_t op = (color << 16) | color;
+		while(end > start) *--end = op;
+	} else {
+		while(end > start) *--end ^= 0xffffffff;
+	}
 }
 
 /* gint_dvline(): Optimized vertical line */
@@ -51,11 +56,11 @@ void gint_dvline(int y1, int y2, int x, int color)
 	uint16_t *v = gint_vram + DWIDTH * y1 + x;
 	int height = y2 - y1 + 1;
 
-    if (color != C_INVERT) {
-	    while(height-- > 0) *v = color, v += DWIDTH;
-    } else {
-	    while(height-- > 0) *v ^= 0xffff, v += DWIDTH;
-    }
+	if (color != C_INVERT) {
+		while(height-- > 0) *v = color, v += DWIDTH;
+	} else {
+		while(height-- > 0) *v ^= 0xffff, v += DWIDTH;
+	}
 }
 
 #endif
