@@ -5,6 +5,8 @@
 #ifndef GINT_CORE_KERNEL
 #define GINT_CORE_KERNEL
 
+#include <gint/defs/types.h>
+
 /* gint_load_onchip_sections(): Initialize on-chip memory sections */
 void gint_load_onchip_sections(void);
 
@@ -13,7 +15,7 @@ void gint_load_onchip_sections(void);
 void gint_copy_vram(void);
 
 /* kinit(): Install and start gint */
-void kinit(void);
+void kinit(u32 *load_info);
 
 /* kquit(): Quit gint and give back control to the system */
 void kquit(void);

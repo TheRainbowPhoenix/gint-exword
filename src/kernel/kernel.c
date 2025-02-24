@@ -33,13 +33,17 @@ uint8_t *gint_driver_flags = NULL;
 /* Top of the stack */
 void *gint_stack_top = NULL;
 
+u32 *gint_load_info = NULL;
+
 //---
 //	Initialization and unloading
 //---
 
 /* kinit(): Install and start gint */
-void kinit(void)
+void kinit(u32 *load_info)
 {
+	gint_load_info = load_info;
+
 	/* Figure out which CASIOWIN API to use based on the OS type. */
 	#if GINT_OS_CG
 	char *version = (void *)0x80020020;
@@ -131,6 +135,33 @@ void kinit(void)
 		os_stack.end = os_stack.start + (350 * 1024);
 		kmalloc_init_arena(&os_stack, true);
 		kmalloc_add_arena(&os_stack);
+	}
+	#endif
+
+	/* Create arenas in locations provided by loader */
+	#if GINT_OS_CG
+	u32 load_arena_start = 0;
+	char const *names[4] = { "_ld1", "_ld2", "_ld3", "_ld4" };
+	int count = 0;
+	for(int i = 0; load_info && load_info[i] && count < 4; i += 2)
+	{
+		if(load_info[i] == 0x00000010)
+			load_arena_start = load_info[i+1];
+		else if(load_info[i] == 0x00000011 && load_arena_start)
+		{
+			u32 load_arena_end = load_info[i+1];
+			kmalloc_arena_t *arena = kmalloc(sizeof *arena, NULL);
+			if(arena)
+			{
+				arena->name = names[count];
+				arena->is_default = true;
+				arena->start = (void *)load_arena_start;
+				arena->end = (void *)load_arena_end;
+				kmalloc_init_arena(arena, true);
+				kmalloc_add_arena(arena);
+			}
+			load_arena_start = 0;
+		}
 	}
 	#endif
 

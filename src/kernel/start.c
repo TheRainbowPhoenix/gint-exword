@@ -109,7 +109,7 @@ void gint_load_onchip_sections(void)
 	}
 }
 
-static int start2(int isappli, int optnum)
+static int start2(int load_type, u32 *load_info)
 {
 	/* We are currently in a dynamic userspace mapping of an add-in run
 	   from the storage memory. We are running in privileged mode with one
@@ -174,8 +174,11 @@ static int start2(int isappli, int optnum)
 	}
 	#endif
 
-	/* Install gint, switch VBR and initialize drivers */
-	kinit();
+	/* Install gint, switch VBR and initialize drivers. If loading information
+	   was provided, pass it on. */
+	if(load_type == 0x4d504d30 /* 'MPM0' */ && !((u32)load_info & 3)) {}
+	else load_info = NULL;
+	kinit(load_info);
 
 	/* We are now running on our own in kernel mode. Since we have taken
 	   control of interrupts, pretty much any interaction with the system
@@ -190,9 +193,6 @@ static int start2(int isappli, int optnum)
 	   what it wants in exit() after main() finishes executing */
 	if(!setjmp(gint_exitbuf)) {
 		callarray(&bctors, &ectors);
-		// TODO: record isappli and optnum in globals
-		(void)isappli;
-		(void)optnum;
 		exit(main());
 	}
 	else {
@@ -211,11 +211,11 @@ static int start2(int isappli, int optnum)
 }
 
 GSECTION(".text.entry")
-int start(int isappli, int optnum)
+int start(int load_type, u32 *load_info)
 {
 	int rc;
 	while(1) {
-		rc = start2(isappli, optnum);
+		rc = start2(load_type, load_info);
 		if(!gint_restart) break;
 		gint_osmenu_native();
 	}
