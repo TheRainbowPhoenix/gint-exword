@@ -21,8 +21,8 @@
 // Low-level clock speed access
 //---
 
-#define SH7305_SDMR3_CL2 ((volatile uint8_t *)0xFEC15040)
-#define SH7305_SDMR3_CL3 ((volatile uint8_t *)0xFEC15060)
+#define SH7305_SDMR3_CL2 ((volatile uint16_t *)0xFEC15040)
+#define SH7305_SDMR3_CL3 ((volatile uint16_t *)0xFEC15060)
 
 //---
 // Predefined clock speeds
