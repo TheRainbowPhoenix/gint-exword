@@ -109,7 +109,6 @@ void r61523_win_set(int x1, int x2, int y1, int y2)
 void r61523_display(uint16_t *vram)
 {
     r61523_win_set(0, 319, 0, 527);
-
     select(44);
 
     int row_offset = 0;
@@ -122,6 +121,23 @@ void r61523_display(uint16_t *vram)
             *DISPLAY = *r5++;
 
         row_offset += 2 * 320;
+    }
+}
+
+void r61523_display_rect(
+    uint16_t *vram, int xmin, int xmax, int ymin, int ymax)
+{
+    // dma_transfer_wait(0);
+    r61523_win_set(xmin, xmax, ymin, ymax);
+    select(44);
+
+    vram += 320 * ymin + xmin;
+    uint16_t volatile *DISPLAY = (void *)0xb4000000;
+
+    for(int y = 0; y < ymax - ymin + 1; y++) {
+        for(int x = 0; x < xmax - xmin + 1; x++)
+            *DISPLAY = vram[x];
+        vram += 320;
     }
 }
 

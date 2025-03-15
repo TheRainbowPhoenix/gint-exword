@@ -16,6 +16,10 @@ extern "C" {
 /* r61523_display(): Update the entire display (320x528) */
 void r61523_display(uint16_t *vram);
 
+/* r61523_display_rect(): Update a rectangle (both bounds included). */
+void r61523_display_rect(
+    uint16_t *vram, int xmin, int xmax, int ymin, int ymax);
+
 /* r61523_win_set(): Set the display window */
 void r61523_win_set(int x1, int x2, int y1, int y2);
 
