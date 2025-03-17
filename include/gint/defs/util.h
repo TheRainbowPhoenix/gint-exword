@@ -47,4 +47,10 @@ using std::max;
 	(b) = _tmp;			\
 })
 
+/* abs() - absolute value of a variable (be careful of neg overflow) */
+#define abs(a) ({           \
+    GAUTOTYPE _a = (a);     \
+    (_a < 0) ? -(_a) : _a;  \
+})
+
 #endif /* GINT_DEFS_UTIL */
