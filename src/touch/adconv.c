@@ -1,6 +1,8 @@
 //---
 // gint:touchscreen:adconv  - 0x84 register data conversion
 //---
+#include <stdlib.h>
+
 #include <gint/defs/util.h>
 
 #include "./adconv.h"
@@ -11,6 +13,7 @@
 //---
 
 /* _adconv_check_dual() - check if it is dual or single */
+// fixme : atomic
 static int _adconv_check_dual(
     struct _touch_adconv *adconv,
     struct _touch_adraw *adraw

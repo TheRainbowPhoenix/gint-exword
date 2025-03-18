@@ -8,9 +8,6 @@
 // User API
 //---
 
-/* i2c_power_on() - power on the I2C peripheral and install handlers */
-extern void i2c_power_on(void);
-
 /* i2c_reg_select() - select a register */
 extern int i2c_reg_select(int reg);
 
@@ -121,4 +118,26 @@ typedef struct {
 
 #define SH7305_I2C  (*((volatile sh7305_i2c_t *)0xa4470000))
 
-#endif /* CLOVE_TOUCH_I2C_H */
+// state and world-switch
+
+#include <gint/drivers/states.h>
+
+/* i2c_configure() - driver/hardware configuration */
+extern void i2c_configure(void);
+
+/* i2c_hsave() - save hardware information */
+extern void i2c_hsave(touch_state_t *states);
+
+/* i2c_hrestore() - restore hardware information */
+extern void i2c_hrestore(touch_state_t *states);
+
+/* i2c_hpowered() - check if the module is powered */
+extern bool i2c_hpowered(void);
+
+/* i2c_hpoweron() - power on the module */
+extern void i2c_hpoweron(void);
+
+/* i2c_hpoweroff() - power off the module */
+extern void i2c_hpoweroff(void);
+
+#endif /* GINT_TOUCH_I2C_H */

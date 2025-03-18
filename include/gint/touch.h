@@ -10,7 +10,6 @@ extern "C" {
 
 /* touch_calib - tounch-screen calibration information */
 typedef struct {
-    int scan_freq_us;
     int x_mul;
     int x_div;
     int y_mul;

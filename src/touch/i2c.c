@@ -1,6 +1,8 @@
 //---
 // gint:touchscreen:i2c - I2C driver
 //---
+#include <string.h>
+
 #include <gint/defs/attributes.h>
 #include <gint/defs/types.h>
 #include <gint/defs/call.h>
@@ -74,47 +76,6 @@ static int _i2c_request_await(void)
 // Public
 //---
 
-/* i2c_power_on() - power on the I2C peripheral and install handlers */
-void i2c_power_on(void)
-{
-    volatile uint16_t *INTC_IPRH    = (void*)0xa408001c;
-    volatile uint8_t *INTC_IMCR7    = (void*)0xa40800dc;
-    volatile uint8_t *INTC_IMR7     = (void*)0xa408009c;
-    volatile uint16_t *PFC_PJCR     = (void*)0xa4050110;
-    volatile uint32_t *MSTPCR2      = (void*)0xa4150038;
-    extern void i2c_inth_tack(void);
-    extern void i2c_inth_wait(void);
-    extern void i2c_inth_trans(void);
-    extern void i2c_inth_al(void);
-
-    // force-mask I2C interrupts
-    *INTC_IPRH &= 0xfff0;
-    *INTC_IMR7 |= 0xf0;
-
-    // install I2C handler
-    intc_handler_function(0xe00, GINT_CALL(i2c_inth_al));
-    intc_handler_function(0xe20, GINT_CALL(i2c_inth_tack));
-    intc_handler_function(0xe40, GINT_CALL(i2c_inth_wait));
-    intc_handler_function(0xe60, GINT_CALL(i2c_inth_trans));
-
-    // power-on I2C module
-    *MSTPCR2 &= 0xfffff7ff;
-
-    // configure I2C PIN
-    *PFC_PJCR &= 0xf0ff;
-
-    // configure I2C module
-    SH7305_I2C.ICCR.byte &= 0x7f;
-    SH7305_I2C.ICSR.byte = 0x00;
-    SH7305_I2C.ICIC.byte = 0x00;
-
-    // Enable interrupt
-    *INTC_IPRH |= 1;
-    *INTC_IMCR7 |= 0xf0;
-}
-
-// user API
-
 /* i2c_reg_select() - select a register */
 int i2c_reg_select(int reg)
 {
@@ -183,4 +144,84 @@ int i2c_read_stream(void *buffer, size_t size)
     cpu_atomic_end();
     _i2c_hw_start_operation();
     return _i2c_request_await();
+}
+
+//---
+// Driver and state management
+//---
+
+#include <gint/mpu/power.h>
+#include <gint/mpu/pfc.h>
+#include <gint/mpu/intc.h>
+
+/* i2c_hpowered() - check if the module is powered */
+bool i2c_hpowered(void)
+{
+    return (SH7305_POWER.MSTPCR2.I2C == 0);
+}
+
+/* i2c_hpoweron() - power on the module */
+void i2c_hpoweron(void)
+{
+    SH7305_POWER.MSTPCR2.I2C = 0;
+    SH7305_I2C.ICCR.ICE = 0;
+    SH7305_I2C.ICDR = 0;
+}
+
+/* i2c_hpoweroff() - power on the module */
+void i2c_hpoweroff(void)
+{
+    SH7305_POWER.MSTPCR2.I2C = 1;
+}
+
+/* i2c_hsave() - save hardware information */
+void i2c_hsave(touch_state_t *state)
+{
+    state->PJCR = SH7305_PFC.PJCR.word;
+    state->ICCR = SH7305_I2C.ICCR.byte;
+    state->ICIC = SH7305_I2C.ICIC.byte;
+    state->ICCL = SH7305_I2C.ICCL;
+    state->ICCH = SH7305_I2C.ICCH;
+}
+
+/* i2c_hrestore() - restore hardware information */
+void i2c_hrestore(touch_state_t *state)
+{
+    SH7305_I2C.ICCH      = state->ICCH;
+    SH7305_I2C.ICCL      = state->ICCL;
+    SH7305_I2C.ICIC.byte = state->ICIC;
+    SH7305_I2C.ICCR.byte = state->ICCR;
+    SH7305_PFC.PJCR.word = state->PJCR;
+}
+
+/* i2c_configure() - configure and install interrupt handlers */
+void i2c_configure(void)
+{
+    extern void i2c_inth_tack(void);
+    extern void i2c_inth_wait(void);
+    extern void i2c_inth_trans(void);
+    extern void i2c_inth_al(void);
+
+    // install I2C handler
+    intc_handler_function(0xe00, GINT_CALL(i2c_inth_al));
+    intc_handler_function(0xe20, GINT_CALL(i2c_inth_tack));
+    intc_handler_function(0xe40, GINT_CALL(i2c_inth_wait));
+    intc_handler_function(0xe60, GINT_CALL(i2c_inth_trans));
+
+    // configure I2C PIN
+    SH7305_PFC.PJCR.P5MD = 0b00;
+    SH7305_PFC.PJCR.P4MD = 0b00;
+
+    // configure I2C module
+    SH7305_I2C.ICCR.byte &= 0x7f;
+    SH7305_I2C.ICSR.byte = 0x00;
+    SH7305_I2C.ICIC.byte = 0x00;
+
+    // init high-level driver information
+    memset((void*)&__i2c_request, 0x00, sizeof(struct i2c_request_info));
+    __i2c_request.status = I2C_REQ_STATUS_FINISHED;
+
+    // Enable interrupt
+    SH7305_INTC._->IPRH.I2C = 1;
+    SH7305_INTC.MSKCLR->IMR7 |= 0xf0;
 }
