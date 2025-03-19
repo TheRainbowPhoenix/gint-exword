@@ -140,4 +140,10 @@ extern void i2c_hpoweron(void);
 /* i2c_hpoweroff() - power off the module */
 extern void i2c_hpoweroff(void);
 
+/* i2c_funbin() - funbind from casio to gint */
+extern void i2c_funbin(void);
+
+/* i2c_unbin() - unbind from gint to casio */
+extern void i2c_unbin(void);
+
 #endif /* GINT_TOUCH_I2C_H */

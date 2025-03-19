@@ -129,6 +129,19 @@ static void _touch_hpoweroff(void)
     i2c_hpoweroff();
 }
 
+/* _touch_unbin() - unbind from gint to casio */
+static void _touch_unbin(void)
+{
+    i2c_unbin();
+}
+
+/* _touch_funbin() - funbind from casio to gint */
+static void _touch_funbin(void)
+{
+    i2c_funbin();
+}
+
+/* drv_touch - touch-screen driver declaration */
 gint_driver_t drv_touch = {
     .name       = "TOUCH",
     .configure  = _touch_configure,
@@ -137,6 +150,8 @@ gint_driver_t drv_touch = {
     .hpowered   = _touch_hpowered,
     .hpoweron   = _touch_hpoweron,
     .hpoweroff  = _touch_hpoweroff,
+    .unbind     = _touch_unbin,
+    .funbind    = _touch_funbin,
     .state_size = sizeof(touch_state_t),
 };
 GINT_DECLARE_DRIVER(16, drv_touch);

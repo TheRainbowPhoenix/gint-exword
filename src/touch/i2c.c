@@ -154,6 +154,7 @@ int i2c_read_stream(void *buffer, size_t size)
 #include <gint/mpu/pfc.h>
 #include <gint/mpu/intc.h>
 
+
 /* i2c_hpowered() - check if the module is powered */
 bool i2c_hpowered(void)
 {
@@ -166,6 +167,8 @@ void i2c_hpoweron(void)
     SH7305_POWER.MSTPCR2.I2C = 0;
     SH7305_I2C.ICCR.ICE = 0;
     SH7305_I2C.ICDR = 0;
+    SH7305_I2C.ICCL = 0x00;
+    SH7305_I2C.ICCH = 0x00;
 }
 
 /* i2c_hpoweroff() - power on the module */
@@ -213,7 +216,10 @@ void i2c_configure(void)
     SH7305_PFC.PJCR.P4MD = 0b00;
 
     // configure I2C module
-    SH7305_I2C.ICCR.byte &= 0x7f;
+    SH7305_I2C.ICCR.ICE  = 0;
+    SH7305_I2C.ICDR      = 0;
+    SH7305_I2C.ICCL      = 0x00;
+    SH7305_I2C.ICCH      = 0x00;
     SH7305_I2C.ICSR.byte = 0x00;
     SH7305_I2C.ICIC.byte = 0x00;
 
@@ -224,4 +230,25 @@ void i2c_configure(void)
     // Enable interrupt
     SH7305_INTC._->IPRH.I2C = 1;
     SH7305_INTC.MSKCLR->IMR7 |= 0xf0;
+}
+
+/* i2c_unbin() - unbind from gint to casio */
+void i2c_unbin(void)
+{
+    _i2c_request_await();
+}
+
+/* i2c_funbin() - funbind from casio to gint */
+void i2c_funbin(void)
+{
+    if (i2c_hpowered() == false)
+        return;
+    // fixme : avoid force terminate
+    //  We cannot easily know the state of Casio's driver since they use
+    //  an state machine to work, and finding the current state require a
+    //  lot of hardcoded OS-specific offsets information. So, for now,
+    //  force terminate the transaction and disable the module to avoid
+    //  any error
+    SH7305_I2C.ICCR.ICE = 0;
+    SH7305_I2C.ICDR = 0;
 }
