@@ -258,6 +258,7 @@ set(SOURCES
   src/touch/i2c_inth.c
   src/touch/adconv.c
   src/touch/touch.c
+  src/touch/driver.c
 )
 
 set(ASSETS_FX src/font5x7.png src/gdb/icons-i1msb.png)

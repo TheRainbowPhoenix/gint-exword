@@ -4,35 +4,45 @@
 #include <stdlib.h>
 
 #include <gint/defs/util.h>
+#include <gint/cpu.h>
 
 #include "./adconv.h"
 #include "./i2c.h"
+#include "./driver.h"
 
 //---
 // Internals
 //---
 
+/* __touch_drv_info - global driver information */
+extern struct _touch_drv_info __touch_drv_info;
+
 /* _adconv_check_dual() - check if it is dual or single */
-// fixme : atomic
 static int _adconv_check_dual(
     struct _touch_adconv *adconv,
     struct _touch_adraw *adraw
 ) {
-    static int _prev_type = 0;
+    extern struct _touch_drv_info __touch_drv_info;
+    bool is_dual;
     int x2;
     int y2;
     int z2;
     int val;
 
+    cpu_atomic_start();
     x2 = ((int)((uint)(adraw->x2) >> 6)) + ((adraw->x2 & 1) * -0x400);
     y2 = ((int)((uint)(adraw->y2) >> 6)) + ((adraw->y2 & 1) * -0x400);
     z2 = ((int)((uint)(adraw->z2) >> 4)) + ((adraw->z2 & 1) * -0x1000);
     adconv->x2 = x2;
     adconv->y2 = y2;
     adconv->z2 = z2;
-    val = (_prev_type == 0) ? 0x18 : 0x12;
-    _prev_type = ((abs(z2) >= val) || (max(abs(x2),abs(y2)) >= val));
-    return _prev_type;
+    val = __touch_drv_info.calibration.dual_sensi_entry;
+    if (__touch_drv_info.adinfo.prev_is_dual)
+        val = __touch_drv_info.calibration.dual_sensi_leave;
+    is_dual = ((abs(z2) >= val) || (max(abs(x2),abs(y2)) >= val));
+    __touch_drv_info.adinfo.prev_is_dual = is_dual;
+    cpu_atomic_end();
+    return is_dual;
 }
 
 //---
@@ -53,6 +63,9 @@ int touchscreen_adconv_get_raw(struct _touch_adraw *adraw)
         adraw->y2 = 0;
         adraw->z2 = 0;
         adraw->gh = 0;
+        cpu_atomic_start();
+        __touch_drv_info.adinfo.prev_is_dual = false;
+        cpu_atomic_end();
         return 0;
     }
     i2c_reg_read(0x84, adraw, 16);
@@ -83,6 +96,16 @@ int touchscreen_adconv_get_dots(
     struct _touch_adconv *adconv,
     int type
 ) {
+    int x_div;
+    int x_mul;
+    int y_div;
+    int y_mul;
+
+    cpu_atomic_start();
+    x_div = __touch_drv_info.calibration.x_div;
+    x_mul = __touch_drv_info.calibration.x_mul;
+    y_div = __touch_drv_info.calibration.y_div;
+    y_mul = __touch_drv_info.calibration.y_mul;
     switch (type)
     {
         case 0:
@@ -96,8 +119,8 @@ int touchscreen_adconv_get_dots(
             break;
         case 1:
             dots->type = TS_DOTS_TYPE_SINGLE;
-            dots->x1 = ((adconv->x1 - 0x1b8) * 0x100) / 0x9e5;
-            dots->y1 = ((adconv->y1 - 0x104) * 0x100) / 0x660;
+            dots->x1 = ((adconv->x1 - x_mul) * 0x100) / x_div;
+            dots->y1 = ((adconv->y1 - y_mul) * 0x100) / y_div;
             dots->z1 = adconv->z1;
             dots->x2 = 0;
             dots->y2 = 0;
@@ -105,13 +128,14 @@ int touchscreen_adconv_get_dots(
             break;
         case 2:
             dots->type = TS_DOTS_TYPE_DUAL;
-            dots->x1 = ((adconv->x1 - 0x1b8) * 0x100) / 0x9e5;
-            dots->y1 = ((adconv->y1 - 0x104) * 0x100) / 0x660;
+            dots->x1 = ((adconv->x1 - x_mul) * 0x100) / x_div;
+            dots->y1 = ((adconv->y1 - y_mul) * 0x100) / y_div;
             dots->z1 = adconv->z1;
-            dots->x2 = ((adconv->x2 - 0x1b8) * 0x100) / 0x9e5;
-            dots->y2 = ((adconv->y2 - 0x104) * 0x100) / 0x660;
+            dots->x2 = ((adconv->x2 - x_mul) * 0x100) / x_div;
+            dots->y2 = ((adconv->y2 - y_mul) * 0x100) / y_div;
             dots->z2 = adconv->z2;
             break;
     }
+    cpu_atomic_end();
     return type;
 }

@@ -128,22 +128,32 @@ typedef struct
 
 	// The following attributes will be union'd with touch info on the CP.
 
-	/* Matrix code: physical location of the key being it. */
-	u8 row, col;
-
-	/* Reserved for future use. */
-	uint :16;
+    union {
+        struct {
+            /* Matrix code: physical location of the key being it. */
+            u8 row;
+            u8 col;
+        };
+        struct {
+            /* X/Y touch-screen coordinate */
+            u16 x;
+            u16 y;
+        };
+    };
 
 } GPACKED(4) key_event_t;
 
 /* Keyboard event types, as in the [type] field of key_event_t */
 enum
 {
-	KEYEV_NONE   = 0,	/* No event available (poll() only) */
-	KEYEV_DOWN   = 1,	/* Key was pressed */
-	KEYEV_UP     = 2,	/* Key was released */
-	KEYEV_HOLD   = 3,	/* A key that was pressed has been held down */
-	KEYEV_OSMENU = 4,	/* We went to the main menu and back */
+    KEYEV_NONE          = 0, /* No event available (poll() only) */
+    KEYEV_DOWN          = 1, /* Key was pressed */
+    KEYEV_UP            = 2, /* Key was released */
+    KEYEV_HOLD          = 3, /* A key that was pressed has been held down */
+    KEYEV_OSMENU        = 4, /* We went to the main menu and back */
+    KEYEV_TOUCH_PRESSED = 5, /* Touch was detected */
+    KEYEV_TOUCH_DRAG    = 6, /* A touch that was detected has been held down */
+    KEYEV_TOUCH_RELEASE = 7, /* Touch was released */
 };
 
 /* Keyboard frequency analysis is a runtime setting since gint 2.4. This macro
