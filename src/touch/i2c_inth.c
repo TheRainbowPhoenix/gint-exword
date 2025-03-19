@@ -51,8 +51,8 @@ void i2c_inth_trans(void)
     switch (__i2c_request.state)
     {
         // start byte (writing or reading) and select the proper mode
-        // note that the "read stream" just change the internal state
-        // because the starting byte (0x81) is force-sended over there
+        // note that the "read stream" just changes the internal state
+        // because the starting byte (0x81) is force-sent over there
         case I2C_REQ_STATE_START:
             SH7305_I2C.ICIC.DTEE    = 0;
             SH7305_I2C.ICIC.WAITE   = 1;
@@ -73,8 +73,8 @@ void i2c_inth_trans(void)
             __i2c_request.state     = I2C_REQ_STATE_SWITCH_TO_RECEIVE_WAIT;
             break;
 
-        // for the read operation, the only things to do is the ACK at the
-        // end of the operation
+        // for the read operation, the only thing to do is to send the
+        // ACK at the end of the operation
         case I2C_REQ_STATE_READ:
             SH7305_I2C.ICIC.DTEE    = 0;
             if (_i2c_inth_io_operation(true) == 0)
@@ -105,9 +105,9 @@ void i2c_inth_wait(void)
         // note that if the "select register" request is performed (or if
         // no buffer is provided) then we send the stop condition (0x90)
         // and force-stop the module.
-        // Otherwise, we trigger a new request (0x94) manually to (after
-        // the restart interruption) switch from "reading" or "writing"
-        // mode
+        // Otherwise, we trigger a new request (0x94) to (after
+        // the restart interruption) switch manually from "reading" or
+        // "writing" mode
         case I2C_REQ_STATE_REG_SELECT_WAIT:
             if (
                    __i2c_request.mode == I2C_REQ_MODE_REG_SELECT
@@ -134,8 +134,8 @@ void i2c_inth_wait(void)
             break;
 
         // read operation
-        // can either be WAIT or DTE interruption, a special case is
-        // performed to avoid DTE interruption
+        // can either be WAIT or DTE interrupt, a special case is
+        // performed to avoid DTE interrupt
         case I2C_REQ_STATE_READ:
             if (__i2c_request.buffer_size_remaning > 1) {
                 if (SH7305_I2C.ICSR.DTE != 0)
