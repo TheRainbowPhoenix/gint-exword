@@ -1,5 +1,5 @@
 //---
-// gint:touchscreen:i2c - I2C driver
+// gint:touch:i2c - I2C driver
 //---
 #include <string.h>
 
@@ -45,14 +45,7 @@ static void _i2c_hw_start_operation(void)
     SH7305_I2C.ICIC.TACKE   = 1;
     SH7305_I2C.ICIC.WAITE   = 0;
     SH7305_I2C.ICIC.DTEE    = 1;
-
-    __auto_type iccr = SH7305_I2C.ICCR;
-    iccr.ICE     = 1;
-    iccr.RACK    = 0;
-    iccr.TRS     = 1;
-    iccr.BBSY    = 1;
-    iccr.SCP     = 0;
-    SH7305_I2C.ICCR = iccr;
+    SH7305_I2C.ICCR.byte    = 0x94;
 }
 
 /* i2c_request_await() - await async operation */
@@ -228,18 +221,20 @@ void i2c_configure(void)
     __i2c_request.status = I2C_REQ_STATUS_FINISHED;
 
     // Enable interrupt
-    SH7305_INTC._->IPRH.I2C = 1;
-    SH7305_INTC.MSKCLR->IMR7 |= 0xf0;
+    intc_priority(INTC_I2C_AL,   1);
+    intc_priority(INTC_I2C_TACK, 1);
+    intc_priority(INTC_I2C_WAIT, 1);
+    intc_priority(INTC_I2C_DTE,  1);
 }
 
-/* i2c_unbin() - unbind from gint to casio */
-void i2c_unbin(void)
+/* i2c_unbind() - unbind from gint to casio */
+void i2c_unbind(void)
 {
     _i2c_request_await();
 }
 
-/* i2c_funbin() - funbind from casio to gint */
-void i2c_funbin(void)
+/* i2c_funbind() - funbind from casio to gint */
+void i2c_funbind(void)
 {
     if (i2c_hpowered() == false)
         return;

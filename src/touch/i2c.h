@@ -66,61 +66,8 @@ extern volatile struct i2c_request_info __i2c_request;
 // Hardware information
 //---
 
-typedef struct {
-    // read/write register
-    uint8_t ICDR;
-    pad(3);
-
-    // control register
-    byte_union(ICCR,
-        uint8_t ICE     :1;
-        uint8_t RACK    :1;
-        uint8_t         :1;
-        uint8_t TRS     :1;
-        uint8_t         :1;
-        uint8_t BBSY    :1;
-        uint8_t         :1;
-        uint8_t SCP     :1;
-    );
-    pad(3);
-
-    // status register
-    byte_union(ICSR,
-        uint8_t SCLM    :1;
-        uint8_t SDAM    :1;
-        uint8_t         :1;
-        uint8_t BUSY    :1;
-        uint8_t AL      :1;
-        uint8_t TACK    :1;
-        uint8_t WAIT    :1;
-        uint8_t DTE     :1;
-    );
-    pad(3);
-
-    // interrupt control register
-    byte_union(ICIC,
-        uint8_t         :1;
-        uint8_t         :1;
-        uint8_t         :1;
-        uint8_t         :1;
-        uint8_t ALE     :1;
-        uint8_t TACKE   :1;
-        uint8_t WAITE   :1;
-        uint8_t DTEE    :1;
-    );
-    pad(3);
-
-    // clock control registers
-    uint8_t ICCL;
-    pad(3);
-    uint8_t ICCH;
-} GPACKED(1) sh7305_i2c_t;
-
-#define SH7305_I2C  (*((volatile sh7305_i2c_t *)0xa4470000))
-
-// state and world-switch
-
 #include <gint/drivers/states.h>
+#include <gint/mpu/i2c.h>
 
 /* i2c_configure() - driver/hardware configuration */
 extern void i2c_configure(void);
@@ -140,10 +87,10 @@ extern void i2c_hpoweron(void);
 /* i2c_hpoweroff() - power off the module */
 extern void i2c_hpoweroff(void);
 
-/* i2c_funbin() - funbind from casio to gint */
-extern void i2c_funbin(void);
+/* i2c_funbind() - funbind from casio to gint */
+extern void i2c_funbind(void);
 
-/* i2c_unbin() - unbind from gint to casio */
-extern void i2c_unbin(void);
+/* i2c_unbind() - unbind from gint to casio */
+extern void i2c_unbind(void);
 
 #endif /* GINT_TOUCH_I2C_H */

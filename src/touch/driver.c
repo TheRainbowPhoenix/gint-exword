@@ -27,9 +27,9 @@ static void _touch_configure(void)
     __touch_drv_info.prev_evt.type = KEYEV_NONE;
     __touch_drv_info.prev_evt.x = 0xffff;
     __touch_drv_info.prev_evt.y = 0xffff;
-    __touch_drv_info.calibration.x_mul = 0x20b;
+    __touch_drv_info.calibration.x_base = 0x20b;
     __touch_drv_info.calibration.x_div = 0x9b6;
-    __touch_drv_info.calibration.y_mul = 0x0f4;
+    __touch_drv_info.calibration.y_base = 0x0f4;
     __touch_drv_info.calibration.y_div = 0x66f;
     __touch_drv_info.calibration.dual_debounce_frame = 0;
     __touch_drv_info.calibration.dual_sensi_entry = 0x18;
@@ -72,16 +72,16 @@ static void _touch_hpoweroff(void)
     i2c_hpoweroff();
 }
 
-/* _touch_unbin() - unbind from gint to casio */
-static void _touch_unbin(void)
+/* _touch_unbind() - unbind from gint to casio */
+static void _touch_unbind(void)
 {
-    i2c_unbin();
+    i2c_unbind();
 }
 
-/* _touch_funbin() - funbind from casio to gint */
-static void _touch_funbin(void)
+/* _touch_funbind() - funbind from casio to gint */
+static void _touch_funbind(void)
 {
-    i2c_funbin();
+    i2c_funbind();
 }
 
 //---
@@ -100,8 +100,8 @@ gint_driver_t drv_touch = {
     .hpowered   = _touch_hpowered,
     .hpoweron   = _touch_hpoweron,
     .hpoweroff  = _touch_hpoweroff,
-    .unbind     = _touch_unbin,
-    .funbind    = _touch_funbin,
+    .unbind     = _touch_unbind,
+    .funbind    = _touch_funbind,
     .state_size = sizeof(touch_state_t),
 };
-GINT_DECLARE_DRIVER(16, drv_touch);
+GINT_DECLARE_DRIVER(24, drv_touch);

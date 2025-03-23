@@ -1,5 +1,5 @@
 //---
-// gint:touchscreen:i2c_inth - I2C interrupt handlers
+// gint:touch:i2c_inth - I2C interrupt handlers
 //---
 #include <gint/exc.h>
 

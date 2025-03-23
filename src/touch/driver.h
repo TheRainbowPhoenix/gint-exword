@@ -7,7 +7,7 @@
 /* _touch_drv_info() - internal driver information */
 struct _touch_drv_info
 {
-    touch_calib calibration;
+    touch_calibration_t calibration;
     key_event_t prev_evt;
     struct {
         bool prev_is_dual;

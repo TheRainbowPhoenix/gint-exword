@@ -57,18 +57,18 @@ struct _touch_addots
 // Public
 //---
 
-/* touchscreen_adconv_get_raw() - read 0x84 register using I2C */
-extern int touchscreen_adconv_get_raw(struct _touch_adraw *adraw);
+/* touch_adconv_get_raw() - read 0x84 register using I2C */
+extern int touch_adconv_get_raw(struct _touch_adraw *adraw);
 
-/* touchscreen_adconv_get_conv() - perform the raw conversion */
-extern int touchscreen_adconv_get_conv(
+/* touch_adconv_get_conv() - perform the raw conversion */
+extern int touch_adconv_get_conv(
     struct _touch_adconv *adconv,
     struct _touch_adraw *adraw,
     int type
 );
 
-/* touchscreen_adconv_get_dots() - generate dots information */
-extern int touchscreen_adconv_get_dots(
+/* touch_adconv_get_dots() - generate dots information */
+extern int touch_adconv_get_dots(
     struct _touch_addots *dots,
     struct _touch_adconv *adconv,
     int type

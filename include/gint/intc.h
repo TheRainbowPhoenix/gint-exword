@@ -52,6 +52,11 @@ enum {
 	INTC_SPU_DSP1,
 	/* USB communication */
 	INTC_USB,
+    /* I2C */
+    INTC_I2C_AL,
+    INTC_I2C_TACK,
+    INTC_I2C_WAIT,
+    INTC_I2C_DTE,
 };
 
 //---

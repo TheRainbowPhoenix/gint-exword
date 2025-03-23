@@ -1,5 +1,5 @@
 //---
-// gint:touchscreen:adconv  - 0x84 register data conversion
+// gint:touch:adconv  - 0x84 register data conversion
 //---
 #include <stdlib.h>
 
@@ -49,8 +49,8 @@ static int _adconv_check_dual(
 // Public
 //---
 
-/* touchscreen_adconv_get_raw() - read 0x84 register using I2C */
-int touchscreen_adconv_get_raw(struct _touch_adraw *adraw)
+/* touch_adconv_get_raw() - read 0x84 register using I2C */
+int touch_adconv_get_raw(struct _touch_adraw *adraw)
 {
     volatile uint8_t *IO_PRDR = (void*)0xa405013c;
 
@@ -72,8 +72,8 @@ int touchscreen_adconv_get_raw(struct _touch_adraw *adraw)
     return 1;
 }
 
-/* touchscreen_adconv_convert() - perform the raw conversion */
-int touchscreen_adconv_get_conv(
+/* touch_adconv_convert() - perform the raw conversion */
+int touch_adconv_get_conv(
     struct _touch_adconv *adconv,
     struct _touch_adraw *adraw,
     int type
@@ -90,22 +90,22 @@ int touchscreen_adconv_get_conv(
     return 2;
 }
 
-/* touchscreen_adconv_get_dots() - generate dots information */
-int touchscreen_adconv_get_dots(
+/* touch_adconv_get_dots() - generate dots information */
+int touch_adconv_get_dots(
     struct _touch_addots *dots,
     struct _touch_adconv *adconv,
     int type
 ) {
     int x_div;
-    int x_mul;
+    int x_base;
     int y_div;
-    int y_mul;
+    int y_base;
 
     cpu_atomic_start();
     x_div = __touch_drv_info.calibration.x_div;
-    x_mul = __touch_drv_info.calibration.x_mul;
+    x_base = __touch_drv_info.calibration.x_base;
     y_div = __touch_drv_info.calibration.y_div;
-    y_mul = __touch_drv_info.calibration.y_mul;
+    y_base = __touch_drv_info.calibration.y_base;
     switch (type)
     {
         case 0:
@@ -119,8 +119,8 @@ int touchscreen_adconv_get_dots(
             break;
         case 1:
             dots->type = TS_DOTS_TYPE_SINGLE;
-            dots->x1 = ((adconv->x1 - x_mul) * 0x100) / x_div;
-            dots->y1 = ((adconv->y1 - y_mul) * 0x100) / y_div;
+            dots->x1 = ((adconv->x1 - x_base) * 0x100) / x_div;
+            dots->y1 = ((adconv->y1 - y_base) * 0x100) / y_div;
             dots->z1 = adconv->z1;
             dots->x2 = 0;
             dots->y2 = 0;
@@ -128,11 +128,11 @@ int touchscreen_adconv_get_dots(
             break;
         case 2:
             dots->type = TS_DOTS_TYPE_DUAL;
-            dots->x1 = ((adconv->x1 - x_mul) * 0x100) / x_div;
-            dots->y1 = ((adconv->y1 - y_mul) * 0x100) / y_div;
+            dots->x1 = ((adconv->x1 - x_base) * 0x100) / x_div;
+            dots->y1 = ((adconv->y1 - y_base) * 0x100) / y_div;
             dots->z1 = adconv->z1;
-            dots->x2 = ((adconv->x2 - x_mul) * 0x100) / x_div;
-            dots->y2 = ((adconv->y2 - y_mul) * 0x100) / y_div;
+            dots->x2 = ((adconv->x2 - x_base) * 0x100) / x_div;
+            dots->y2 = ((adconv->y2 - y_base) * 0x100) / y_div;
             dots->z2 = adconv->z2;
             break;
     }
