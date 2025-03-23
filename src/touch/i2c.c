@@ -8,6 +8,9 @@
 #include <gint/defs/call.h>
 #include <gint/cpu.h>
 #include <gint/intc.h>
+#include <gint/config.h>
+
+#if GINT_HW_CP
 
 #include "./i2c.h"
 
@@ -247,3 +250,5 @@ void i2c_funbind(void)
     SH7305_I2C.ICCR.ICE = 0;
     SH7305_I2C.ICDR = 0;
 }
+
+#endif /* GINT_HW_CP */

@@ -5,6 +5,9 @@
 
 #include <gint/touch.h>
 #include <gint/cpu.h>
+#include <gint/config.h>
+
+#if GINT_HW_CP
 
 #include "./i2c.h"
 #include "./adconv.h"
@@ -88,3 +91,5 @@ key_event_t touch_next_event(void)
     cpu_atomic_end();
     return evt;
 }
+
+#endif /* GINT_HW_CP */

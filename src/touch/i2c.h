@@ -1,8 +1,15 @@
 #ifndef GINT_TOUCH_I2C_H
 #define GINT_TOUCH_I2C_H 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <gint/defs/attributes.h>
 #include <gint/defs/types.h>
+#include <gint/config.h>
+
+#if GINT_HW_CP
 
 //---
 // User API
@@ -92,5 +99,11 @@ extern void i2c_funbind(void);
 
 /* i2c_unbind() - unbind from gint to casio */
 extern void i2c_unbind(void);
+
+#endif /* GINT_HW_CP */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GINT_TOUCH_I2C_H */

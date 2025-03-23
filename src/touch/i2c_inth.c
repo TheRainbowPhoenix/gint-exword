@@ -2,6 +2,9 @@
 // gint:touch:i2c_inth - I2C interrupt handlers
 //---
 #include <gint/exc.h>
+#include <gint/config.h>
+
+#if GINT_HW_CP
 
 #include "./i2c.h"
 
@@ -164,3 +167,5 @@ void i2c_inth_al(void)
 {
     gint_panic(0x10e0);
 }
+
+#endif /* GINT_HW_CP */

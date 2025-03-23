@@ -5,6 +5,9 @@
 
 #include <gint/defs/util.h>
 #include <gint/cpu.h>
+#include <gint/config.h>
+
+#if GINT_HW_CP
 
 #include "./adconv.h"
 #include "./i2c.h"
@@ -139,3 +142,5 @@ int touch_adconv_get_dots(
     cpu_atomic_end();
     return type;
 }
+
+#endif /* GINT_HW_CP */

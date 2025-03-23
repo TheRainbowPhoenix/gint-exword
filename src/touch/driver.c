@@ -5,6 +5,9 @@
 
 #include <gint/drivers.h>
 #include <gint/drivers/states.h>
+#include <gint/config.h>
+
+#if GINT_HW_CP
 
 #include "./driver.h"
 #include "./i2c.h"
@@ -105,3 +108,5 @@ gint_driver_t drv_touch = {
     .state_size = sizeof(touch_state_t),
 };
 GINT_DECLARE_DRIVER(24, drv_touch);
+
+#endif /* GINT_HW_CP */

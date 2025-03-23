@@ -1,7 +1,14 @@
 #ifndef GINT_TOUCH_ADCONV_H
 #define GINT_TOUCH_ADCONV_H 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <gint/defs/types.h>
+#include <gint/config.h>
+
+#if GINT_HW_CP
 
 //---
 // Internals
@@ -73,5 +80,11 @@ extern int touch_adconv_get_dots(
     struct _touch_adconv *adconv,
     int type
 );
+
+#endif /* GINT_HW_CP */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GINT_TOUCH_ADCONV_H */
