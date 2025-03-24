@@ -80,6 +80,7 @@ GNORETURN static void gint_default_panic(GUNUSED uint32_t code)
 	if(code == 0x1060) name = "Memory init failed";
 	if(code == 0x1080) name = "Stack overflow";
 	if(code == 0x10a0) name = "UBC in bank 1 code";
+	// if(code == 0x10c0) name = "Missing syscall"; // not on FX
 
 	if(name[0]) dtext(1, 9, name);
 	else dprint(1, 9, "%03x", code);
@@ -121,6 +122,8 @@ GNORETURN static void gint_default_panic(GUNUSED uint32_t code)
 	if(code == 0x1060) name = "Memory initialization failed (heap)";
 	if(code == 0x1080) name = "Stack overflow during world switch";
 	if(code == 0x10a0) name = "UBC break in register bank 1 code";
+	if(code == 0x10c0) name = "Missing syscall for this OS version";
+	if(code == 0x10e0) name = "I2C (touch-screen) error";
 
 	dprint(6, 25, "%03x %s", code, name);
 
@@ -171,6 +174,11 @@ GNORETURN static void gint_default_panic(GUNUSED uint32_t code)
 		dprint(6, 160, "Opcodes: %04x %04x [%04x] %04x",
 			opcodes[-2], opcodes[-1], opcodes[0], opcodes[1]);
 	}
+    /* I2C exception error */
+    if (code == 0x10e0)
+    {
+        //todo
+    }
 	#endif
 
 	_WEAK_dupdate();

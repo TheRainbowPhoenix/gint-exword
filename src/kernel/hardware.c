@@ -11,6 +11,7 @@
 #include <gint/config.h>
 
 #include <string.h>
+#include "kernel.h"
 
 /* Holds information about the current platform */
 GBSS uint32_t gint[HW_KEYS];
@@ -90,10 +91,10 @@ void hw_detect(void)
 		gint[HWFS] = HWFS_CASIOWIN;
 	}
 
-	/* Detect RAM by checking if 8804'0000 is the same as 8800'0000. */
+	/* Detect RAM by checking if a804'0000 is the same as a800'0000. */
 
-	volatile uint8_t *R4 = (void *)0x88040000;
-	volatile uint8_t *R0 = (void *)0x88000000;
+	volatile uint8_t *R4 = (void *)0xa8040000;
+	volatile uint8_t *R0 = (void *)0xa8000000;
 
 	/* Make backups */
 	uint8_t b0 = *R0;
@@ -126,10 +127,28 @@ void hw_detect(void)
 	gint[HWCPUVR] = PVR;
 	gint[HWCPUPR] = PRR;
 
-	/* Tell Prizms apart from fx-CG 50 by checking the stack address*/
 	uint32_t stack;
 	__asm__("mov r15, %0" : "=r"(stack));
-	gint[HWCALC] = (stack < 0x8c000000) ? HWCALC_PRIZM : HWCALC_FXCG50;
+	char const *version = (void *)0x80020020;
+	char const *osdate = (void *)0x80b5ffe0;
+
+	/* Tell Prizms apart from fx-CG 50 by checking the stack address*/
+	if(stack < 0x8c000000) {
+		gint[HWCALC] = HWCALC_PRIZM;
+	}
+	/* Tell Math+/fx-CG 100 apart from CG-50 by checking OS version + date.
+	   CG-50 OS versions use OS 3. Math+, for some reason, rewinds back to OS 1
+	   and got updated to OS 2 in late 2024. We decide that we are on a CG-50 OS
+	   if the version is 3 and the date is 201x-2024. */
+	else {
+		/* All known CG-50 versions have date at this address due to the footer
+		   location. WARNING: not a future-proof address! */
+		char d0 = osdate[0], d1 = osdate[1], d2 = osdate[2], d3 = osdate[3];
+		bool cg50 = version[1] == '3' && d0 == '2' && d1 == '0' &&
+						(d2 == '1' || (d2 == '2' && d3 <= '4'));
+		gint[HWCALC] = cg50 ? HWCALC_FXCG50 : HWCALC_FXCG100;
+	}
+
 	gint[HWFS] = HWFS_FUGUE;
 
 	/* Tell the fx-CG emulator apart using the product ID */

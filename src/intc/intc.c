@@ -71,6 +71,11 @@ static struct info {
 	{ IPRC, 0x000f, IMR4, 0x08, _ },
 	/* USB */
 	{ IPRF, 0x00f0, IMR9, 0x02, _ /* Driver not SH3-compatible yet */ },
+    /* I2C */
+    { IPRH, 0x000f, IMR7, 0x10, _ },
+    { IPRH, 0x000f, IMR7, 0x20, _ },
+    { IPRH, 0x000f, IMR7, 0x40, _ },
+    { IPRH, 0x000f, IMR7, 0x80, _ },
 };
 
 /* Compact SH3 VBR-space scheme

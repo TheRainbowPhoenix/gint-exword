@@ -97,16 +97,15 @@ bool dvram_init(void)
 {
 	int const MARGIN = 32;
 
+	char const *arena = NULL;
+	if(kmalloc_get_arena("_ostk"))
+		arena = "_ostk";
+
 	/* Leave MARGIN bytes on each side of the region; this enables some
 	   important optimizations in the image renderer. We also add another
 	   32 bytes so we can manually 32-align the region */
-	uint32_t region = (uint32_t)kmalloc(DWIDTH*DHEIGHT*2 + MARGIN*2 + 32,
-#if !defined(GINT_NO_OS_STACK)
-		"_ostk"
-#else
-		NULL
-#endif
-	);
+	uint32_t region =
+		(uint32_t)kmalloc(DWIDTH*DHEIGHT*2 + MARGIN*2 + 32, arena);
 	if(region == 0)
 		return false;
 
