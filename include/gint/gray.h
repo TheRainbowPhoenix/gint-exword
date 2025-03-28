@@ -140,6 +140,43 @@ void dgray_setdelays(uint32_t light, uint32_t dark);
    @dark   Set to the current dark delay setting */
 void dgray_getdelays(uint32_t *light, uint32_t *dark);
 
+#define DGRAY_BORDER_DEFAULT  0xe71c /* C_RGB(28, 28, 28) */
+#define DGRAY_BLACK_DEFAULT   0x0000
+#define DGRAY_DARK_DEFAULT    0x528a
+#define DGRAY_LIGHT_DEFAULT   0xad55
+#define DGRAY_WHITE_DEFAULT   0xffff
+
+/* dgray_setborder(): Set the gray engine border color
+
+   When using the fxg3a compilation target, there is a border drawn around the
+   screen because the 128x64 screen is scaled to 384x192, yet the display is
+   396x224. This function allows changing the color used for the border. The
+   default color is DGRAY_BORDER_DEFAULT.
+
+   @border New gray engine border color (RGB565) */
+void dgray_setborder(const uint16_t border);
+
+/* dgray_setcolors(): Set the gray engine colors
+
+   When using the fxg3a compilation target, the gray engine is simulated using
+   colors. This function allows changing the colors used for the screen. The
+   default colors are: DGRAY_BLACK_DEFAULT, DGRAY_DARK_DEFAULT,
+   DGRAY_LIGHT_DEFAULT, DGRAY_WHITE_DEFAULT.
+
+   @black New gray engine black color (RGB565)
+   @dark  New gray engine dark color (RGB565)
+   @light New gray engine light color (RGB565)
+   @white New gray engine white color (RGB565) */
+void dgray_setcolors(const uint16_t black, const uint16_t dark,
+   const uint16_t light, const uint16_t white);
+
+/* dgray_resetcolors(): Reset border and all gray engine colors to defaults
+
+   When using the fxg3a compilation target, this function will reset the gray
+   engine border color and all gray engine screen colors to their default
+   values. */
+void dgray_resetcolors(void);
+
 //---
 //	VRAM management
 //---

@@ -81,6 +81,36 @@ void dupdate_set_hook(gint_call_t function);
 /* dupdate_get_hook(): Get a copy of the dupdate() hook */
 gint_call_t dupdate_get_hook(void);
 
+#define DMONO_BORDER_DEFAULT  0xe71c /* C_RGB(28, 28, 28) */
+#define DMONO_BLACK_DEFAULT   0x0000
+#define DMONO_WHITE_DEFAULT   0xffff
+
+/* dmono_setborder(): Set the mono border color
+
+   When using the fxg3a compilation target, there is a border drawn around the
+   screen because the 128x64 screen is scaled to 384x192, yet the display is
+   396x224. This function allows changing the color used for the border. The
+   default color is DMONO_BORDER_DEFAULT.
+
+   @border New mono border color (RGB565) */
+void dmono_setborder(const uint16_t border);
+
+/* dmono_setcolors(): Set the mono screen colors
+
+   When using the fxg3a compilation target, this function allows changing the
+   colors used for the screen. The default colors are:
+   DMONO_BLACK_DEFAULT, DMONO_WHITE_DEFAULT.
+
+   @black New mono black color (RGB565)
+   @white New mono white color (RGB565) */
+void dmono_setcolors(const uint16_t black, const uint16_t white);
+
+/* dmono_resetcolors(): Reset mono border and screen colors to defaults
+
+   When using the fxg3a compilation target, this function will reset the mono
+   border color and all screen colors to their default values. */
+void dmono_resetcolors(void);
+
 //---
 // Rendering mode control
 //---

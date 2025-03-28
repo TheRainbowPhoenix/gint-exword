@@ -264,6 +264,25 @@ int gupdate(void)
 	r61524_display_gray_128x64(vrams[0], vrams[1]);
 	return 0;
 }
+
+void dgray_setborder(const uint16_t border)
+{
+	r61524_set_gray_border_128x64(border);
+}
+
+void dgray_setcolors(const uint16_t black, const uint16_t dark,
+   const uint16_t light, const uint16_t white)
+{
+	r61524_set_gray_colors_128x64(black, dark, light, white);
+}
+
+void dgray_resetcolors(void)
+{
+	r61524_set_gray_border_128x64(DGRAY_BORDER_DEFAULT);
+	r61524_set_gray_colors_128x64(DGRAY_BLACK_DEFAULT, DGRAY_DARK_DEFAULT,
+	   DGRAY_LIGHT_DEFAULT, DGRAY_WHITE_DEFAULT);
+}
+
 #endif
 
 //---

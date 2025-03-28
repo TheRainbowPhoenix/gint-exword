@@ -49,13 +49,53 @@ void r61524_display(uint16_t *vram, int start, int height, int method);
 void r61524_display_rect(uint16_t *vram, int xmin, int xmax, int ymin,
    int ymax);
 
+/* r61524_set_mono_border_128x64(): Set mono border color
+
+   This function sets the border color for a 128x64 mono VRAM, used with
+   the fxg3a compilation target.
+
+   @border New mono VRAM border color (RGB565) */
+void r61524_set_mono_border_128x64(const uint16_t border);
+
+/* r61524_set_mono_colors_128x64(): Set mono colors
+
+   This function sets the colors for a 128x64 mono VRAM, used with the fxg3a
+   compilation target.
+
+   @black New mono VRAM black color (RGB565)
+   @white New mono VRAM white color (RGB565) */
+void r61524_set_mono_colors_128x64(const uint16_t black, const uint16_t white);
+
 /* r61524_display_mono_128x64(): Display a mono-style VRAM
+
    This experimental function updates the display with the contents of a 128x64
    VRAM, used with the fxg3a compilation target.
    TODO: Make that a video mode. */
 void r61524_display_mono_128x64(uint32_t *vram);
 
-/* r61524_display_mono_128x64(): Display a gray-style VRAM
+/* r61524_set_gray_border_128x64(): Set gray border color
+
+   This function sets the border color for a 128x64 gray VRAM, used with
+   the fxg3a compilation target.
+
+   @border New gray VRAM border color (RGB565) */
+void r61524_set_gray_border_128x64(const uint16_t border);
+
+/* r61524_set_gray_colors_128x64(): Set gray colors
+
+   This function sets the colors for a 128x64 gray VRAM, used with the fxg3a
+   compilation target.
+
+   @black New gray VRAM black color (RGB565)
+   @dark  New gray VRAM dark color (RGB565)
+   @light New gray VRAM light color (RGB565)
+   @white New gray VRAM white color (RGB565) */
+
+void r61524_set_gray_colors_128x64(const uint16_t black, const uint16_t dark,
+   const uint16_t light, const uint16_t white);
+
+/* r61524_display_gray_128x64(): Display a gray-style VRAM
+
    This experimental function updates the display with the contents of a 128x64
    gray VRAM pair, used with the fxg3a compilation target.
    TODO: Make that a video mode. */

@@ -56,4 +56,22 @@ void dupdate(void)
 __attribute__((alias("dupdate")))
 void _WEAK_dupdate(void);
 
+#if GINT_HW_CG
+void dmono_setborder(const uint16_t border)
+{
+	r61524_set_mono_border_128x64(border);
+}
+
+void dmono_setcolors(const uint16_t black, const uint16_t white)
+{
+	r61524_set_mono_colors_128x64(black, white);
+}
+
+void dmono_resetcolors(void)
+{
+	r61524_set_mono_border_128x64(DMONO_BORDER_DEFAULT);
+	r61524_set_mono_colors_128x64(DMONO_BLACK_DEFAULT, DMONO_WHITE_DEFAULT);
+}
+#endif
+
 #endif /* GINT_RENDER_MONO */

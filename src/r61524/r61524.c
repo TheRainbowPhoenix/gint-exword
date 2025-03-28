@@ -12,6 +12,8 @@
 #include <gint/video.h>
 #include <gint/image.h>
 #include <gint/config.h>
+#include <gint/display.h>
+#include <gint/gray.h>
 
 #if GINT_HW_CG
 
@@ -33,6 +35,24 @@
 static volatile uint16_t *DISPLAY = (void *)0xb4000000;
 /* Bit 4 of Port R controls the RS bit of the display driver */
 static volatile uint8_t *PRDR = (void *)0xa405013c;
+
+/* 128x64 mono VRAM border color */
+static uint16_t mono_border = DMONO_BORDER_DEFAULT;
+/* 128x64 mono VRAM screen colors
+   White is at index 0 rather than 1, because the LCD has a white background and
+   when pixels are on, they are black. When a bit is set the LCD driver turns on
+   a black pixel. Therefore, black is 1 and white is 0. */
+static uint16_t mono_colors[] = { DMONO_WHITE_DEFAULT, DMONO_BLACK_DEFAULT };
+
+/* 128x64 gray VRAM border color */
+static uint16_t gray_border = DGRAY_BORDER_DEFAULT;
+/* 128x64 gray VRAM gray engine colors */
+static uint16_t gray_colors[] = {
+	DGRAY_BLACK_DEFAULT,
+	DGRAY_DARK_DEFAULT,
+	DGRAY_LIGHT_DEFAULT,
+	DGRAY_WHITE_DEFAULT
+};
 
 /* Select a register */
 GINLINE static void select(uint16_t reg)
@@ -186,28 +206,37 @@ void r61524_display_rect(uint16_t *vram, int xmin, int xmax, int ymin,
 	}
 }
 
+void r61524_set_mono_border_128x64(const uint16_t border)
+{
+	mono_border = border;
+}
+
+void r61524_set_mono_colors_128x64(const uint16_t black, const uint16_t white)
+{
+	mono_colors[0] = white;
+	mono_colors[1] = black;
+}
+
 void r61524_display_mono_128x64(uint32_t *vram)
 {
 	dma_transfer_wait(0);
 	r61524_start_frame(0, 395, 0, 223);
 
-	int border = 0xe71c; /* C_RGB(28, 28, 28) */
-
 	for(int i = 0; i < 16 * 396; i++)
-		write(border);
+		write(mono_border);
 
 	for(int y = 0; y < 64; y++) {
 		/* sub-y position */
 		for(int sy = 0; sy < 3; sy++) {
 			for(int i = 0; i < 6; i++)
-				write(border);
+				write(mono_border);
 
 			/* longword-x position */
 			for(int lwx = 0; lwx < 4; lwx++) {
 				int32_t i = vram[lwx];
 				/* sub-x position */
 				for(int sx = 0; sx < 32; sx++) {
-					int color = ~(i >> 31);
+					const int color = mono_colors[(uint32_t)i >> 31];
 					i <<= 1;
 					write(color);
 					write(color);
@@ -216,13 +245,27 @@ void r61524_display_mono_128x64(uint32_t *vram)
 			}
 
 			for(int i = 0; i < 6; i++)
-				write(border);
+				write(mono_border);
 		}
 		vram += 4;
 	}
 
 	for(int i = 0; i < 16 * 396; i++)
-		write(border);
+		write(mono_border);
+}
+
+void r61524_set_gray_border_128x64(const uint16_t border)
+{
+	gray_border = border;
+}
+
+void r61524_set_gray_colors_128x64(const uint16_t black, const uint16_t dark,
+   const uint16_t light, const uint16_t white)
+{
+	gray_colors[0] = black;
+	gray_colors[1] = dark;
+	gray_colors[2] = light;
+	gray_colors[3] = white;
 }
 
 void r61524_display_gray_128x64(uint32_t *light, uint32_t *dark)
@@ -230,17 +273,14 @@ void r61524_display_gray_128x64(uint32_t *light, uint32_t *dark)
 	dma_transfer_wait(0);
 	r61524_start_frame(0, 395, 0, 223);
 
-	int border = 0xe71c; /* C_RGB(28, 28, 28) */
-	int colors[] = { 0x0000, 0x528a, 0xad55, 0xffff };
-
 	for(int i = 0; i < 16 * 396; i++)
-		write(border);
+		write(gray_border);
 
 	for(int y = 0; y < 64; y++) {
 		/* sub-y position */
 		for(int sy = 0; sy < 3; sy++) {
 			for(int i = 0; i < 6; i++)
-				write(border);
+				write(gray_border);
 
 			/* longword-x position */
 			for(int lwx = 0; lwx < 4; lwx++) {
@@ -248,7 +288,7 @@ void r61524_display_gray_128x64(uint32_t *light, uint32_t *dark)
 				int32_t id = dark[lwx];
 				/* sub-x position */
 				for(int sx = 0; sx < 32; sx++) {
-					int color = colors[(id >= 0) * 2 + (il >= 0)];
+					const int color = gray_colors[(id >= 0) * 2 + (il >= 0)];
 					il <<= 1;
 					id <<= 1;
 					write(color);
@@ -258,14 +298,14 @@ void r61524_display_gray_128x64(uint32_t *light, uint32_t *dark)
 			}
 
 			for(int i = 0; i < 6; i++)
-				write(border);
+				write(gray_border);
 		}
 		light += 4;
 		dark += 4;
 	}
 
 	for(int i = 0; i < 16 * 396; i++)
-		write(border);
+		write(gray_border);
 }
 
 static bool r61524_update(int x, int y, image_t const *fb, int flags)
