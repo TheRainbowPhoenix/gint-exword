@@ -81,6 +81,7 @@ GNORETURN static void gint_default_panic(GUNUSED uint32_t code)
 	if(code == 0x1080) name = "Stack overflow";
 	if(code == 0x10a0) name = "UBC in bank 1 code";
 	// if(code == 0x10c0) name = "Missing syscall"; // not on FX
+	if(code == 0x1100) name = "World-switch error";
 
 	if(name[0]) dtext(1, 9, name);
 	else dprint(1, 9, "%03x", code);
@@ -124,6 +125,7 @@ GNORETURN static void gint_default_panic(GUNUSED uint32_t code)
 	if(code == 0x10a0) name = "UBC break in register bank 1 code";
 	if(code == 0x10c0) name = "Missing syscall for this OS version";
 	if(code == 0x10e0) name = "I2C (touch-screen) error";
+	if(code == 0x1100) name = "World-switch error";
 
 	dprint(6, 25, "%03x %s", code, name);
 

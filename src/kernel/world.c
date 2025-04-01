@@ -3,6 +3,7 @@
 #include <gint/gint.h>
 #include <gint/exc.h>
 #include <gint/defs/call.h>
+#include <gint/defs/util.h>
 #include <gint/hardware.h>
 #include <gint/display.h>
 #include "kernel.h"
@@ -146,10 +147,58 @@ void gint_world_switch_out(gint_world_t world_addin, gint_world_t world_os)
 	cpu_atomic_end();
 }
 
+#ifndef WORLD_SWITCH_STACK_SIZE
+# define WORLD_SWITCH_STACK_SIZE 8
+#endif
+
+static struct {
+    u8 stack[WORLD_SWITCH_STACK_SIZE];
+    int idx;
+} world_switch_stack = {
+    .stack = { GINT_WORLD_ADDIN },
+    .idx = 0,
+};
+
+// FIXME: support CPU atomic operation
+void gint_world_enter(int world)
+{
+    GAUTOTYPE wss = &world_switch_stack;
+
+    if (world != GINT_WORLD_OS && world != GINT_WORLD_ADDIN)
+        gint_panic(0x1100);
+    if (wss->idx >= WORLD_SWITCH_STACK_SIZE)
+        gint_panic(0x1100);
+    if (world != wss->stack[wss->idx])
+    {
+        if (world == GINT_WORLD_OS)
+            gint_world_switch_out(gint_world_addin, gint_world_os);
+        if (world == GINT_WORLD_ADDIN)
+            gint_world_switch_in(gint_world_os, gint_world_addin);
+    }
+    wss->stack[++(wss->idx)] = world;
+}
+
+// FIXME: support CPU atomic operation
+void gint_world_leave(void)
+{
+    GAUTOTYPE wss = &world_switch_stack;
+
+    if (wss->idx == 0)
+        gint_panic(0x1100);
+    if (wss->stack[wss->idx - 0] != wss->stack[wss->idx - 1])
+    {
+        if (wss->stack[wss->idx] == GINT_WORLD_OS)
+            gint_world_switch_in(gint_world_os, gint_world_addin);
+        if (wss->stack[wss->idx] == GINT_WORLD_ADDIN)
+            gint_world_switch_out(gint_world_addin, gint_world_os);
+    }
+    wss->idx -= 1;
+}
+
 int gint_world_switch(gint_call_t call)
 {
 	extern void *gint_stack_top;
-	gint_world_switch_out(gint_world_addin, gint_world_os);
+    gint_world_enter(GINT_WORLD_OS);
 
 	void *ILRAM = (void *)0xe5200000;
 	void *XRAM  = (void *)0xe500e000;
@@ -194,7 +243,7 @@ int gint_world_switch(gint_call_t call)
 	if(canary && *canary != 0xb7c0ffee)
 		gint_panic(0x1080);
 
-	gint_world_switch_in(gint_world_os, gint_world_addin);
+	gint_world_leave();
 	return rc;
 }
 

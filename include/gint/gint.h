@@ -41,6 +41,15 @@ int gint_world_switch(gint_call_t function);
 __attribute__((deprecated("Use gint_world_switch() instead")))
 void gint_switch(void (*function)(void));
 
+#define GINT_WORLD_ADDIN    1
+#define GINT_WORLD_OS       0
+
+/* gint_world_enter(): Enter in a new world */
+void gint_world_enter(int world);
+
+/* gint_world_leave(): Leave a world set by gint_world_enter() */
+void gint_world_leave(void);
+
 /* gint_world_sync(): Synchronize asynchronous drivers
 
    This function waits for asynchronous tasks to complete by unbinding all
