@@ -9,10 +9,13 @@ ssize_t write(int fd, const void *buf, size_t size)
 		errno = EBADF;
 		return (ssize_t)-1;
 	}
-
-	if(d->type->write)
-		return d->type->write(d->data, buf, size);
-
 	/* No write function: discard the contents but show no error */
-	return size;
+	if(d->type->write == NULL)
+        return 0;
+    /* A special synchronisation must be performed to ensure that all
+     * Fygue's descriptor meta information are valid */
+    size = d->type->write(d->data, buf, size);
+    if (fs_descriptor_is_fugue(d))
+        fs_fygue_sync();
+    return size;
 }

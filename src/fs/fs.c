@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <stdlib.h>
+#include "fugue/fugue.h"
+#include "fygue/fygue.h"
 
 /* File descriptor table */
 static fs_descriptor_t *fdtable;
@@ -40,6 +42,36 @@ void fs_free_descriptor(int fd)
 
 	fdtable[fd].type = NULL;
 	fdtable[fd].data = NULL;
+}
+
+//---
+// Utils
+//---
+
+bool fs_descriptor_is_fugue(fs_descriptor_t const *desc)
+{
+    return (
+        (desc->type == &fugue_dir_descriptor_type) ||
+        (desc->type == &fugue_descriptor_type)
+    );
+}
+
+bool fs_descriptor_is_fygue(fs_descriptor_t const *desc)
+{
+    return (
+        (desc->type == &fygue_dir_descriptor_type) ||
+        (desc->type == &fygue_descriptor_type)
+    );
+}
+
+void fs_fygue_sync(void)
+{
+    for (int i = 3 ; i < FS_FD_MAX ; i++) {
+        if (fdtable[i].type == NULL)
+            continue;
+        if (fs_descriptor_is_fygue(fdtable[i].data))
+            fygue_syncfs(fdtable[i].data);
+    }
 }
 
 int open_generic(fs_descriptor_type_t const *type, void *data, int fd)

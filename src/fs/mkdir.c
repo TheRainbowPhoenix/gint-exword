@@ -4,5 +4,7 @@
 int mkdir(char const *path, mode_t mode)
 {
 	/* Standard mkdir() is the Fugue filesystem only */
-	return fugue_mkdir(path, mode);
+	int rc = fugue_mkdir(path, mode);
+    fs_fygue_sync();
+    return rc;
 }

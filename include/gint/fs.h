@@ -9,6 +9,7 @@
 extern "C" {
 #endif
 
+#include <gint/defs/types.h>
 #include <sys/types.h>
 #include <stddef.h>
 
@@ -99,6 +100,19 @@ char *fs_path_normalize(char const *path);
    string that starts with \\fls0\ rather than /, and can be used in direct
    calls to BFile. */
 uint16_t *fs_path_normalize_fc(char const *path);
+
+/* return True if the provided descriptor is a directory one */
+bool fs_descriptor_is_dir(fs_descriptor_t const *data);
+
+/* return True if the provided descriptor is a Fugue one */
+bool fs_descriptor_is_fugue(fs_descriptor_t const *data);
+
+/* return True if the provided descriptor is a Fygue one */
+bool fs_descriptor_is_fygue(fs_descriptor_t const *data);
+
+/* workaround to keep Fygue filesystem sync */
+//TODO: (re?)move me
+void fs_fygue_sync(void);
 
 #ifdef __cplusplus
 }

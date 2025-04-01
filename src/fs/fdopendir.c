@@ -11,7 +11,7 @@ DIR *fdopendir(int fd)
 		errno = EBADF;
 		return NULL;
 	}
-	if(desc->type != &fugue_dir_descriptor_type) {
+	if(!fs_descriptor_is_dir(desc)) {
 		errno = ENOTDIR;
 		return NULL;
 	}

@@ -31,7 +31,6 @@ int fugue_mkdir(char const *path, mode_t mode);
 
 int fugue_rmdir(char const *path);
 
-int fugue_stat(char const * restrict path, struct stat * restrict statbuf);
 
 /* Other functions */
 

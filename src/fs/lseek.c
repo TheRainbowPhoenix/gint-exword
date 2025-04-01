@@ -15,9 +15,13 @@ off_t lseek(int fd, off_t offset, int whence)
 		return (ssize_t)-1;
 	}
 
-	if(d->type->lseek)
-		return d->type->lseek(d->data, offset, whence);
-
 	/* No seek function: cannot seek */
-	return 0;
+	if(d->type->lseek == NULL)
+        return 0;
+    /* BFile_Seek() can flush pending IO write operations. Sync Fygue's
+     * descriptor to avoid data corruption */
+    off_t off = d->type->lseek(d->data, offset, whence);
+    if (fs_descriptor_is_fugue(d))
+        fs_fygue_sync();
+    return off;
 }
