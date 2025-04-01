@@ -1,6 +1,7 @@
 #include <gint/hardware.h>
 #include <gint/bfile.h>
 #include <gint/fs.h>
+#include <gint/gint.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include "util.h"
@@ -14,6 +15,8 @@ int fugue_unlink(char const *path)
 		errno = ENOMEM;
 		return -1;
 	}
+
+    gint_world_enter(GINT_WORLD_OS);
 
 	int type, size, rc;
 	rc = BFile_Ext_Stat(fcpath, &type, &size);
@@ -36,6 +39,7 @@ int fugue_unlink(char const *path)
 	else rc = 0;
 
 end:
+    gint_world_leave();
 	free(fcpath);
 	return rc;
 }

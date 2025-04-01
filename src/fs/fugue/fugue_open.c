@@ -1,5 +1,6 @@
 #include <gint/fs.h>
 #include <gint/bfile.h>
+#include <gint/gint.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
@@ -31,6 +32,8 @@ int fugue_open(char const *path, int flags, GUNUSED mode_t mode)
 	bool excl = (flags & O_EXCL) && (flags & O_CREAT);
 	/* Truncation requires the file to be removed/recreated */
 	bool trunc = (flags & O_TRUNC) && (flags & O_CREAT);
+
+    gint_world_enter(GINT_WORLD_OS);
 
 	/* Stat the entry. A special case is needed for the root, which doesn't
 	   respond well. fs_path_normalize_fc() normalizes the path so we just
@@ -142,6 +145,7 @@ int fugue_open(char const *path, int flags, GUNUSED mode_t mode)
 	}
 
 end:
+    gint_world_leave();
 	free(fcpath);
 	return rc;
 }

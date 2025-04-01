@@ -1,6 +1,7 @@
 #include <gint/hardware.h>
 #include <gint/bfile.h>
 #include <gint/fs.h>
+#include <gint/gint.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include "util.h"
@@ -24,12 +25,15 @@ int fugue_rename(char const *oldpath, char const *newpath)
 		goto end;
 	}
 
+    gint_world_enter(GINT_WORLD_OS);
 	rc = BFile_Rename(fcpath_1, fcpath_2);
 	if(rc < 0) {
 		errno = bfile_error_to_errno(rc);
 		rc = -1;
-	}
-	else rc = 0;
+	} else {
+        rc = 0;
+    }
+    gint_world_leave();
 
 end:
 	free(fcpath_1);

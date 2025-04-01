@@ -1,6 +1,7 @@
 #include <gint/hardware.h>
 #include <gint/bfile.h>
 #include <gint/fs.h>
+#include <gint/gint.h>
 #include <errno.h>
 #include <dirent.h>
 #include <string.h>
@@ -39,12 +40,15 @@ int fugue_rmdir(char const *path)
 		return -1;
 	}
 
+    gint_world_enter(GINT_WORLD_OS);
 	int rc = BFile_Remove(fcpath);
 	if(rc < 0) {
 		errno = bfile_error_to_errno(rc);
 		rc = -1;
-	}
-	else rc = 0;
+	} else {
+        rc = 0;
+    }
+    gint_world_leave();
 
 	free(fcpath);
 	return rc;
