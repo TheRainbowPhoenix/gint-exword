@@ -22,10 +22,10 @@ int open(char const *path, int flags, ...)
      * descriptor because when some flags are set (e.g O_CREATE) Fygue
      * invoke BFile_*() syscall that perform IO operation.
      *
-     * Note that Fygue's open() primitive with perform a "lazy" open operation
-     * by simply ensure that the file exists and mark the file descriptor as
-     * dirty to force internal data refresh on the next Fygue's IO
-     * operation */
+     * Note that Fygue's open() primitive with perform a "lazy" open
+     * operation by simply ensure that the file exists and mark the file
+     * descriptor as dirty to force internal data refresh on the next
+     * Fygue's IO operation */
     fs_fygue_sync();
     return rc;
 }

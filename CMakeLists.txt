@@ -259,6 +259,17 @@ set(SOURCES
   src/touch/adconv.c
   src/touch/touch.c
   src/touch/driver.c
+  # Fygue filesystem
+  src/fs/fygue/fygue.c
+  src/fs/fygue/fygue_open.c
+  src/fs/fygue/fygue_syncfs.c
+  src/fs/fygue/fat/cluster.c
+  src/fs/fygue/fat/initialize.c
+  src/fs/fygue/fat/readdir.c
+  src/fs/fygue/fat/resolve.c
+  src/fs/fygue/fat/sector.c
+  src/fs/fygue/flash/cluster.c
+  src/fs/fygue/flash/cmap.c
 )
 
 set(ASSETS_FX src/font5x7.png src/gdb/icons-i1msb.png)
