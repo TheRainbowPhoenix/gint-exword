@@ -3,7 +3,7 @@
 int fygue_syncfs(void *data)
 {
     struct fygue_fsinfo *fsinfo;
-    struct fygue_file_descriptor *descriptor;
+    struct fygue_descriptor *descriptor;
 
     if (data == NULL)
         return -1;

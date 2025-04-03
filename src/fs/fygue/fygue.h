@@ -62,27 +62,41 @@ struct fygue_fsinfo
     bool dirty;
 };
 
-/* fygue_stat: internals file information */
-struct fygue_stat {
-    int type;
+/* fygue_resolve: internals file information */
+struct fygue_resolve {
+    enum {
+        FYGUE_FILE_TYPE_FILE,
+        FYGUE_FILE_TYPE_DIR,
+    } type;
     union {
         struct {
-            int file;
-        };
+            off_t cursor;
+            struct fygue_fat_file fat;
+        } file;
         struct {
-            int dir;
-        };
+            struct fygue_fat_dir fat;
+        } dir;
     };
 };
 
-/* fygue_file_descriptor: internal file descriptor information */
-struct fygue_file_descriptor
+/* fygue_descriptor: internal file descriptor information */
+struct fygue_descriptor
 {
+    struct fygue_resolve resolve;
+    char const *path;
+    int flags;
     bool dirty;
 };
 
 /* fygue_mount(): mount and return the filesystem info */
 extern int fygue_mount(struct fygue_fsinfo **fsinfo, bool refresh);
+
+
+/* fygue_resolve() - try to resolve path */
+extern int fygue_resolve(
+    char const * const path,
+    struct fygue_resolve *resolve
+);
 
 #ifdef __cplusplus
 }

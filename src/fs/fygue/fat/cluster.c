@@ -7,8 +7,8 @@
 // Public
 //---
 
-/* fygue_fat_cluster_next() - find the next cluster ID of a file */
-int fygue_fat_cluster_next(struct fygue_fat *fat, int *cluster_current)
+/* fygue_fat_cluster_get_next() - find the next cluster ID of a file */
+int fygue_fat_cluster_get_next(struct fygue_fat *fat, int *cluster_current)
 {
     uint16_t *fat0;
     int cluster;

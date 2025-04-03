@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "fygue.h"
 
 //---
@@ -45,23 +46,35 @@ int fygue_mount(struct fygue_fsinfo **fsinfo, bool refresh)
  *   - assume that path is clean
  *   - automatically mount the filesystem if needed
  *   - the saved pathname will not be saved in stat */
-int fygue_resolve(
-    char const * const path,
-    int *type,
-    struct fygue_stat *stat
-) {
+int fygue_resolve(char const * const path, struct fygue_resolve *resolve)
+{
     struct fygue_fsinfo *fsinfo;
-    struct fygue_fat_dirent dirent;
+    struct fygue_fat_resolve fat_resolve;
 
-    if (path == NULL || path[0] != '\\')
+    if (path == NULL || path[0] != '/' || resolve == NULL)
         return -1;
     if (fygue_mount(&fsinfo, true) != 0)
         return -2;
-    if (fygue_fat_resolve(&(fsinfo->fat), path, &dirent) != 0)
-        return -3;
-    (void)type;
-    (void)stat;
-    // todo: convert FAT dirent into Fygue stat
+    int rc = fygue_fat_resolve(&(fsinfo->fat), path, &fat_resolve);
+    if (rc < 0)
+        return rc;
+    if (fat_resolve.type == FYGUE_FAT_FILE_TYPE_FILE)
+    {
+        resolve->type = FYGUE_FILE_TYPE_DIR;
+        resolve->file.cursor = 0;
+        memcpy(
+            &(resolve->file.fat),
+            &(fat_resolve.file),
+            sizeof(struct fygue_fat_file)
+        );
+    } else {
+        resolve->type = FYGUE_FILE_TYPE_DIR;
+        memcpy(
+            &(resolve->dir.fat),
+            &(fat_resolve.dir),
+            sizeof(struct fygue_fat_dir)
+        );
+    }
     return 0;
 }
 

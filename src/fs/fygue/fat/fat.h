@@ -52,7 +52,6 @@ struct fygue_fat_dirent
     unsigned int cluster_id;
 };
 
-
 /* fygue_fat_dir - fygue directory information */
 struct fygue_fat_dir
 {
@@ -67,6 +66,25 @@ struct fygue_fat_dir
     bool dirty;
 };
 
+/* fygue_fat_file: file information needed to perform IO primitives */
+struct fygue_fat_file
+{
+    int todo;
+};
+
+/* fygue_fat_resolve: internal resolve information */
+struct fygue_fat_resolve
+{
+    enum {
+        FYGUE_FAT_FILE_TYPE_FILE,
+        FYGUE_FAT_FILE_TYPE_DIR,
+    } type;
+    union {
+        struct fygue_fat_file file;
+        struct fygue_fat_dir dir;
+    };
+};
+
 /* fygue_fat_init_cold() - fully initialize the FAT information */
 extern int fygue_fat_init_cold(struct fygue_fat *fat);
 
@@ -77,7 +95,7 @@ extern int fygue_fat_init_hot(struct fygue_fat *fat);
 extern int fygue_fat_resolve(
     struct fygue_fat *fat,
     char const * const path,
-    struct fygue_fat_dirent *dirent
+    struct fygue_fat_resolve *resolve
 );
 
 /* fygue_fat_readdir(): readdir primitive */

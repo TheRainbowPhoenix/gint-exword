@@ -193,3 +193,11 @@ int fygue_fat_init_cold(struct fygue_fat *fat)
     }
     return 0;
 }
+
+/* fygue_fat_init_hot(): re-initialize the FAT information */
+int fygue_fat_init_hot(struct fygue_fat *fat)
+{
+    //FIXME: implement
+    (void)fat;
+    return -3;
+}

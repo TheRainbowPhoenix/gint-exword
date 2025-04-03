@@ -1,83 +1,61 @@
-#if 0
+#include <string.h>
+#include <stdlib.h>
 #include <gint/gint.h>
 #include <gint/bfile.h>
-#include "../fugue/util.h"
+#include "../fugue/fugue.h"
 #include "fygue.h"
-#include "utils.h"
 
+/* fygue_open(): open primitive */
 int fygue_open(char const *path, int flags, GUNUSED mode_t mode)
 {
-    int rc;
+    struct fygue_descriptor *desc;
+    struct fygue_resolve resolve;
+    fs_descriptor_t data;
 
     ENOTSUP_IF_NOT_FYGUE(-1);
 
-    /* Exclusive open means no sense unless creation is also requested */
-    bool excl = (flags & O_EXCL) && (flags & O_CREAT);
-    /* Truncation requires the file to be removed/recreated */
-    bool trunc = (flags & O_TRUNC) && (flags & O_CREAT);
+    /* resolve the entry */
+    int exists = fygue_resolve(path, &resolve);
 
-    /* stat the entry */
-    exists = fygue_resolve(path);
+    /* if opening fails and no explicit file creation is required, fail */
+    if ((exists < 0 && (!(flags & O_CREAT) || (flags & O_DIRECTORY)))) {
+        errno = ENOENT;
+        return exists;
+    }
 
-    /* If the entry exists and O_EXCL was requested, fail. */
-    if(exists && excl) {
+    /* if opening fails and the previous check as not returned an error,
+     * it is certainly because of a creation request. We are a read-only
+     * file-system, so, fail */
+    if (exists < 0) {
+        errno = EROFS;
+        return exists;
+    }
+
+    /* If the entry exists and O_EXCL was requested, fail.
+     * note that Exclusive open means no sense unless creation is also
+     * requested */
+    if(exists >= 0 && (flags & O_EXCL)) {
         errno = EEXIST;
         return -1;
     }
 
-    /* If the entry is not a directory but O_DIRECTORY is set, fail. If the
-       directory doesn't exist, we fail regardless of O_CREAT. */
-    if((flags & O_DIRECTORY) && type != BFile_Type_Directory) {
-        errno = (exists ? ENOTDIR : ENOENT);
-        return -1;
-    }
-
-    /* If the entry is a directory, open it as such */
-    if(type == BFile_Type_Directory) {
-        void *dp = fugue_dir_explore(path);
-        if(!dp) {
-            rc = -1;
-            goto end;
-        }
-        fs_descriptor_t data = {
-            .type = &fugue_dir_descriptor_type,
-            .data = dp,
-        };
-        return = fs_create_descriptor(&data);
-    }
-
-    /* prepare Fugue/Casio path */
-    uint16_t *fcpath = fs_path_normalize_fc(path);
-    if(fcpath == NULL) {
+    /* generate the final file descriptor */
+    desc = calloc(1, sizeof(struct fygue_descriptor));
+    if (desc == NULL) {
         errno = ENOMEM;
         return -1;
     }
-
-    /* If O_TRUNC is requested and either the file exists or we can create
-     * it, remove it. (If fugue_fd < 0 an opening error might still have
-     * occurred so we delete it just in case.) */
-    if((flags & O_TRUNC) && (fugue_fd >= 0 || (flags & O_CREAT))) {
-        gint_world_enter(GINT_WORLD_OS);
-        BFile_Remove(fcpath);
-        gint_world_leave();
-        fugue_fd = BFile_EntryNotFound;
-    }
-
-    /* If the file does not exist and O_CREAT is set, create it */
-    if((flags & O_CREAT) && ((flags & O_TRUNC) || fugue_fd < 0))
-    {
-        int new_file_size = 0;
-        gint_world_enter(GINT_WORLD_OS);
-        int err = BFile_Create(fcpath, BFile_File, &new_file_size);
-        gint_world_leave();
-        if(err < 0) {
-            errno = bfile_error_to_errno(err);
+    desc->path = strdup(path);
+    desc->flags = flags;
+    memcpy(&(desc->resolve), &resolve, sizeof(struct fygue_resolve));
+    data.type = &fygue_descriptor_type;
+    data.data = desc;
+    if (flags & O_DIRECTORY) {
+        if (resolve.type != FYGUE_FILE_TYPE_DIR) {
+            errno = ENOTDIR;
             return -1;
         }
+        data.type = &fygue_dir_descriptor_type;
     }
-
-end:
-    free(fcpath);
-    return rc;
+    return fs_create_descriptor(&data);
 }
-#endif
