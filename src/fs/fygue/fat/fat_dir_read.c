@@ -371,14 +371,14 @@ static int _fygue_readdir_fat_check(struct _fat_info *finfo)
 // Public
 //---
 
-/* fygue_fat_readdir() - readdir-like primitive
+/* fygue_fat_dir_read() - readdir-like primitive
  *
  * return
  *   -3     no dirent remaning
  *   -2     internal error
  *   -1     argument error
  *    0     success */
-int fygue_fat_readdir(
+int fygue_fat_dir_read(
     struct fygue_fat *fat,
     struct fygue_fat_dir *dir,
     struct fygue_fat_dirent *current

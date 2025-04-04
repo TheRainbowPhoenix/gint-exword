@@ -76,7 +76,7 @@ static int _fygue_dirent_find(
 ) {
     while (true)
     {
-        if (fygue_fat_readdir(fat, dir, dirent) != 0)
+        if (fygue_fat_dir_read(fat, dir, dirent) != 0)
             return -1;
         if (strncmp(dirent->name, start, len) != 0)
             continue;

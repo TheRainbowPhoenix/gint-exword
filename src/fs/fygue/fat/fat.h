@@ -99,11 +99,17 @@ extern int fygue_fat_resolve(
     struct fygue_fat_resolve *resolve
 );
 
-/* fygue_fat_readdir(): readdir primitive */
-extern int fygue_fat_readdir(
+/* fygue_fat_dir_read(): readdir primitive */
+extern int fygue_fat_dir_read(
     struct fygue_fat *fat,
     struct fygue_fat_dir *dir,
     struct fygue_fat_dirent *dirent
+);
+
+/* fygue_fat_dir_close(): closedir primitive */
+extern int fygue_fat_dir_close(
+    struct fygue_fat *fat,
+    struct fygue_fat_dir *dir
 );
 
 //---

@@ -68,7 +68,9 @@ struct fygue_resolve {
         } file;
         struct {
             struct fygue_fat_dir fat;
-            struct dirent *dirent;
+            struct dirent **dirent;
+            int count;
+            int pos;
         } dir;
     };
 };
@@ -96,6 +98,20 @@ extern int fygue_resolve(
 extern int fygue_dir_read(
     struct fygue_descriptor *desc,
     struct dirent **dirent,
+    size_t size
+);
+
+/* fygue_dir_lseek(): seek directory */
+extern off_t fygue_dir_lseek(
+    struct fygue_descriptor *desc,
+    off_t offset,
+    int whence
+);
+
+/* fygue_dir_write(): write directory (EISDIR) */
+ssize_t fygue_dir_write(
+    struct fygue_descriptor *desc,
+    void *buffer,
     size_t size
 );
 
