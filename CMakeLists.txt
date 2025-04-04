@@ -263,6 +263,7 @@ set(SOURCES
   src/fs/fygue/fygue.c
   src/fs/fygue/fygue_open.c
   src/fs/fygue/fygue_syncfs.c
+  src/fs/fygue/fygue_dir_read.c
   src/fs/fygue/fat/cluster.c
   src/fs/fygue/fat/initialize.c
   src/fs/fygue/fat/readdir.c

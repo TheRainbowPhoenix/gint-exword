@@ -55,9 +55,9 @@ int fygue_resolve(char const * const path, struct fygue_resolve *resolve)
         return -1;
     if (fygue_mount(&fsinfo, true) != 0)
         return -2;
-    int rc = fygue_fat_resolve(&(fsinfo->fat), path, &fat_resolve);
-    if (rc < 0)
-        return rc;
+    if (fygue_fat_resolve(&(fsinfo->fat), path, &fat_resolve) < 0)
+        return -3;
+    memset(resolve, 0x00, sizeof(struct fygue_resolve));
     if (fat_resolve.type == FYGUE_FAT_FILE_TYPE_FILE)
     {
         resolve->type = FYGUE_FILE_TYPE_DIR;
@@ -69,6 +69,7 @@ int fygue_resolve(char const * const path, struct fygue_resolve *resolve)
         );
     } else {
         resolve->type = FYGUE_FILE_TYPE_DIR;
+        resolve->dir.dirent = NULL;
         memcpy(
             &(resolve->dir.fat),
             &(fat_resolve.dir),
@@ -90,7 +91,7 @@ const fs_descriptor_type_t fygue_descriptor_type = {
 };
 
 const fs_descriptor_type_t fygue_dir_descriptor_type = {
-    .read   = NULL,
+    .read   = (void*)&fygue_dir_read,
     .write  = NULL,
     .lseek  = NULL,
     .close  = NULL,

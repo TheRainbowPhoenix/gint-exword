@@ -12,6 +12,10 @@ int fygue_open(char const *path, int flags, GUNUSED mode_t mode)
     struct fygue_resolve resolve;
     fs_descriptor_t data;
 
+    if ((flags & O_RDWR) || (flags & O_WRONLY)) {
+        errno = EROFS;
+        return -1;
+    }
     ENOTSUP_IF_NOT_FYGUE(-1);
 
     /* resolve the entry */

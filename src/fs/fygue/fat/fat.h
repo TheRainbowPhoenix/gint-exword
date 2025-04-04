@@ -43,6 +43,7 @@ struct fygue_fat
 };
 
 /* fygue_fat_dirent - FAT dirent information */
+//TODO: flexible name array like the high-level `struct dirent` ?
 struct fygue_fat_dirent
 {
     char name[256];

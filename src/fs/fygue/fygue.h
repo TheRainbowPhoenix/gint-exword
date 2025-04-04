@@ -28,10 +28,7 @@ extern const fs_descriptor_type_t fygue_dir_descriptor_type;
 extern int fygue_open(char const *path, int flags, mode_t mode);
 
 /* fygue_stat() - get file or directory information */
-extern int fygue_stat(
-    char const * restrict path,
-    struct stat * restrict statbuf
-);
+extern int fygue_stat(char const *path, struct stat *statbuf);
 
 /* fygue_syncfs() - request filesystem re-synchronisation */
 extern int fygue_syncfs(void *desc);
@@ -43,14 +40,10 @@ extern int fygue_syncfs(void *desc);
 #include <gint/hardware.h>
 #include <errno.h>
 
-#define ENOTSUP_IF_NOT_FYGUE(rc)        \
-   if(                                  \
-        (gint[HWFS] != HWFS_FUGUE) ||   \
-        (flags & O_WRONLY) ||           \
-        (flags & O_RDWR)                \
-    ) {                                 \
-       errno = ENOTSUP;                 \
-       return (rc);                     \
+#define ENOTSUP_IF_NOT_FYGUE(rc)    \
+   if(gint[HWFS] != HWFS_FUGUE) {   \
+       errno = ENOTSUP;             \
+       return (rc);                 \
     }
 
 #include "fat/fat.h"
@@ -75,6 +68,7 @@ struct fygue_resolve {
         } file;
         struct {
             struct fygue_fat_dir fat;
+            struct dirent *dirent;
         } dir;
     };
 };
@@ -96,6 +90,13 @@ extern int fygue_mount(struct fygue_fsinfo **fsinfo, bool refresh);
 extern int fygue_resolve(
     char const * const path,
     struct fygue_resolve *resolve
+);
+
+/* fygue_dir_read(): directory read implementation */
+extern int fygue_dir_read(
+    struct fygue_descriptor *desc,
+    struct dirent **dirent,
+    size_t size
 );
 
 #ifdef __cplusplus

@@ -102,10 +102,6 @@ static int _fygue_resolve_set(
 // Public
 //---
 
-char const *debug_prefix = "";
-char const *debug_start = "";
-size_t debug_len = 0;
-
 /* fygue_fat_resolve(): resolve any path provided
  *
  * notes
@@ -138,9 +134,6 @@ int fygue_fat_resolve(
             is_root = false;
             continue;
         }
-        debug_prefix = prefix;
-        debug_start = start;
-        debug_len = len;
         if (_fygue_dirent_find(fat, &dir, &dirent, start, len) != 0)
             return -4;
         if (_fygue_path_get_name(&prefix, &start, &len) != 0)
