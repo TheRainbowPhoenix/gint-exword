@@ -87,7 +87,7 @@ const fs_descriptor_type_t fygue_descriptor_type = {
     .read   = NULL,
     .write  = (void*)&fygue_file_write,
     .lseek  = (void*)&fygue_file_lseek,
-    .close  = NULL,
+    .close  = (void*)&fygue_file_close,
 };
 
 const fs_descriptor_type_t fygue_dir_descriptor_type = {

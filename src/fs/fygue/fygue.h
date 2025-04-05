@@ -141,6 +141,9 @@ extern ssize_t fygue_file_write(
     size_t size
 );
 
+/* fygue_file_close(): close directory */
+extern int fygue_file_close(struct fygue_descriptor *desc);
+
 #ifdef __cplusplus
 }
 #endif

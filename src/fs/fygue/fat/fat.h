@@ -152,6 +152,12 @@ extern int fygue_fat_file_stat(
     struct stat *statbuf
 );
 
+/* fygue_fat_file_close(): closedir primitive */
+extern int fygue_fat_file_close(
+    struct fygue_fat *fat,
+    struct fygue_fat_file *dir
+);
+
 //---
 // Cluster interface
 //---

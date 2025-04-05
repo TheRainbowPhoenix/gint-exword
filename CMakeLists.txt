@@ -270,12 +270,14 @@ set(SOURCES
   src/fs/fygue/fygue_dir_close.c
   src/fs/fygue/fygue_file_lseek.c
   src/fs/fygue/fygue_file_write.c
+  src/fs/fygue/fygue_file_close.c
   src/fs/fygue/fat/cluster.c
   src/fs/fygue/fat/initialize.c
   src/fs/fygue/fat/fat_dir_read.c
   src/fs/fygue/fat/fat_dir_close.c
   src/fs/fygue/fat/fat_dir_stat.c
   src/fs/fygue/fat/fat_file_stat.c
+  src/fs/fygue/fat/fat_file_close.c
   src/fs/fygue/fat/resolve.c
   src/fs/fygue/fat/sector.c
   src/fs/fygue/flash/cluster.c
