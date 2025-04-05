@@ -149,25 +149,7 @@ static int _fygue_fat_configure(struct fygue_fat *fat)
 /* _fygue_fat_prepare() - prepare logic information */
 static int _fygue_fat_prepare(struct fygue_fat *fat)
 {
-    int rc;
-
-#if 0
-    rc = fygue_fat_sector_get_addr(
-        fat,
-        &fat->FAT0Addr,
-        fat->FAT0SectorID
-    );
-    if (rc != 0)
-        return -1;
-    rc = fygue_fat_sector_get_addr(
-        fat,
-        (void*)&fat->FAT1Addr,
-        fat->FAT1SectorID
-    );
-    if (rc != 0)
-        return -1;
-#endif
-    rc = fygue_flash_cmap_lsector_get_addr(
+    int rc = fygue_flash_cmap_lsector_get_addr(
         &fat->_flash.cmap,
         &fat->RootAddr,
         fat->RootSectorID

@@ -83,6 +83,12 @@ struct fygue_fat_file
     int cluster_entry;
     int attribute;
     size_t size;
+    struct {
+        uintptr_t addr;
+        size_t size;
+        int cluster_count;
+    } *chunk;
+    int chunk_count;
 };
 
 /* fygue_fat_resolve: internal resolve information */
@@ -161,6 +167,13 @@ extern int fygue_fat_cluster_get_sector(
     struct fygue_fat *fat,
     int cluster_id,
     int *sector_id
+);
+
+/* fygue_fat_get_cluster_addr() - get logical sector addr */
+extern int fygue_fat_cluster_get_addr(
+    struct fygue_fat *fat,
+    uintptr_t *addr,
+    int cluster_id
 );
 
 /* fygue_fat_get_sector_addr() - get logical sector addr */

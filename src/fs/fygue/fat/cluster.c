@@ -79,3 +79,16 @@ int fygue_fat_cluster_get_sector(
     }
     return 0;
 }
+
+/* fygue_fat_get_cluster_addr() - get logical sector addr */
+int fygue_fat_cluster_get_addr(
+    struct fygue_fat *fat,
+    uintptr_t *addr,
+    int cluster_id
+) {
+    int sector_id;
+
+    if (fygue_fat_cluster_get_sector(fat, cluster_id, &sector_id) != 0)
+        return -1;
+    return fygue_fat_sector_get_addr(fat, addr, sector_id);
+}
