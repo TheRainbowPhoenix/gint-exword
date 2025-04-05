@@ -24,7 +24,7 @@ int fygue_open(char const *path, int flags, GUNUSED mode_t mode)
     /* if opening fails and no explicit file creation is required, fail */
     if ((exists < 0 && (!(flags & O_CREAT) || (flags & O_DIRECTORY)))) {
         errno = ENOENT;
-        return exists;
+        return -1;
     }
 
     /* if opening fails and the previous check as not returned an error,
@@ -32,7 +32,7 @@ int fygue_open(char const *path, int flags, GUNUSED mode_t mode)
      * file-system, so, fail */
     if (exists < 0) {
         errno = EROFS;
-        return exists;
+        return -1;
     }
 
     /* If the entry exists and O_EXCL was requested, fail.

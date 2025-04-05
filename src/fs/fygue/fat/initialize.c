@@ -127,6 +127,8 @@ static int _fygue_fat_configure(struct fygue_fat *fat)
 
     fat->TotalCapacity  = DataSec * FAT_WORD(bpb->BPB_BytsPerSec);
     fat->RootEntCount   = FAT_WORD(bpb->BPB_RootEntCnt);
+    fat->SectorSize     = FAT_WORD(bpb->BPB_BytsPerSec);
+    fat->SectorPerClus  = bpb->BPB_SecPerClus;
 
     // todo : FAT12-specific operation
     fat->ClusterCount   = FAT_WORD(bpb->BPB_FATSz16);

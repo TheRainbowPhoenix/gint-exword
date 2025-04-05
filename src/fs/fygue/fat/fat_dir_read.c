@@ -155,7 +155,7 @@ static void _fygue_fat_readdir_dirent_gen(
     while (finfo->idx > 0)
         current->name[idx++] = finfo->filename[--finfo->idx];
     current->name[idx] = 0x00;
-    current->type = dirent->DIR_Attr;
+    current->attribute = dirent->DIR_Attr;
     current->size = FAT_DWORD(dirent->DIR_FileSize);
     current->meta_addr = (uintptr_t)dirent;
     current->cluster_id = (

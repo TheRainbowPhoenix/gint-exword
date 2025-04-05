@@ -263,6 +263,7 @@ set(SOURCES
   src/fs/fygue/fygue.c
   src/fs/fygue/fygue_open.c
   src/fs/fygue/fygue_syncfs.c
+  src/fs/fygue/fygue_stat.c
   src/fs/fygue/fygue_dir_read.c
   src/fs/fygue/fygue_dir_lseek.c
   src/fs/fygue/fygue_dir_write.c
@@ -271,6 +272,8 @@ set(SOURCES
   src/fs/fygue/fat/initialize.c
   src/fs/fygue/fat/fat_dir_read.c
   src/fs/fygue/fat/fat_dir_close.c
+  src/fs/fygue/fat/fat_dir_stat.c
+  src/fs/fygue/fat/fat_file_stat.c
   src/fs/fygue/fat/resolve.c
   src/fs/fygue/fat/sector.c
   src/fs/fygue/flash/cluster.c

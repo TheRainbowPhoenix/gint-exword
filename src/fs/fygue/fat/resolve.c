@@ -36,15 +36,18 @@ static int _fygue_dirent_resolve(
     struct fygue_fat_dir *dir,
     struct fygue_fat_dirent *dirent
 ) {
+    int rc;
+
     memset(dir, 0x00, sizeof(struct fygue_fat_dir));
-    if (dirent == NULL)
-    {
+    if (dirent == NULL) {
         dir->cluster_entry      = 0;
         dir->root_dirent_count  = fat->RootEntCount;
+        dir->attribute          = FYGUE_FAT_FILE_TYPE_DIR;
     } else {
-        if ((dirent->type & 0x10) == 0x00)
+        if ((dirent->attribute & FYGUE_FAT_FILE_TYPE_DIR) == 0x00)
             return -1;
         dir->cluster_entry      = dirent->cluster_id;
+        dir->attribute          = FYGUE_FAT_FILE_TYPE_DIR;
         dir->root_dirent_count  = 0;
     }
     dir->dirty           = false;
@@ -52,18 +55,19 @@ static int _fygue_dirent_resolve(
     dir->dirent_cursor   = 0;
     dir->end_of_dirent   = false;
     dir->cluster_current = dir->cluster_entry;
-    int rc = fygue_fat_cluster_get_sector(
+    rc = fygue_fat_cluster_get_sector(
         fat,
         dir->cluster_current,
         &dir->sector_id
     );
     if (rc != 0)
-        return -1;
-    return fygue_fat_sector_get_addr(
+        return -2;
+    rc = fygue_fat_sector_get_addr(
         fat,
         &dir->dirent_current_addr,
         dir->sector_id
     );
+    return (rc != 0) ? -3 : 0;
 }
 
 /* _fygue_opendir_find() - try to find the directory entry */
@@ -90,11 +94,14 @@ static int _fygue_resolve_set(
     struct fygue_fat_resolve *resolve,
     struct fygue_fat_dirent *dirent
 ) {
-    resolve->type = FYGUE_FAT_FILE_TYPE_DIR;
-    if (_fygue_dirent_resolve(fat, &(resolve->dir), dirent) == 0)
-        return 0;
+    if (dirent == NULL || (dirent->attribute & FYGUE_FAT_ATTR_DIRECTORY)) {
+        resolve->type = FYGUE_FAT_FILE_TYPE_DIR;
+        return _fygue_dirent_resolve(fat, &(resolve->dir), dirent);
+    }
     resolve->type = FYGUE_FAT_FILE_TYPE_FILE;
-    // todo: support IO file information
+    resolve->file.attribute = dirent->attribute;
+    resolve->file.cluster_entry = dirent->cluster_id;
+    resolve->file.size = dirent->size;
     return 0;
 }
 

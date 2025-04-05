@@ -2,6 +2,7 @@
 #define FS_FYGUE_FAT_H 1
 
 #include <gint/defs/types.h>
+#include <sys/stat.h>
 
 #include "../flash/flash.h"
 
@@ -17,6 +18,14 @@
     | (((x) & 0x000000ff) << 24)  \
 )
 
+/* FYGUE_FAT_ATTR_* : FAT dirent attribute */
+#define FYGUE_FAT_ATTR_READ_ONLY 0x01
+#define FYGUE_FAT_ATTR_HIDDEN    0x02
+#define FYGUE_FAT_ATTR_SYSTEM    0x04
+#define FYGUE_FAT_ATTR_VOLUME    0x08
+#define FYGUE_FAT_ATTR_DIRECTORY 0x10
+#define FYGUE_FAT_ATTR_ARCHIVE   0x20
+
 /* fygue_fat - fat information */
 struct fygue_fat
 {
@@ -26,6 +35,8 @@ struct fygue_fat
     } Type;
     int SectorHiddenCount;
     int SectorCount;
+    int SectorSize;
+    int SectorPerClus;
     int ClusterCount;
     int TotalCapacity;
     int RootEntCount;
@@ -47,10 +58,10 @@ struct fygue_fat
 struct fygue_fat_dirent
 {
     char name[256];
-    int type;
     size_t size;
     uintptr_t meta_addr;
     unsigned int cluster_id;
+    int attribute;
 };
 
 /* fygue_fat_dir - fygue directory information */
@@ -65,12 +76,15 @@ struct fygue_fat_dir
     uintptr_t dirent_current_addr;
     bool end_of_dirent;
     bool dirty;
+    int attribute;
 };
 
 /* fygue_fat_file: file information needed to perform IO primitives */
 struct fygue_fat_file
 {
-    int todo;
+    int cluster_entry;
+    int attribute;
+    size_t size;
 };
 
 /* fygue_fat_resolve: internal resolve information */
@@ -99,6 +113,10 @@ extern int fygue_fat_resolve(
     struct fygue_fat_resolve *resolve
 );
 
+//---
+// Directory interface
+//---
+
 /* fygue_fat_dir_read(): readdir primitive */
 extern int fygue_fat_dir_read(
     struct fygue_fat *fat,
@@ -110,6 +128,24 @@ extern int fygue_fat_dir_read(
 extern int fygue_fat_dir_close(
     struct fygue_fat *fat,
     struct fygue_fat_dir *dir
+);
+
+/* fygue_fat_dir_stat(): directory stat primitive */
+extern int fygue_fat_dir_stat(
+    struct fygue_fat *fat,
+    struct fygue_fat_dir *dir,
+    struct stat *statbuf
+);
+
+//---
+// File interface
+//---
+
+/* fygue_fat_file_stat(): directory stat primitive */
+extern int fygue_fat_file_stat(
+    struct fygue_fat *fat,
+    struct fygue_fat_file *file,
+    struct stat *statbuf
 );
 
 //---
