@@ -89,6 +89,8 @@ struct fygue_fat_file
         int cluster_count;
     } *chunk;
     int chunk_count;
+    int chunk_rd_index;
+    int chunk_rd_offset;
 };
 
 /* fygue_fat_resolve: internal resolve information */
@@ -145,14 +147,29 @@ extern int fygue_fat_dir_stat(
 // File interface
 //---
 
-/* fygue_fat_file_stat(): directory stat primitive */
+/* fygue_fat_file_read(): read primitive */
+extern int fygue_fat_file_read(
+    struct fygue_fat *fat,
+    struct fygue_fat_file *file,
+    void *buffer,
+    size_t size
+);
+
+/* fygue_fat_file_stat(): stat primitive */
 extern int fygue_fat_file_stat(
     struct fygue_fat *fat,
     struct fygue_fat_file *file,
     struct stat *statbuf
 );
 
-/* fygue_fat_file_close(): closedir primitive */
+/* fygue_fat_file_seek(): lseek primitive */
+extern int fygue_fat_file_seek(
+    struct fygue_fat *fat,
+    struct fygue_fat_file *file,
+    off_t offset
+);
+
+/* fygue_fat_file_close(): close primitive */
 extern int fygue_fat_file_close(
     struct fygue_fat *fat,
     struct fygue_fat_file *dir

@@ -114,7 +114,7 @@ extern off_t fygue_dir_lseek(
 );
 
 /* fygue_dir_write(): write directory (EISDIR) */
-ssize_t fygue_dir_write(
+extern ssize_t fygue_dir_write(
     struct fygue_descriptor *desc,
     void *buffer,
     size_t size
@@ -126,6 +126,13 @@ extern int fygue_dir_close(struct fygue_descriptor *desc);
 //---
 // File interface
 //---
+
+/* fygue_file_read(): read primitive */
+extern ssize_t fygue_file_read(
+    struct fygue_descriptor *desc,
+    void *buffer,
+    size_t size
+);
 
 /* fygue_file_lseek(): seek directory */
 extern off_t fygue_file_lseek(

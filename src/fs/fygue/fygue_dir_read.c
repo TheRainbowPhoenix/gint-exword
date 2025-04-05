@@ -24,7 +24,7 @@ static int _fygue_dir_fat_read(
 
     rc = fygue_fat_dir_read(
         &(fsinfo->fat),
-        &desc->resolve.dir.fat,
+        &(desc->resolve.dir.fat),
         &fat_dirent
     );
     if (rc <= -3)
