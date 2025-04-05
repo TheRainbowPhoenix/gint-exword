@@ -65,6 +65,7 @@ struct fygue_resolve {
         struct {
             off_t cursor;
             struct fygue_fat_file fat;
+            off_t size;
         } file;
         struct {
             struct fygue_fat_dir fat;
@@ -94,6 +95,10 @@ extern int fygue_resolve(
     struct fygue_resolve *resolve
 );
 
+//---
+// Directory interface
+//---
+
 /* fygue_dir_read(): directory read implementation */
 extern int fygue_dir_read(
     struct fygue_descriptor *desc,
@@ -110,6 +115,27 @@ extern off_t fygue_dir_lseek(
 
 /* fygue_dir_write(): write directory (EISDIR) */
 ssize_t fygue_dir_write(
+    struct fygue_descriptor *desc,
+    void *buffer,
+    size_t size
+);
+
+/* fygue_dir_close(): close directory */
+extern int fygue_dir_close(struct fygue_descriptor *desc);
+
+//---
+// File interface
+//---
+
+/* fygue_file_lseek(): seek directory */
+extern off_t fygue_file_lseek(
+    struct fygue_descriptor *desc,
+    off_t offset,
+    int whence
+);
+
+/* fygue_file_write(): write directory (EROFS) */
+extern ssize_t fygue_file_write(
     struct fygue_descriptor *desc,
     void *buffer,
     size_t size

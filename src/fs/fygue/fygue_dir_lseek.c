@@ -26,8 +26,13 @@ off_t fygue_dir_lseek(
     off_t offset,
     int whence
 ) {
+    ENOTSUP_IF_NOT_FYGUE(-1);
     if (desc == NULL || desc->resolve.type != FYGUE_FILE_TYPE_DIR) {
         errno = EBADF;
+        return -1;
+    }
+    if (whence != SEEK_CUR && whence != SEEK_SET && whence != SEEK_END) {
+        errno = EINVAL;
         return -1;
     }
     if(whence == SEEK_CUR)

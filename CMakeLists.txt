@@ -268,6 +268,8 @@ set(SOURCES
   src/fs/fygue/fygue_dir_lseek.c
   src/fs/fygue/fygue_dir_write.c
   src/fs/fygue/fygue_dir_close.c
+  src/fs/fygue/fygue_file_lseek.c
+  src/fs/fygue/fygue_file_write.c
   src/fs/fygue/fat/cluster.c
   src/fs/fygue/fat/initialize.c
   src/fs/fygue/fat/fat_dir_read.c

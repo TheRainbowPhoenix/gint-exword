@@ -44,8 +44,6 @@ struct fygue_fat
     int FAT1SectorID;
     int RootSectorID;
     int DataSectorID;
-    uintptr_t FAT0Addr;
-    uintptr_t FAT1Addr;
     uintptr_t RootAddr;
     uintptr_t BPB;
     struct {

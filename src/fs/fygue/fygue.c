@@ -85,8 +85,8 @@ int fygue_resolve(char const * const path, struct fygue_resolve *resolve)
 
 const fs_descriptor_type_t fygue_descriptor_type = {
     .read   = NULL,
-    .write  = NULL,
-    .lseek  = NULL,
+    .write  = (void*)&fygue_file_write,
+    .lseek  = (void*)&fygue_file_lseek,
     .close  = NULL,
 };
 
@@ -94,5 +94,5 @@ const fs_descriptor_type_t fygue_dir_descriptor_type = {
     .read   = (void*)&fygue_dir_read,
     .write  = (void*)&fygue_dir_write,
     .lseek  = (void*)&fygue_dir_lseek,
-    .close  = NULL,
+    .close  = (void*)&fygue_dir_close,
 };

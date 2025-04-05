@@ -3,6 +3,7 @@
 #include "fygue.h"
 #include "fat/fat.h"
 
+/* fygue_dir_close(): close directory */
 int fygue_dir_close(struct fygue_descriptor *desc)
 {
     struct fygue_fsinfo *fsinfo;
