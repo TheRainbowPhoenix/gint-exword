@@ -289,4 +289,13 @@ ___VRAMRestore:
 ___Reset:
 	fixed(0xa0000000)
 
+_BFile_Size:
+_BFile_Read:
+_BFile_Seek:
+_BFile_Write:
+_BFile_Close:
+_BFile_FindFirst:
+_BFile_FindClose:
+    fixed(0xa0000000)
+
 #endif /* GINT_OS_CP */

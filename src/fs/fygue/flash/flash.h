@@ -2,10 +2,19 @@
 #define FS_FYGUE_FLASH_H 1
 
 #include <gint/defs/types.h>
+#include <gint/config.h>
 
 /* __FYGUE_* - hardcoded fygue information */
-#define __FYGUE_FSECTOR_COUNT   (0x9c)
-#define __FYGUE_FCLUSTER_COUNT  (__FYGUE_FSECTOR_COUNT * 32)
+//FIXME: change between OS version ?
+#if GINT_HW_CP
+# define __FYGUE_FSECTOR_START_ADDR  (0x01a20000)
+# define __FYGUE_FSECTOR_COUNT       (0xf2)
+# define __FYGUE_FCLUSTER_COUNT      (__FYGUE_FSECTOR_COUNT * 32)
+#else
+# define __FYGUE_FSECTOR_START_ADDR  (0x00c80000)
+# define __FYGUE_FSECTOR_COUNT       (0x9c)
+# define __FYGUE_FCLUSTER_COUNT      (__FYGUE_FSECTOR_COUNT * 32)
+#endif
 
 /* fygue_fcluster - generic flash cluster information */
 struct fygue_flash_cluster

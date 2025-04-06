@@ -33,7 +33,7 @@ int fygue_mount(struct fygue_fsinfo **fsinfo, bool refresh)
     }
     if (refresh && __fygue_fsinfo->dirty) {
         if (fygue_fat_init_hot(&(__fygue_fsinfo->fat)) != 0)
-            return -3;
+            return -4;
         __fygue_fsinfo->dirty = false;
     }
     *fsinfo = __fygue_fsinfo;

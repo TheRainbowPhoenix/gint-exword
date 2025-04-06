@@ -121,9 +121,9 @@ int fygue_flash_cmap_init(struct fygue_flash_cmap *cmap)
         }
     }
     if (cmap->lcluster == NULL)
-        return -1;
+        return -2;
     if (cmap->lcluster[0].fcluster_id == 0xffff)
-        return -1;
+        return -3;
     return 0;
 }
 

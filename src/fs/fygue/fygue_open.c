@@ -27,6 +27,7 @@ int fygue_open(char const *path, int flags, GUNUSED mode_t mode)
         return -1;
     }
 
+
     /* if opening fails and the previous check as not returned an error,
      * it is certainly because of a creation request. We are a read-only
      * file-system, so, fail */

@@ -176,8 +176,7 @@ void hw_detect(void)
 	gint[HWCPUVR] = PVR;
 	gint[HWCPUPR] = PRR;
 	gint[HWCALC] = HWCALC_FXCP400;
-	// TODO: What filesystem implementation on the fx-CP 400?
-	gint[HWFS] = HWFS_NONE;
+	gint[HWFS] = HWFS_FUGUE;
 	gint[HWRAM] = 16 << 20;
 	// TOOD: How much ROM on the fx-CP 400?
 	gint[HWROM] = 0;

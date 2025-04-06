@@ -62,8 +62,8 @@ static int _fygue_flash_cluster_convert(
         0xdd, 0xee, 0xee, 0xee,
     };
     struct _bfile_cluster_metadata *meta[2] = {
-        (void*)(bfile_meta | 0x80000000),
         (void*)(bfile_meta | 0xa0000000),
+        (void*)(bfile_meta | 0x80000000),
     };
     if (fcluster == NULL)
         return -1;
@@ -87,12 +87,21 @@ static int _fygue_flash_cluster_convert(
             continue;
         if (meta[i]->bitmask[0] != 0x11 && meta[i]->lcluster_id != 0xffff)
             continue;
+#if GINT_HW_CP
+        // on the fxcp400, only some flash sector have the constants used
+        // in other device. Casio check an CRC that is performed on the
+        // whole cluster
+        // TODO: CRC check
+        (void)_constant1;
+        (void)_constant2;
+#else
         if (
             memcmp(&(meta[i]->constant), _constant1, 0x18) != 0 &&
             memcmp(&(meta[i]->constant), _constant2, 0x18) != 0
         ) {
             continue;
         }
+#endif
         fcluster->lcluster_id = meta[i]->lcluster_id;
         fcluster->kind        = meta[i]->bitmask[0];
         fcluster->version     = meta[i]->fcluster_version;
@@ -121,9 +130,9 @@ int fygue_flash_cluster_geometry(
     uint16_t *fsector_id,
     uint16_t *fcluster_off
 ) {
-    if ((addr & 0x0fffffff) < 0x00c80000)
+    if ((addr & 0x0fffffff) < __FYGUE_FSECTOR_START_ADDR)
         return -1;
-    addr = (addr & 0x0fffffff) - 0x00c80000;
+    addr = (addr & 0x0fffffff) - __FYGUE_FSECTOR_START_ADDR;
     if (fcluster_id != NULL) {
         *fcluster_id  = ((addr & 0xfffe0000) >> 17) * 32;
         *fcluster_id += ((addr & 0x0001ffff) >> 12);
@@ -162,13 +171,13 @@ int fygue_flash_cluster_get(
         fcluster->lcluster_id   = 0xffff;
         fcluster->version       = 0xffffffff;
     } else {
-        bfile_meta  = 0x00c80000;
+        bfile_meta  = __FYGUE_FSECTOR_START_ADDR;
         bfile_meta += (fsector_id * 0x20000) + 0x1f000;
         bfile_meta += (fcluster_off * 0x40);
         if (_fygue_flash_cluster_convert(fcluster, bfile_meta) != 0)
             return -2;
     }
-    bfile_data  = 0x00c80000;
+    bfile_data  = __FYGUE_FSECTOR_START_ADDR;
     bfile_data += (fsector_id * 0x20000);
     bfile_data += (fcluster_off * 0x1000);
     fcluster->data_p1           = bfile_data | 0xa0000000;
