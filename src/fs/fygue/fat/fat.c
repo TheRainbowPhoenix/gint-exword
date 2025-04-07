@@ -2,6 +2,7 @@
 ** fygue/fat/initialize    - FAT initialization
 */
 #include <string.h>
+#include <errno.h>
 
 #include <gint/defs/attributes.h>
 
@@ -61,12 +62,7 @@ static int _fygue_fat_sector0(struct fygue_fat *fat)
     uint8_t *sector;
     int rc;
 
-    rc = fygue_flash_cmap_lsector_get_addr(
-        &fat->_flash.cmap,
-        (void*)&sector,
-        0
-    );
-    if (rc != 0)
+    if (fygue_fat_sector_get_addr(fat, (void*)&sector, 0) != 0)
         return -1;
     fat->SectorHiddenCount = (
         (sector[0x1c9] << 24) |
@@ -80,8 +76,8 @@ static int _fygue_fat_sector0(struct fygue_fat *fat)
         (sector[0x1cb] <<  8) |
         (sector[0x1ca] <<  0)
     );
-    rc = fygue_flash_cmap_lsector_get_addr(
-        &fat->_flash.cmap,
+    rc = fygue_fat_sector_get_addr(
+        fat,
         &fat->BPB,
         fat->SectorHiddenCount
     );
@@ -149,8 +145,8 @@ static int _fygue_fat_configure(struct fygue_fat *fat)
 /* _fygue_fat_prepare() - prepare logic information */
 static int _fygue_fat_prepare(struct fygue_fat *fat)
 {
-    int rc = fygue_flash_cmap_lsector_get_addr(
-        &fat->_flash.cmap,
+    int rc = fygue_fat_sector_get_addr(
+        fat,
         &fat->RootAddr,
         fat->RootSectorID
     );
@@ -169,7 +165,7 @@ int fygue_fat_init_cold(struct fygue_fat *fat)
     if (fat == NULL)
         return -1;
     memset(fat, 0x00, sizeof(struct fygue_fat));
-    if (fygue_flash_cmap_init(&fat->_flash.cmap) != 0)
+    if (fygue_flash_initialize(&(fat->_flash)) != 0)
         return -2;
     if (
         _fygue_fat_sector0(fat)   != 0 ||
@@ -186,5 +182,6 @@ int fygue_fat_init_hot(struct fygue_fat *fat)
 {
     //FIXME: implement
     (void)fat;
+    errno = ENOTSUP;
     return -3;
 }

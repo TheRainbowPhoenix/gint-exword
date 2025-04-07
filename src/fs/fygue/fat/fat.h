@@ -27,6 +27,7 @@
 #define FYGUE_FAT_ATTR_ARCHIVE   0x20
 
 /* fygue_fat - fat information */
+// TODO: rename fields
 struct fygue_fat
 {
     enum {
@@ -46,9 +47,7 @@ struct fygue_fat
     int DataSectorID;
     uintptr_t RootAddr;
     uintptr_t BPB;
-    struct {
-        struct fygue_flash_cmap cmap;
-    } _flash;
+    struct fygue_flash _flash;
 };
 
 /* fygue_fat_dirent - FAT dirent information */
@@ -176,7 +175,7 @@ extern int fygue_fat_file_close(
 );
 
 //---
-// Cluster interface
+// (internal) Cluster interface
 //---
 
 /* fygue_fat_cluster_get_next() - find the next cluster ID of a file */
@@ -198,6 +197,10 @@ extern int fygue_fat_cluster_get_addr(
     uintptr_t *addr,
     int cluster_id
 );
+
+//---
+// (internal) Sector interface
+//---
 
 /* fygue_fat_get_sector_addr() - get logical sector addr */
 extern int fygue_fat_sector_get_addr(

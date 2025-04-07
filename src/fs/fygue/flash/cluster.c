@@ -42,6 +42,7 @@ struct _bfile_cluster_metadata
  *   -1  if the bfile metadata cannot be validated
  *    0  otherwise */
 static int _fygue_flash_cluster_convert(
+    struct fygue_flash *flash,
     struct fygue_flash_cluster *fcluster,
     uintptr_t bfile_meta
 ) {
@@ -61,53 +62,44 @@ static int _fygue_flash_cluster_convert(
         0xbb, 0xbb, 0xdd, 0xdd,
         0xdd, 0xee, 0xee, 0xee,
     };
-    struct _bfile_cluster_metadata *meta[2] = {
-        (void*)(bfile_meta | 0xa0000000),
-        (void*)(bfile_meta | 0x80000000),
-    };
+    struct _bfile_cluster_metadata *meta;
+
     if (fcluster == NULL)
         return -1;
-    for (int i = 0 ; i < 2 ; i++)
-    {
-        if (
-            meta[i]->signature[0] != 0x5a ||
-            meta[i]->signature[1] != 0x5a ||
-            meta[i]->signature[2] != 0x5a
-        ) {
-            continue;
-        }
-        if (
-            meta[i]->bitmask[0] != 0x88 &&
-            meta[i]->bitmask[0] != 0x22 &&
-            meta[i]->bitmask[0] != 0x11
-        ) {
-            continue;
-        }
-        if (meta[i]->bitmask[1] != 0x0f)
-            continue;
-        if (meta[i]->bitmask[0] != 0x11 && meta[i]->lcluster_id != 0xffff)
-            continue;
-#if GINT_HW_CP
-        // on the fxcp400, only some flash sector have the constants used
-        // in other device. Casio check an CRC that is performed on the
-        // whole cluster
-        // TODO: CRC check
-        (void)_constant1;
-        (void)_constant2;
-#else
-        if (
-            memcmp(&(meta[i]->constant), _constant1, 0x18) != 0 &&
-            memcmp(&(meta[i]->constant), _constant2, 0x18) != 0
-        ) {
-            continue;
-        }
-#endif
-        fcluster->lcluster_id = meta[i]->lcluster_id;
-        fcluster->kind        = meta[i]->bitmask[0];
-        fcluster->version     = meta[i]->fcluster_version;
-        return 0;
+    meta = (void*)(bfile_meta | 0xa0000000);
+    if (
+        meta->signature[0] != 0x5a ||
+        meta->signature[1] != 0x5a ||
+        meta->signature[2] != 0x5a
+    ) {
+        return -2;
     }
-    return -2;
+    if (
+        meta->bitmask[0] != 0x88 &&
+        meta->bitmask[0] != 0x22 &&
+        meta->bitmask[0] != 0x11
+    ) {
+        return -3;
+    }
+    if (meta->bitmask[1] != 0x0f)
+        return -4;
+    if (meta->bitmask[0] != 0x11 && meta->lcluster_id != 0xffff)
+        return -5;
+    // on the fxcp400, have only some flash sector with the constants used
+    // in other device. Internally, on the fxcp400, Casio only perform
+    // a check an CRC that is performed on the whole cluster
+    // TODO: CRC check
+    if (
+        flash->integrity == FYGUE_FLASH_INTEGRITY_FULL   &&
+        memcmp(&(meta->constant), _constant1, 0x18) != 0 &&
+        memcmp(&(meta->constant), _constant2, 0x18) != 0
+    ) {
+        return -6;
+    }
+    fcluster->lcluster_id = meta->lcluster_id;
+    fcluster->kind        = meta->bitmask[0];
+    fcluster->version     = meta->fcluster_version;
+    return 0;
 }
 
 //---
@@ -125,14 +117,15 @@ static int _fygue_flash_cluster_convert(
  *   -1     if the provided address is not valid
  *    0     success */
 int fygue_flash_cluster_geometry(
+    struct fygue_flash *flash,
     uintptr_t addr,
     uint16_t *fcluster_id,
     uint16_t *fsector_id,
     uint16_t *fcluster_off
 ) {
-    if ((addr & 0x0fffffff) < __FYGUE_FSECTOR_START_ADDR)
+    if ((addr & 0x0fffffff) < flash->geometry.phy_start)
         return -1;
-    addr = (addr & 0x0fffffff) - __FYGUE_FSECTOR_START_ADDR;
+    addr = (addr & 0x0fffffff) - flash->geometry.phy_start;
     if (fcluster_id != NULL) {
         *fcluster_id  = ((addr & 0xfffe0000) >> 17) * 32;
         *fcluster_id += ((addr & 0x0001ffff) >> 12);
@@ -151,6 +144,7 @@ int fygue_flash_cluster_geometry(
  *   -2  if the provided `fline` have invalid Bfile metadata
  *    0  if the meta information has been generated */
 int fygue_flash_cluster_get(
+    struct fygue_flash *flash,
     uint16_t fcluster_id,
     struct fygue_flash_cluster *fcluster
 ) {
@@ -159,9 +153,9 @@ int fygue_flash_cluster_get(
     int fsector_id;
     int fcluster_off;
 
-    if (fcluster == NULL)
+    if (flash == NULL || fcluster == NULL)
         return -1;
-    if (fcluster_id >= __FYGUE_FCLUSTER_COUNT)
+    if (fcluster_id >= flash->geometry.fcluster_count)
         return -1;
     fsector_id    = fcluster_id / 32;
     fcluster_off  = fcluster_id % 32;
@@ -171,13 +165,13 @@ int fygue_flash_cluster_get(
         fcluster->lcluster_id   = 0xffff;
         fcluster->version       = 0xffffffff;
     } else {
-        bfile_meta  = __FYGUE_FSECTOR_START_ADDR;
+        bfile_meta  = flash->geometry.phy_start;
         bfile_meta += (fsector_id * 0x20000) + 0x1f000;
         bfile_meta += (fcluster_off * 0x40);
-        if (_fygue_flash_cluster_convert(fcluster, bfile_meta) != 0)
+        if (_fygue_flash_cluster_convert(flash, fcluster, bfile_meta) != 0)
             return -2;
     }
-    bfile_data  = __FYGUE_FSECTOR_START_ADDR;
+    bfile_data  = flash->geometry.phy_start;
     bfile_data += (fsector_id * 0x20000);
     bfile_data += (fcluster_off * 0x1000);
     fcluster->data_p1           = bfile_data | 0xa0000000;

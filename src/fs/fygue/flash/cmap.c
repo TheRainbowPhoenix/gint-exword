@@ -97,22 +97,33 @@ static int fygue_flash_cmap_update(
  * returns:
  *   -1 if the sector 0 is not found
  *    0 success */
-int fygue_flash_cmap_init(struct fygue_flash_cmap *cmap)
-{
+int fygue_flash_cmap_init(
+    struct fygue_flash *flash,
+    struct fygue_flash_cmap *cmap
+) {
     struct fygue_flash_cluster fcluster;
+    int fsector;
     int rc;
 
-    if (cmap == NULL)
+    if (flash == NULL || cmap == NULL)
         return -1;
-    for (int fsector = 0 ; fsector < __FYGUE_FSECTOR_COUNT ; fsector++)
-    {
-        if (fygue_flash_cluster_get(fsector * 32, &fcluster) != 0)
+    memset(cmap, 0x00, sizeof(struct fygue_flash_cmap));
+    for (
+        fsector = 0 ;
+        fsector < flash->geometry.fsector_count ;
+        fsector++
+    ) {
+        if (fygue_flash_cluster_get(flash, fsector * 32, &fcluster) != 0)
             continue;
         if (fcluster.kind != 0x22)
             continue;
         for (int j = 0 ; j < 31 ; j++)
         {
-            rc = fygue_flash_cluster_get((fsector * 32) + j, &fcluster);
+            rc = fygue_flash_cluster_get(
+                flash,
+                (fsector * 32) + j,
+                &fcluster
+            );
             if (rc != 0)
                 continue;
             if (fcluster.kind != 0x11)
@@ -129,6 +140,7 @@ int fygue_flash_cmap_init(struct fygue_flash_cmap *cmap)
 
 /* fygue_flash_cmap_lsector_get_addr() - get logical sector address */
 int fygue_flash_cmap_lsector_get_addr(
+    struct fygue_flash *flash,
     struct fygue_flash_cmap *cmap,
     uintptr_t *sector,
     uint16_t lsector_id
@@ -136,7 +148,9 @@ int fygue_flash_cmap_lsector_get_addr(
     uintptr_t fsector_addr;
     uint16_t lcluster_id;
 
-    if (sector == NULL || cmap == NULL || cmap->lcluster == NULL)
+    if (flash == NULL  || sector == NULL || cmap == NULL)
+        return -1;
+    if (cmap->lcluster == NULL)
         return -1;
     lcluster_id = lsector_id / 8;
     if (

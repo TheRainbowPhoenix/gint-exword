@@ -273,7 +273,7 @@ set(SOURCES
   src/fs/fygue/fygue_file_close.c
   src/fs/fygue/fygue_file_read.c
   src/fs/fygue/fat/cluster.c
-  src/fs/fygue/fat/initialize.c
+  src/fs/fygue/fat/fat.c
   src/fs/fygue/fat/fat_dir_read.c
   src/fs/fygue/fat/fat_dir_close.c
   src/fs/fygue/fat/fat_dir_stat.c
@@ -285,6 +285,8 @@ set(SOURCES
   src/fs/fygue/fat/sector.c
   src/fs/fygue/flash/cluster.c
   src/fs/fygue/flash/cmap.c
+  src/fs/fygue/flash/flash.c
+  src/fs/fygue/flash/sector.c
 )
 
 set(ASSETS_FX src/font5x7.png src/gdb/icons-i1msb.png)

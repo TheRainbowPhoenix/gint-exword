@@ -4,18 +4,6 @@
 #include <gint/defs/types.h>
 #include <gint/config.h>
 
-/* __FYGUE_* - hardcoded fygue information */
-//FIXME: change between OS version ?
-#if GINT_HW_CP
-# define __FYGUE_FSECTOR_START_ADDR  (0x01a20000)
-# define __FYGUE_FSECTOR_COUNT       (0xf2)
-# define __FYGUE_FCLUSTER_COUNT      (__FYGUE_FSECTOR_COUNT * 32)
-#else
-# define __FYGUE_FSECTOR_START_ADDR  (0x00c80000)
-# define __FYGUE_FSECTOR_COUNT       (0x9c)
-# define __FYGUE_FCLUSTER_COUNT      (__FYGUE_FSECTOR_COUNT * 32)
-#endif
-
 /* fygue_fcluster - generic flash cluster information */
 struct fygue_flash_cluster
 {
@@ -45,22 +33,61 @@ struct fygue_flash_cmap
     int lcluster_id_max;
 };
 
-// cluster map interface
+struct fygue_flash
+{
+    struct {
+        uintptr_t phy_start;
+        uintptr_t phy_end;
+        size_t size;
+        int fsector_count;
+        int fcluster_count;
+    } geometry;
+    enum {
+        FYGUE_FLASH_INTEGRITY_FULL,
+        FYGUE_FLASH_INTEGRITY_PARTIAL,
+    } integrity;
+    struct fygue_flash_cmap cmap;
+};
+
+//---
+// (public) Flash interface
+//---
+
+/* fygue_flash_initialize(): init flash abstraction */
+extern int fygue_flash_initialize(struct fygue_flash *flash);
+
+/* fygue_flash_sector_get_addr(): return the logical sector address */
+extern int fygue_flash_sector_get_addr(
+    struct fygue_flash *flash,
+    uintptr_t *sector_addr,
+    uint16_t sector_id
+);
+
+//---
+// (internal) cluster map interface
+//---
 
 /* fygue_flash_cmap_init() - initialize the fcluster redirection map */
-extern int fygue_flash_cmap_init(struct fygue_flash_cmap *cmap);
+extern int fygue_flash_cmap_init(
+    struct fygue_flash *flash,
+    struct fygue_flash_cmap *cmap
+);
 
 /* fygue_flash_cmap_lsector_get_addr() - get logical sector address */
 extern int fygue_flash_cmap_lsector_get_addr(
+    struct fygue_flash *flash,
     struct fygue_flash_cmap *cmap,
     uintptr_t *sector,
     uint16_t lsector_id
 );
 
-// cluster interface
+//---
+// (internal) cluster interface
+//---
 
 /* fygue_flash_cluster_geometry() - get geometry information */
 extern int fygue_flash_cluster_geometry(
+    struct fygue_flash *flash,
     uintptr_t addr,
     uint16_t *fcluster_id,
     uint16_t *fsector_id,
@@ -69,6 +96,7 @@ extern int fygue_flash_cluster_geometry(
 
 /* fygue_flash_cluster_get() - get cluster information */
 extern int fygue_flash_cluster_get(
+    struct fygue_flash *flash,
     uint16_t fcluster_id,
     struct fygue_flash_cluster *fcluster
 );

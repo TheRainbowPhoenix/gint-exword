@@ -13,11 +13,7 @@ int fygue_fat_sector_get_addr(
     uintptr_t *addr,
     int sector
 ) {
-    if (fat == NULL)
-        return -1;
-    return fygue_flash_cmap_lsector_get_addr(
-        &fat->_flash.cmap,
-        addr,
-        sector
-    );
+    if (fat != NULL)
+        return fygue_flash_sector_get_addr(&(fat->_flash), addr, sector);
+    return -1;
 }

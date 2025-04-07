@@ -13,6 +13,7 @@ static struct fygue_fsinfo *__fygue_fsinfo = NULL;
 // Primitives
 //---
 
+
 /* fygue_mount() - mount (if needed) and return the filesystem information
  *
  * notes
@@ -21,14 +22,17 @@ int fygue_mount(struct fygue_fsinfo **fsinfo, bool refresh)
 {
     if (fsinfo == NULL)
         return -1;
+    *fsinfo = NULL;
     if (__fygue_fsinfo == NULL)
     {
-        *fsinfo = NULL;
         __fygue_fsinfo = calloc(1, sizeof(struct fygue_fsinfo));
         if (__fygue_fsinfo == NULL)
             return -2;
-        if (fygue_fat_init_cold(&(__fygue_fsinfo->fat)) != 0)
+        if (fygue_fat_init_cold(&(__fygue_fsinfo->fat)) != 0) {
+            free(__fygue_fsinfo);
+            __fygue_fsinfo = NULL;
             return -3;
+        }
         __fygue_fsinfo->dirty = false;
     }
     if (refresh && __fygue_fsinfo->dirty) {
