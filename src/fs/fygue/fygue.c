@@ -13,7 +13,6 @@ static struct fygue_fsinfo *__fygue_fsinfo = NULL;
 // Primitives
 //---
 
-
 /* fygue_mount() - mount (if needed) and return the filesystem information
  *
  * notes

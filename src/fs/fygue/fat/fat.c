@@ -100,7 +100,6 @@ static int _fygue_fat_configure(struct fygue_fat *fat)
     struct _fat_bpb *bpb;
     int RootDirSectors;
     int DataSec;
-    int CountofClusters;
 
     bpb = (void *)fat->BPB;
 
@@ -111,13 +110,13 @@ static int _fygue_fat_configure(struct fygue_fat *fat)
     DataSec += FAT_WORD(bpb->BPB_FATSz16) * bpb->BPB_NumFATs;
     DataSec += RootDirSectors;
     DataSec  = FAT_WORD(bpb->BPB_TotSec16) - DataSec;
-    CountofClusters = DataSec / bpb->BPB_SecPerClus;
-    if (CountofClusters < 4085) {
+    fat->ClusterCount = DataSec / bpb->BPB_SecPerClus;
+    if (fat->ClusterCount < 4085) {
         fat->Type = FYGUE_FAT_TYPE_FAT12;
-    } else if (CountofClusters < 65525) {
+    } else if (fat->ClusterCount < 65525) {
         fat->Type = FYGUE_FAT_TYPE_FAT16;
     } else {
-        // TODO: maybe gint panic ?
+        // TODO: (FAT32) maybe gint panic ?
         return -2;
     }
 
@@ -125,11 +124,6 @@ static int _fygue_fat_configure(struct fygue_fat *fat)
     fat->RootEntCount   = FAT_WORD(bpb->BPB_RootEntCnt);
     fat->SectorSize     = FAT_WORD(bpb->BPB_BytsPerSec);
     fat->SectorPerClus  = bpb->BPB_SecPerClus;
-
-    // todo : FAT12-specific operation
-    fat->ClusterCount   = FAT_WORD(bpb->BPB_FATSz16);
-    fat->ClusterCount  *= FAT_WORD(bpb->BPB_BytsPerSec);
-    fat->ClusterCount  /= 2;
 
     fat->FAT0SectorID   = fat->SectorHiddenCount;
     fat->FAT0SectorID  += FAT_WORD(bpb->BPB_RsvdSecCnt);
@@ -167,13 +161,12 @@ int fygue_fat_init_cold(struct fygue_fat *fat)
     memset(fat, 0x00, sizeof(struct fygue_fat));
     if (fygue_flash_initialize(&(fat->_flash)) != 0)
         return -2;
-    if (
-        _fygue_fat_sector0(fat)   != 0 ||
-        _fygue_fat_configure(fat) != 0 ||
-        _fygue_fat_prepare(fat)   != 0
-    ) {
+    if (_fygue_fat_sector0(fat) != 0)
         return -3;
-    }
+    if (_fygue_fat_configure(fat) != 0)
+        return -4;
+    if (_fygue_fat_prepare(fat) != 0)
+        return -5;
     return 0;
 }
 

@@ -7,13 +7,18 @@
 /* fygue_fcluster - generic flash cluster information */
 struct fygue_flash_cluster
 {
-    uint32_t  kind;
+    enum {
+        FYGUE_FCLUSTER_KIND_DATA     = 0x11,
+        FYGUE_FCLUSTER_KIND_FINFO    = 0x22,
+        FYGUE_FCLUSTER_KIND_DETAILS  = 0x88,
+        FYGUE_FCLUSTER_KIND_METADATA = 0x667,
+    } kind;
     uint16_t  fcluster_id;
     uint16_t  fcluster_id_bfile;
     uint16_t  lcluster_id;
     uint32_t  version;
-    uintptr_t data_p1;
-    uintptr_t data_p2;
+    uintptr_t data_addr;
+    uintptr_t meta_addr;
 };
 
 /* fygue_fcluster_map_entry - cmap list entry */
@@ -21,8 +26,7 @@ struct fygue_flash_cmap_entry
 {
     uint16_t  fcluster_id;
     uint16_t  fcluster_id_bfile;
-    uintptr_t fcluster_data_p1;
-    uintptr_t fcluster_data_p2;
+    uintptr_t fcluster_addr;
     uint32_t  version;
 };
 
@@ -33,6 +37,7 @@ struct fygue_flash_cmap
     int lcluster_id_max;
 };
 
+/* fygue_flash - flash information */
 struct fygue_flash
 {
     struct {
@@ -40,6 +45,8 @@ struct fygue_flash
         uintptr_t phy_end;
         size_t size;
         int fsector_count;
+        size_t fsector_size;
+        int fcluster_per_fsector;
         int fcluster_count;
     } geometry;
     enum {
@@ -97,8 +104,8 @@ extern int fygue_flash_cluster_geometry(
 /* fygue_flash_cluster_get() - get cluster information */
 extern int fygue_flash_cluster_get(
     struct fygue_flash *flash,
-    uint16_t fcluster_id,
-    struct fygue_flash_cluster *fcluster
+    struct fygue_flash_cluster *fcluster,
+    int fcluster_id
 );
 
 #endif /* FS_FYGUE_FLASH_H */

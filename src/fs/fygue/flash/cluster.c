@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include <gint/defs/attributes.h>
+#include <gint/defs/util.h>
+#include <gint/hardware.h>
 
 #include "flash.h"
 
@@ -22,6 +24,8 @@ struct _bfile_cluster_metadata
     uint8_t     signature[3];
     uint8_t     ecc_bitmask_position[3];
 } GPACKED(1);
+
+uintptr_t debug_meta = 0;
 
 /* _fygue_flash_cluster_convert - ensure that the provided meta is valid
  *
@@ -66,6 +70,7 @@ static int _fygue_flash_cluster_convert(
 
     if (fcluster == NULL)
         return -1;
+    debug_meta = bfile_meta;
     meta = (void*)(bfile_meta | 0xa0000000);
     if (
         meta->signature[0] != 0x5a ||
@@ -102,9 +107,171 @@ static int _fygue_flash_cluster_convert(
     return 0;
 }
 
+/* _fygue_flash_cluster_meta(): special metadata cluster handling
+ *
+ * notes:
+ *   metadata cluster are the last flash cluster of a flash sector it does
+ *   not have Bfile information. Generate a fake flash cluster with a
+ *   special custom kind to allow quick identification */
+static int _fygue_flash_cluster_meta(
+    struct fygue_flash *flash,
+    struct fygue_flash_cluster *fcluster,
+    int fsector_id
+) {
+    GAUTOTYPE geometry = &(flash->geometry);
+
+    memset(fcluster, 0x00, sizeof(struct fygue_flash_cluster));
+    fcluster->kind              = FYGUE_FCLUSTER_KIND_METADATA;
+    fcluster->lcluster_id       = 0xffff;
+    fcluster->fcluster_id       = 0xffff;
+    fcluster->fcluster_id_bfile = 0xffff;
+    fcluster->version           = 0xffffffff;
+    fcluster->meta_addr         = 0xffffffff;
+    fcluster->data_addr         = (
+        (geometry->phy_start | 0xa0000000) +
+        ((fsector_id + 1) * geometry->fsector_size) -
+        (8 * 512)
+    );
+    return 0;
+}
+
+/* _fygue_flash_cluster_details(): special flash sector details handling
+ *
+ * notes:
+ *   flash sector details is a particular flash cluster that contains
+ *   critical versioning information needed to rebuild Casio's flash
+ *   mapping.
+ *   However, this particular flash cluster are not represented in the
+ *   same way between machines. For example, the G35EII that use flash
+ *   sector of 64ko merge the details sector inside the metadata cluster to
+ *   keep some space which is not the case with the FXCP400 or CG50 that
+ *   use 128ko flash sector and which the first cluster should be a details
+ *   one type. */
+//TODO: remove device-specific code
+static int _fygue_flash_cluster_details(
+    struct fygue_flash *flash,
+    struct fygue_flash_cluster *fcluster,
+    int fsector_id
+) {
+    GAUTOTYPE geometry = &(flash->geometry);
+    volatile uint32_t *data32;
+    uintptr_t meta;
+    uintptr_t data;
+
+    memset(fcluster, 0x00, sizeof(struct fygue_flash_cluster));
+    if (gint[HWCALC] == HWCALC_G35PE2) {
+        data = (
+            (geometry->phy_start | 0xa0000000) +
+            (fsector_id * geometry->fsector_size) +
+            (geometry->fsector_size - (8*512)) +
+            ((geometry->fcluster_per_fsector - 1) * 0x40)
+        );
+        meta = data + 512;
+    } else {
+        data = (
+            (geometry->phy_start | 0xa0000000) +
+            (fsector_id * geometry->fsector_size)
+        );
+        meta = data + (geometry->fsector_size) - (8*512);
+    }
+    if (_fygue_flash_cluster_convert(flash, fcluster, meta) != 0)
+        return -1;
+    if (fcluster->version != 0xffffffff)
+        return -2;
+    data32 = (void*)data;
+    if (
+        ((data32[0] ^ data32[1]) != 0xffffffff) ||
+        ((data32[2] ^ data32[3]) != 0xffffffff) ||
+        ((data32[4] ^ data32[5]) != 0xffffffff)
+    ) {
+        return -1;
+    }
+    fcluster->data_addr = data;
+    fcluster->meta_addr = meta;
+    fcluster->version = data32[0];
+    return 0;
+}
+
+/* _fygue_flash_cluster_data(): handle generic data flash cluster
+ *
+ * notes
+ *   flash cluster data (0x11 or 0x88) are handled in the same way between
+ *   all device */
+static int _fygue_flash_cluster_data(
+    struct fygue_flash *flash,
+    struct fygue_flash_cluster *fcluster,
+    int fcluster_id,
+    int fsector_id,
+    int fcluster_off
+) {
+    GAUTOTYPE geometry = &(flash->geometry);
+    uintptr_t meta;
+    uintptr_t data;
+
+    data = (
+        (geometry->phy_start | 0xa0000000) +
+        (fsector_id * geometry->fsector_size) +
+        (fcluster_off * (8 * 512))
+    );
+    meta = (
+        (geometry->phy_start | 0xa0000000) +
+        (fsector_id * geometry->fsector_size) +
+        (geometry->fsector_size - (8 * 512)) +
+        (fcluster_off * 0x40)
+    );
+    int rc = _fygue_flash_cluster_convert(flash, fcluster, meta);
+    if (rc != 0)
+        return rc;
+    fcluster->data_addr         = data;
+    fcluster->meta_addr         = meta;
+    fcluster->fcluster_id       = fcluster_id;
+    fcluster->fcluster_id_bfile = (
+        (fsector_id * (geometry->fcluster_per_fsector - 1)) +
+        (fcluster_off)
+    );
+    return 0;
+}
+
 //---
 // Public
 //---
+
+/* fygue_flash_cluster_get() - get flash cluster information
+ *
+ * return
+ *   -1  if the provided `fline` is not valid
+ *   -2  if the provided `fline` have invalid Bfile metadata
+ *    0  if the meta information has been generated */
+int fygue_flash_cluster_get(
+    struct fygue_flash *flash,
+    struct fygue_flash_cluster *fcluster,
+    int fcluster_id
+) {
+    int fsector_id;
+    int fcluster_off;
+    int nb_entry;
+
+    if (flash == NULL || fcluster == NULL)
+        return -1;
+    if (fcluster_id >= flash->geometry.fcluster_count)
+        return -1;
+
+    nb_entry     = flash->geometry.fcluster_per_fsector;
+    fsector_id   = fcluster_id / nb_entry;
+    fcluster_off = fcluster_id % nb_entry;
+
+    if (fcluster_off == (nb_entry - 1))
+        return _fygue_flash_cluster_meta(flash, fcluster, fsector_id);
+    if (fcluster_off == 0)
+        return _fygue_flash_cluster_details(flash, fcluster, fsector_id);
+    return _fygue_flash_cluster_data(
+        flash,
+        fcluster,
+        fcluster_id,
+        fsector_id,
+        fcluster_off
+    );
+}
 
 /* fygue_flash_cluster_geometry() - get geometry information
  *
@@ -123,72 +290,19 @@ int fygue_flash_cluster_geometry(
     uint16_t *fsector_id,
     uint16_t *fcluster_off
 ) {
+    int nb_cluster;
+
     if ((addr & 0x0fffffff) < flash->geometry.phy_start)
         return -1;
+    nb_cluster = flash->geometry.fcluster_per_fsector;
     addr = (addr & 0x0fffffff) - flash->geometry.phy_start;
     if (fcluster_id != NULL) {
-        *fcluster_id  = ((addr & 0xfffe0000) >> 17) * 32;
+        *fcluster_id  = ((addr & 0xfffe0000) >> 17) * nb_cluster;
         *fcluster_id += ((addr & 0x0001ffff) >> 12);
     }
     if (fsector_id != NULL)
-        *fsector_id = ((addr & 0xfffe0000) >> 17) * 32;
+        *fsector_id = ((addr & 0xfffe0000) >> 17) * nb_cluster;
     if (fcluster_off != NULL)
         *fcluster_off = ((addr & 0x0001ffff) >> 12);
-    return 0;
-}
-
-/* fygue_flash_cluster_get() - get flash cluster information
- *
- * return
- *   -1  if the provided `fline` is not valid
- *   -2  if the provided `fline` have invalid Bfile metadata
- *    0  if the meta information has been generated */
-int fygue_flash_cluster_get(
-    struct fygue_flash *flash,
-    uint16_t fcluster_id,
-    struct fygue_flash_cluster *fcluster
-) {
-    uintptr_t bfile_meta;
-    uintptr_t bfile_data;
-    int fsector_id;
-    int fcluster_off;
-
-    if (flash == NULL || fcluster == NULL)
-        return -1;
-    if (fcluster_id >= flash->geometry.fcluster_count)
-        return -1;
-    fsector_id    = fcluster_id / 32;
-    fcluster_off  = fcluster_id % 32;
-    if (fcluster_off == 31)
-    {
-        fcluster->kind          = 0x667;
-        fcluster->lcluster_id   = 0xffff;
-        fcluster->version       = 0xffffffff;
-    } else {
-        bfile_meta  = flash->geometry.phy_start;
-        bfile_meta += (fsector_id * 0x20000) + 0x1f000;
-        bfile_meta += (fcluster_off * 0x40);
-        if (_fygue_flash_cluster_convert(flash, fcluster, bfile_meta) != 0)
-            return -2;
-    }
-    bfile_data  = flash->geometry.phy_start;
-    bfile_data += (fsector_id * 0x20000);
-    bfile_data += (fcluster_off * 0x1000);
-    fcluster->data_p1           = bfile_data | 0xa0000000;
-    fcluster->data_p2           = bfile_data | 0xa0000000;
-    fcluster->fcluster_id_bfile = (fsector_id * 31) + fcluster_off;
-    fcluster->fcluster_id       = fcluster_id;
-    if (fcluster->kind == 0x22)
-    {
-        uint32_t *data = (void*)fcluster->data_p1;
-        if (
-            ((data[0] ^ data[1]) != 0xffffffff) ||
-            ((data[2] ^ data[3]) != 0xffffffff) ||
-            ((data[4] ^ data[5]) != 0xffffffff)
-        ) {
-            return -2;
-        }
-        fcluster->version = data[0];
-    }
     return 0;
 }

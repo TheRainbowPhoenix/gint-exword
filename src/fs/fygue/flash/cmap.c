@@ -61,8 +61,7 @@ static int fygue_flash_cmap_update(
         ) {
             cmap->lcluster[i].fcluster_id       = 0xffff;
             cmap->lcluster[i].fcluster_id_bfile = 0xffff;
-            cmap->lcluster[i].fcluster_data_p1  = 0xffffffff;
-            cmap->lcluster[i].fcluster_data_p2  = 0xffffffff;
+            cmap->lcluster[i].fcluster_addr     = 0xffffffff;
             cmap->lcluster[i].version           = 0xffffffff;
         }
         cmap->lcluster_id_max = fcluster->lcluster_id + 1;
@@ -70,8 +69,7 @@ static int fygue_flash_cmap_update(
     entry = &(cmap->lcluster[fcluster->lcluster_id]);
     entry->fcluster_id       = fcluster->fcluster_id;
     entry->fcluster_id_bfile = fcluster->fcluster_id_bfile;
-    entry->fcluster_data_p1  = fcluster->data_p1;
-    entry->fcluster_data_p2  = fcluster->data_p2;
+    entry->fcluster_addr     = fcluster->data_addr;
     entry->version           = fcluster->version;
     return 0;
 }
@@ -79,6 +77,8 @@ static int fygue_flash_cmap_update(
 //---
 // Public
 //---
+
+int debug_count = 0;
 
 /* fygue_flash_cmap_init() - initialize fcluster translation
  *
@@ -102,28 +102,30 @@ int fygue_flash_cmap_init(
     struct fygue_flash_cmap *cmap
 ) {
     struct fygue_flash_cluster fcluster;
+    int fsector_id;
     int fsector;
     int rc;
+    int j;
 
     if (flash == NULL || cmap == NULL)
         return -1;
+    fsector_id = 0;
     memset(cmap, 0x00, sizeof(struct fygue_flash_cmap));
     for (
         fsector = 0 ;
         fsector < flash->geometry.fsector_count ;
         fsector++
     ) {
-        if (fygue_flash_cluster_get(flash, fsector * 32, &fcluster) != 0)
+        if (fsector != 0)
+            fsector_id += flash->geometry.fcluster_per_fsector;
+        if (fygue_flash_cluster_get(flash, &fcluster, fsector_id) != 0)
             continue;
         if (fcluster.kind != 0x22)
             continue;
-        for (int j = 0 ; j < 31 ; j++)
+        debug_count += 1;
+        for (j = 1 ; j < (flash->geometry.fcluster_per_fsector - 1) ; j++)
         {
-            rc = fygue_flash_cluster_get(
-                flash,
-                (fsector * 32) + j,
-                &fcluster
-            );
+            rc = fygue_flash_cluster_get(flash, &fcluster, fsector_id + j);
             if (rc != 0)
                 continue;
             if (fcluster.kind != 0x11)
@@ -159,7 +161,7 @@ int fygue_flash_cmap_lsector_get_addr(
     ) {
         return -2;
     }
-    fsector_addr  = cmap->lcluster[lcluster_id].fcluster_data_p1;
+    fsector_addr  = cmap->lcluster[lcluster_id].fcluster_addr;
     fsector_addr += (lsector_id % 8) * 512;
     *sector = fsector_addr;
     return 0;

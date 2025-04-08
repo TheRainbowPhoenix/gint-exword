@@ -5,6 +5,88 @@
 #include "../flash/flash.h"
 
 //---
+// Internals
+//---
+
+/* _fygue_fat16_cluster_get_next(): FAT16 cluster handling */
+static int _fygue_fat16_cluster_get_next(
+    struct fygue_fat *fat,
+    int *cluster
+) {
+    uint16_t *fat0;
+    int nb_entry_per_sector;
+    int cluster_sector;
+    int cluster_real;
+    int rc;
+
+    nb_entry_per_sector = fat->SectorSize / 2;
+    cluster_sector = *cluster / nb_entry_per_sector;
+    cluster_real = *cluster - (cluster_sector * nb_entry_per_sector);
+    rc = fygue_fat_sector_get_addr(
+        fat,
+        (void*)&fat0,
+        fat->FAT0SectorID + cluster_sector
+    );
+    if (rc < 0)
+        return -1;
+    *cluster = FAT_WORD(fat0[cluster_real]);
+    return 0;
+}
+
+/* _fygue_fat12_cluster_get_next(): FAT12 cluster handling */
+// TODO: assume fixed sector size to 512
+// TODO: better calculus
+static int _fygue_fat12_cluster_get_next(
+    struct fygue_fat *fat,
+    int *cluster
+) {
+    int fat_index0;
+    int fat_index1;
+    int fat_offset0;
+    int fat_offset1;
+    int fat_sector0;
+    int fat_sector1;
+    uintptr_t fat_data0;
+    uintptr_t fat_data1;
+
+    fat_index0  = *cluster + (*cluster / 2);
+    fat_index1  = fat_index0 + 1;
+    fat_sector0 = fat->FAT0SectorID + (fat_index0 / fat->SectorSize);
+    fat_sector1 = fat->FAT0SectorID + (fat_index1 / fat->SectorSize);
+
+    if (fat_sector0 == fat_sector1) {
+        if (fygue_fat_sector_get_addr(fat, &fat_data0, fat_sector0) != 0)
+            return -1;
+        fat_data1 = fat_data0;
+        fat_offset0 = fat_index0 - (fat_sector0 * fat->SectorSize);
+        fat_offset1 = fat_offset0 + 1;
+    } else {
+        if (fygue_fat_sector_get_addr(fat, &fat_data0, fat_sector0) != 0)
+            return -1;
+        if (fygue_fat_sector_get_addr(fat, &fat_data1, fat_sector1) != 0)
+            return -1;
+        fat_offset0 = fat_index0 - (fat_sector0 * fat->SectorSize);
+        fat_offset1 = fat_index1 - (fat_sector1 * fat->SectorSize);
+    }
+
+    if (*cluster & 1) {
+        *cluster = (
+            ((((uint8_t*)fat_data0)[fat_offset0] & 0xf0) >> 4) |
+            ((((uint8_t*)fat_data1)[fat_offset1] & 0xff) << 4)
+        );
+    } else {
+        *cluster = (
+            ((((uint8_t*)fat_data0)[fat_offset0] & 0xff) >> 0) |
+            ((((uint8_t*)fat_data1)[fat_offset1] & 0xf0) << 8)
+        );
+    }
+
+    if (*cluster == 0x0fff)
+        *cluster = 0xffff;
+    return -1;
+}
+
+//---
 // Public
 //---
 
@@ -24,10 +106,6 @@
  *   - ensure FAT1 information is the same ? */
 int fygue_fat_cluster_get_next(struct fygue_fat *fat, int *cluster_current)
 {
-    uint16_t *fat0;
-    int nb_entry_per_sector;
-    int cluster_sector;
-    int cluster_real;
     int cluster;
     int rc;
 
@@ -42,18 +120,12 @@ int fygue_fat_cluster_get_next(struct fygue_fat *fat, int *cluster_current)
         return -2;
     if (cluster >= fat->ClusterCount)
         return -2;
-    nb_entry_per_sector = fat->SectorSize / 2;
-    cluster_sector = cluster / nb_entry_per_sector;
-    cluster_real = cluster - (cluster_sector * nb_entry_per_sector);
-    rc = fygue_fat_sector_get_addr(
-        fat,
-        (void*)&fat0,
-        fat->FAT0SectorID + cluster_sector
-    );
-    if (rc < 0)
+    if (fat->Type == FYGUE_FAT_TYPE_FAT12)
+        rc = _fygue_fat12_cluster_get_next(fat, &cluster);
+    if (fat->Type == FYGUE_FAT_TYPE_FAT16)
+        rc = _fygue_fat16_cluster_get_next(fat, &cluster);
+    if (rc != 0)
         return -5;
-    rc = 0;
-    cluster = FAT_WORD(fat0[cluster_real]);
     if (cluster == 0xffff)
         rc = -6;
     if (cluster == 0x0000)
