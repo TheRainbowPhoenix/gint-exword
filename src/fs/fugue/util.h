@@ -44,6 +44,9 @@ uint16_t *utf8_to_fc_alloc(uint16_t *prefix, char const *utf8,
 /* Same as fc_to_utf8() but allocates a string with malloc(). */
 char *fc_to_utf8_alloc(uint16_t const *fc);
 
+/* Same as fs_path_normalize() but with a prefix. If NULL, "/". */
+char *fs_path_normalize_opt(char const *path, char const *prefix, int dirsep);
+
 #ifdef __cplusplus
 }
 #endif

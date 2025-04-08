@@ -7,6 +7,7 @@
 #include <string.h>
 #include "util.h"
 #include "fugue.h"
+#include "bfilecp.h"
 
 int fugue_rmdir(char const *path)
 {
@@ -34,6 +35,11 @@ int fugue_rmdir(char const *path)
 		return -1;
 	}
 
+#if GINT_OS_CP
+    gint_world_enter(GINT_WORLD_OS);
+	int rc = BFile_Remove(path);
+    gint_world_leave();
+#else
 	uint16_t *fcpath = fs_path_normalize_fc(path);
 	if(!fcpath) {
 		errno = ENOMEM;
@@ -42,14 +48,13 @@ int fugue_rmdir(char const *path)
 
     gint_world_enter(GINT_WORLD_OS);
 	int rc = BFile_Remove(fcpath);
+    gint_world_leave();
+	free(fcpath);
+#endif
+
 	if(rc < 0) {
 		errno = bfile_error_to_errno(rc);
-		rc = -1;
-	} else {
-        rc = 0;
-    }
-    gint_world_leave();
-
-	free(fcpath);
-	return rc;
+		return -1;
+	}
+	return 0;
 }

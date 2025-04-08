@@ -172,6 +172,18 @@ void r61523_display_rect(
     }
 }
 
+void r61523_set_pixel(int x, int y, int color)
+{
+    if((unsigned)x >= 320 || (unsigned)y >= 528)
+        return;
+
+    // dma_transfer_wait(0);
+    r61523_win_set(x, x, y, y);
+    select(44);
+    uint16_t volatile *DISPLAY = (void *)0xb4000000;
+    *DISPLAY = color;
+}
+
 static bool r61523_update(int x, int y, image_t const *fb, int flags)
 {
     if(fb->format != IMAGE_RGB565)

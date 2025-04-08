@@ -23,6 +23,9 @@ void r61523_display_rect(
 /* r61523_win_set(): Set the display window */
 void r61523_win_set(int x1, int x2, int y1, int y2);
 
+/* r61523_set_pixel(): Write a pixel directly to DD (slow) */
+void r61523_set_pixel(int x, int y, int color);
+
 #ifdef __cplusplus
 }
 #endif

@@ -19,6 +19,6 @@ ssize_t pread(int fd, void *buf, size_t size, off_t offset)
 
 end:
 	/* At the end, always try to restore the current position */
-	lseek(fd, current, SEEK_CUR);
+	lseek(fd, current, SEEK_SET);
 	return rc;
 }

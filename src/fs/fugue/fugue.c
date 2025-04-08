@@ -9,6 +9,7 @@
 #include <errno.h>
 #include "fugue.h"
 #include "util.h"
+#include "bfilecp.h"
 
 ssize_t fugue_read(void *data0, void *buf, size_t size)
 {
@@ -22,7 +23,11 @@ ssize_t fugue_read(void *data0, void *buf, size_t size)
 	if(data->pos + (int)size > filesize)
 		size = filesize - data->pos;
 
+#if GINT_OS_CP
+	int rc = BFile_Read(fugue_fd, buf, size);
+#else
 	int rc = BFile_Read(fugue_fd, buf, size, -1);
+#endif
 	if(rc < 0) {
 		errno = bfile_error_to_errno(rc);
 		size = -1;
@@ -109,11 +114,26 @@ ssize_t fugue_write(void *data0, const void *buf, size_t size)
 
 off_t fugue_lseek(void *data0, off_t offset, int whence)
 {
-    gint_world_enter(GINT_WORLD_OS);
-
 	fugue_fd_t *data = data0;
 	int fugue_fd = data->fd;
 
+	// TODO: fugue_lseek: CP400 optimization with native whence?
+#if GINT_OS_CP
+	whence = (whence == SEEK_SET) ? BFileCP_SEEK_SET :
+	         (whence == SEEK_CUR) ? BFileCP_SEEK_CUR :
+	         BFileCP_SEEK_END;
+    gint_world_enter(GINT_WORLD_OS);
+	int rc = BFile_Seek(fugue_fd, offset, whence);
+	if(rc < 0) {
+		errno = bfile_error_to_errno(rc);
+		rc = -1;
+	} else {
+	    data->pos = rc;
+    }
+    gint_world_leave();
+	return rc;
+#else
+    gint_world_enter(GINT_WORLD_OS);
 	int filesize = BFile_Size(fugue_fd);
 
 	if(whence == SEEK_CUR)
@@ -138,6 +158,7 @@ off_t fugue_lseek(void *data0, off_t offset, int whence)
 	/* rc is the amount of space left in the file (including pre-allocated
 	   space), so instead just return offset directly */
 	return offset;
+#endif
 }
 
 int fugue_close(void *data0)
