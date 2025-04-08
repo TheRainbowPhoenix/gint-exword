@@ -78,8 +78,6 @@ static int fygue_flash_cmap_update(
 // Public
 //---
 
-int debug_count = 0;
-
 /* fygue_flash_cmap_init() - initialize fcluster translation
  *
  * notes:
@@ -122,7 +120,6 @@ int fygue_flash_cmap_init(
             continue;
         if (fcluster.kind != 0x22)
             continue;
-        debug_count += 1;
         for (j = 1 ; j < (flash->geometry.fcluster_per_fsector - 1) ; j++)
         {
             rc = fygue_flash_cluster_get(flash, &fcluster, fsector_id + j);

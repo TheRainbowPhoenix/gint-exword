@@ -48,8 +48,9 @@ uintptr_t debug_meta = 0;
 static int _fygue_flash_cluster_convert(
     struct fygue_flash *flash,
     struct fygue_flash_cluster *fcluster,
-    uintptr_t bfile_meta
+    uintptr_t meta
 ) {
+#if 0
     static const uint8_t _constant1[] = {
         0xff, 0xff, 0xff, 0xff,
         0xff, 0xff, 0xff, 0xff,
@@ -66,44 +67,49 @@ static int _fygue_flash_cluster_convert(
         0xbb, 0xbb, 0xdd, 0xdd,
         0xdd, 0xee, 0xee, 0xee,
     };
-    struct _bfile_cluster_metadata *meta;
+#endif
+    struct _bfile_cluster_metadata *bfile_meta;
 
-    if (fcluster == NULL)
+    if (flash == NULL || fcluster == NULL)
         return -1;
-    debug_meta = bfile_meta;
-    meta = (void*)(bfile_meta | 0xa0000000);
+    bfile_meta = (void*)(meta | 0xa0000000);
     if (
-        meta->signature[0] != 0x5a ||
-        meta->signature[1] != 0x5a ||
-        meta->signature[2] != 0x5a
+        bfile_meta->signature[0] != 0x5a ||
+        bfile_meta->signature[1] != 0x5a ||
+        bfile_meta->signature[2] != 0x5a
     ) {
         return -2;
     }
     if (
-        meta->bitmask[0] != 0x88 &&
-        meta->bitmask[0] != 0x22 &&
-        meta->bitmask[0] != 0x11
+        bfile_meta->bitmask[0] != 0x88 &&
+        bfile_meta->bitmask[0] != 0x22 &&
+        bfile_meta->bitmask[0] != 0x11
     ) {
         return -3;
     }
-    if (meta->bitmask[1] != 0x0f)
+    if (bfile_meta->bitmask[1] != 0x0f)
         return -4;
-    if (meta->bitmask[0] != 0x11 && meta->lcluster_id != 0xffff)
+    if (
+        bfile_meta->bitmask[0] != 0x11 &&
+        bfile_meta->lcluster_id != 0xffff
+    ) {
         return -5;
+    }
     // on the fxcp400, have only some flash sector with the constants used
     // in other device. Internally, on the fxcp400, Casio only perform
     // a check an CRC that is performed on the whole cluster
     // TODO: CRC check
+#if 0
     if (
-        flash->integrity == FYGUE_FLASH_INTEGRITY_FULL   &&
-        memcmp(&(meta->constant), _constant1, 0x18) != 0 &&
-        memcmp(&(meta->constant), _constant2, 0x18) != 0
+        memcmp(&(bfile_meta->constant), _constant1, 0x18) != 0 &&
+        memcmp(&(bfile_meta->constant), _constant2, 0x18) != 0
     ) {
         return -6;
     }
-    fcluster->lcluster_id = meta->lcluster_id;
-    fcluster->kind        = meta->bitmask[0];
-    fcluster->version     = meta->fcluster_version;
+#endif
+    fcluster->lcluster_id = bfile_meta->lcluster_id;
+    fcluster->kind        = bfile_meta->bitmask[0];
+    fcluster->version     = bfile_meta->fcluster_version;
     return 0;
 }
 
@@ -146,8 +152,11 @@ static int _fygue_flash_cluster_meta(
  *   sector of 64ko merge the details sector inside the metadata cluster to
  *   keep some space which is not the case with the FXCP400 or CG50 that
  *   use 128ko flash sector and which the first cluster should be a details
- *   one type. */
-//TODO: remove device-specific code
+ *   one type.
+ *
+ *   for 64k cluster the 0xf3c0 offset can be calculated as:
+ *      0x10000 - (8*512)   = 0xf000  | sector size minus cluster size
+ *      15 * 0x40           = 0x3c0   | skip all data cluster meta info */
 static int _fygue_flash_cluster_details(
     struct fygue_flash *flash,
     struct fygue_flash_cluster *fcluster,
@@ -159,21 +168,18 @@ static int _fygue_flash_cluster_details(
     uintptr_t data;
 
     memset(fcluster, 0x00, sizeof(struct fygue_flash_cluster));
-    if (gint[HWCALC] == HWCALC_G35PE2) {
+    if (geometry->fsector_size == FYGUE_FSECTOR_SIZE_64K) {
         data = (
             (geometry->phy_start | 0xa0000000) +
-            (fsector_id * geometry->fsector_size) +
-            (geometry->fsector_size - (8*512)) +
-            ((geometry->fcluster_per_fsector - 1) * 0x40)
+            (fsector_id * 0x10000) +
+            (0xf3c0)
         );
         meta = data + 512;
     } else {
-        data = (
-            (geometry->phy_start | 0xa0000000) +
-            (fsector_id * geometry->fsector_size)
-        );
-        meta = data + (geometry->fsector_size) - (8*512);
+        data = (geometry->phy_start | 0xa0000000) + (fsector_id * 0x20000);
+        meta = data + 0x1f000;
     }
+    debug_meta = meta;
     if (_fygue_flash_cluster_convert(flash, fcluster, meta) != 0)
         return -1;
     if (fcluster->version != 0xffffffff)
@@ -208,20 +214,33 @@ static int _fygue_flash_cluster_data(
     uintptr_t meta;
     uintptr_t data;
 
-    data = (
-        (geometry->phy_start | 0xa0000000) +
-        (fsector_id * geometry->fsector_size) +
-        (fcluster_off * (8 * 512))
-    );
-    meta = (
-        (geometry->phy_start | 0xa0000000) +
-        (fsector_id * geometry->fsector_size) +
-        (geometry->fsector_size - (8 * 512)) +
-        (fcluster_off * 0x40)
-    );
-    int rc = _fygue_flash_cluster_convert(flash, fcluster, meta);
-    if (rc != 0)
-        return rc;
+    if (geometry->fsector_size == FYGUE_FSECTOR_SIZE_64K) {
+        data = (
+            (geometry->phy_start | 0xa0000000) +
+            (fsector_id * 0x10000) +
+            (fcluster_off * (8 * 512))
+        );
+        meta = (
+            (geometry->phy_start | 0xa0000000) +
+            (fsector_id * 0x10000) +
+            (0xf000) +
+            (fcluster_off * 0x40)
+        );
+    } else {
+        data = (
+            (geometry->phy_start | 0xa0000000) +
+            (fsector_id * 0x20000) +
+            (fcluster_off * (8 * 512))
+        );
+        meta = (
+            (geometry->phy_start | 0xa0000000) +
+            (fsector_id * 0x20000) +
+            (0x1f000) +
+            (fcluster_off * 0x40)
+        );
+    }
+    if (_fygue_flash_cluster_convert(flash, fcluster, meta) != 0)
+        return -1;
     fcluster->data_addr         = data;
     fcluster->meta_addr         = meta;
     fcluster->fcluster_id       = fcluster_id;
@@ -247,6 +266,7 @@ int fygue_flash_cluster_get(
     struct fygue_flash_cluster *fcluster,
     int fcluster_id
 ) {
+    GAUTOTYPE geometry = &(flash->geometry);
     int fsector_id;
     int fcluster_off;
     int nb_entry;
@@ -256,14 +276,20 @@ int fygue_flash_cluster_get(
     if (fcluster_id >= flash->geometry.fcluster_count)
         return -1;
 
-    nb_entry     = flash->geometry.fcluster_per_fsector;
-    fsector_id   = fcluster_id / nb_entry;
-    fcluster_off = fcluster_id % nb_entry;
+    if (geometry->fsector_size == FYGUE_FSECTOR_SIZE_64K) {
+        nb_entry     = 16;
+        fsector_id   = fcluster_id / 16;
+        fcluster_off = fcluster_id % 16;
+    } else {
+        nb_entry     = 32;
+        fsector_id   = fcluster_id / 32;
+        fcluster_off = fcluster_id % 32;
+    }
 
-    if (fcluster_off == (nb_entry - 1))
-        return _fygue_flash_cluster_meta(flash, fcluster, fsector_id);
     if (fcluster_off == 0)
         return _fygue_flash_cluster_details(flash, fcluster, fsector_id);
+    if (fcluster_off == (nb_entry - 1))
+        return _fygue_flash_cluster_meta(flash, fcluster, fsector_id);
     return _fygue_flash_cluster_data(
         flash,
         fcluster,

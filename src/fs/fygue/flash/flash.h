@@ -44,15 +44,14 @@ struct fygue_flash
         uintptr_t phy_start;
         uintptr_t phy_end;
         size_t size;
+        enum {
+            FYGUE_FSECTOR_SIZE_64K,
+            FYGUE_FSECTOR_SIZE_128K,
+        } fsector_size;
         int fsector_count;
-        size_t fsector_size;
         int fcluster_per_fsector;
         int fcluster_count;
     } geometry;
-    enum {
-        FYGUE_FLASH_INTEGRITY_FULL,
-        FYGUE_FLASH_INTEGRITY_PARTIAL,
-    } integrity;
     struct fygue_flash_cmap cmap;
 };
 
