@@ -16,7 +16,6 @@ int fygue_stat(char const * const path, struct stat *statbuf)
         errno = EIO;
         return -1;
     }
-
     if (fygue_resolve(path, &resolve) != 0) {
         errno = ENOENT;
         return -1;

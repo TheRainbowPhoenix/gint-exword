@@ -77,7 +77,6 @@ int fygue_dir_read(
     int rc;
 
     ENOTSUP_IF_NOT_FYGUE(-1);
-
     if (desc == NULL || desc->resolve.type != FYGUE_FILE_TYPE_DIR) {
         errno = EBADF;
         return -1;
@@ -90,7 +89,7 @@ int fygue_dir_read(
         errno = EINVAL;
         return -1;
     }
-    if (fygue_mount(&fsinfo, true) != 0) {
+    if (fygue_descriptor_sync(&fsinfo, desc) != 0) {
         errno = EIO;
         return -1;
     }

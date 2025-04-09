@@ -36,9 +36,9 @@ int _fygue_flash_hw_detect(struct fygue_flash *flash)
             geometry->fsector_size = FYGUE_FSECTOR_SIZE_128K;
             break;
         case HWCALC_FXCG100:
-            geometry->phy_start = 0x00bc0000;
+            geometry->phy_start = 0x00c80000;
             geometry->fsector_size = FYGUE_FSECTOR_SIZE_128K;
-            geometry->fsector_count = 0x26;
+            geometry->fsector_count = 0x3d;
             break;
         default:
             errno = ENOTSUP;
@@ -69,7 +69,17 @@ int fygue_flash_initialize(struct fygue_flash *flash)
     memset(flash, 0x00, sizeof(struct fygue_flash));
     if (_fygue_flash_hw_detect(flash) != 0)
         return -2;
-    if (fygue_flash_cmap_init(flash, &(flash->cmap)) != 0)
+    if (fygue_flash_cmap_initialize(flash, &(flash->cmap)) != 0)
+        return -3;
+    return 0;
+}
+
+/* fygue_flash_sync(): re-init flash information */
+int fygue_flash_sync(struct fygue_flash *flash)
+{
+    if (flash == NULL)
+        return -1;
+    if (fygue_flash_cmap_sync(flash, &(flash->cmap)) != 0)
         return -3;
     return 0;
 }

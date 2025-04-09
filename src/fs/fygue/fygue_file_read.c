@@ -19,6 +19,10 @@ ssize_t fygue_file_read(
         errno = EFAULT;
         return -1;
     }
+    if (fygue_file_sync(desc) != 0) {
+        errno = EIO;
+        return -1;
+    }
     if (fygue_mount(&fsinfo, true) != 0) {
         errno = EIO;
         return -1;

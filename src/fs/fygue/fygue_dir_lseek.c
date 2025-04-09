@@ -35,6 +35,10 @@ off_t fygue_dir_lseek(
         errno = EINVAL;
         return -1;
     }
+    if (fygue_descriptor_sync(NULL, desc) != 0) {
+        errno = EIO;
+        return -1;
+    }
     if(whence == SEEK_CUR)
         offset += desc->resolve.dir.pos;
     if(whence == SEEK_END) {

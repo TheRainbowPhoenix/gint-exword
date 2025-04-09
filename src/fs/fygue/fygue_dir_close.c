@@ -13,7 +13,7 @@ int fygue_dir_close(struct fygue_descriptor *desc)
         errno = EBADF;
         return -1;
     }
-    if (fygue_mount(&fsinfo, true) != 0) {
+    if (fygue_descriptor_sync(&fsinfo, desc) != 0) {
         errno = EIO;
         return -1;
     }

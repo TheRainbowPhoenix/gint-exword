@@ -153,8 +153,8 @@ static int _fygue_fat_prepare(struct fygue_fat *fat)
 // Public
 //---
 
-/* fygue_fat_init_cold() - fully initialize the FAT information */
-int fygue_fat_init_cold(struct fygue_fat *fat)
+/* fygue_fat_initialize() - fully initialize the FAT information */
+int fygue_fat_initialize(struct fygue_fat *fat)
 {
     if (fat == NULL)
         return -1;
@@ -170,11 +170,14 @@ int fygue_fat_init_cold(struct fygue_fat *fat)
     return 0;
 }
 
-/* fygue_fat_init_hot(): re-initialize the FAT information */
-int fygue_fat_init_hot(struct fygue_fat *fat)
+/* fygue_fat_sync(): re-initialize the FAT information */
+int fygue_fat_sync(struct fygue_fat *fat)
 {
-    //FIXME: implement
-    (void)fat;
-    errno = ENOTSUP;
-    return -3;
+    if (fat == NULL)
+        return -1;
+    if (fygue_flash_sync((&fat->_flash)) != 0)
+        return -2;
+    if (_fygue_fat_prepare(fat) != 0)
+        return -3;
+    return 0;
 }

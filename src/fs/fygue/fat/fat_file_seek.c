@@ -21,6 +21,7 @@ int fygue_fat_file_seek(
         offset_test += file->chunk[i].size;
         if (offset_test > offset) {
             file->chunk_rd_offset = offset - offset_test;
+            file->cursor = offset;
             return 0;
         }
         file->chunk_rd_index += 1;

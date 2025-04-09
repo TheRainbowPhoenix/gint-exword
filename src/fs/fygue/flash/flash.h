@@ -62,6 +62,9 @@ struct fygue_flash
 /* fygue_flash_initialize(): init flash abstraction */
 extern int fygue_flash_initialize(struct fygue_flash *flash);
 
+/* fygue_flash_sync(): re-init flash information */
+extern int fygue_flash_sync(struct fygue_flash *flash);
+
 /* fygue_flash_sector_get_addr(): return the logical sector address */
 extern int fygue_flash_sector_get_addr(
     struct fygue_flash *flash,
@@ -73,8 +76,14 @@ extern int fygue_flash_sector_get_addr(
 // (internal) cluster map interface
 //---
 
-/* fygue_flash_cmap_init() - initialize the fcluster redirection map */
-extern int fygue_flash_cmap_init(
+/* fygue_flash_cmap_initialize() - initialize the fcluster redirection map */
+extern int fygue_flash_cmap_initialize(
+    struct fygue_flash *flash,
+    struct fygue_flash_cmap *cmap
+);
+
+/* fygue_flash_cmap_sync() - sync the fcluster redirection map */
+extern int fygue_flash_cmap_sync(
     struct fygue_flash *flash,
     struct fygue_flash_cmap *cmap
 );

@@ -31,108 +31,6 @@ static int _fygue_path_get_name(
     return 0;
 }
 
-/* _fygue_dirent_resolve_file(): generate file information
- *
- * notes
- *   - assume FAT integrity */
-static int _fygue_dirent_resolve_file(
-    struct fygue_fat *fat,
-    struct fygue_fat_file *file,
-    struct fygue_fat_dirent *dirent
-) {
-    uintptr_t cluster_addr_prev;
-    uintptr_t cluster_addr;
-    size_t cluster_size;
-    int cluster;
-    void *tmp;
-
-    memset(file, 0x00, sizeof(struct fygue_fat_file));
-    file->attribute     = dirent->attribute;
-    file->cluster_entry = dirent->cluster_id;
-    file->size          = dirent->size;
-    file->chunk         = NULL;
-    file->chunk_count   = 0;
-
-    cluster = file->cluster_entry;
-    cluster_size = fat->SectorSize * fat->SectorPerClus;
-    while (true)
-    {
-        if (fygue_fat_cluster_get_addr(fat, &cluster_addr, cluster) != 0)
-            goto error;
-        if (file->chunk_count > 0) {
-            cluster_addr_prev  = file->chunk[file->chunk_count - 1].addr;
-            cluster_addr_prev += file->chunk[file->chunk_count - 1].size;
-            if (cluster_addr == cluster_addr_prev) {
-                file->chunk[file->chunk_count - 1].size += cluster_size;
-                file->chunk[file->chunk_count - 1].cluster_count += 1;
-                if (fygue_fat_cluster_get_next(fat, &cluster) != 0)
-                    break;
-                continue;
-            }
-        }
-        tmp = reallocarray(
-            file->chunk,
-            file->chunk_count + 1,
-            sizeof(*file->chunk)
-        );
-        if (tmp == NULL)
-            goto error;
-        file->chunk = tmp;
-        file->chunk[file->chunk_count].size = cluster_size;
-        file->chunk[file->chunk_count].addr = cluster_addr;
-        file->chunk[file->chunk_count].cluster_count = 1;
-        file->chunk_count += 1;
-        if (fygue_fat_cluster_get_next(fat, &cluster) != 0)
-            break;
-    }
-    return 0;
-error:
-    if (file->chunk == NULL)
-        free(file->chunk);
-    memset(file, 0x00, sizeof(struct fygue_fat_file));
-    return -1;
-}
-
-/* _fugue_dirent_resolve_dir(): convert found dirent to dir */
-static int _fygue_dirent_resolve_dir(
-    struct fygue_fat *fat,
-    struct fygue_fat_dir *dir,
-    struct fygue_fat_dirent *dirent
-) {
-    int rc;
-
-    memset(dir, 0x00, sizeof(struct fygue_fat_dir));
-    if (dirent == NULL) {
-        dir->cluster_entry      = 0;
-        dir->root_dirent_count  = fat->RootEntCount;
-        dir->attribute          = FYGUE_FAT_FILE_TYPE_DIR;
-    } else {
-        if ((dirent->attribute & FYGUE_FAT_FILE_TYPE_DIR) == 0x00)
-            return -1;
-        dir->cluster_entry      = dirent->cluster_id;
-        dir->attribute          = FYGUE_FAT_FILE_TYPE_DIR;
-        dir->root_dirent_count  = 0;
-    }
-    dir->dirty           = false;
-    dir->sector_count    = 0;
-    dir->dirent_cursor   = 0;
-    dir->end_of_dirent   = false;
-    dir->cluster_current = dir->cluster_entry;
-    rc = fygue_fat_cluster_get_sector(
-        fat,
-        dir->cluster_current,
-        &dir->sector_id
-    );
-    if (rc != 0)
-        return -2;
-    rc = fygue_fat_sector_get_addr(
-        fat,
-        &dir->dirent_current_addr,
-        dir->sector_id
-    );
-    return (rc != 0) ? -3 : 0;
-}
-
 /* _fygue_opendir_find() - try to find the directory entry */
 static int _fygue_dirent_find(
     struct fygue_fat *fat,
@@ -159,10 +57,10 @@ static int _fygue_resolve_set(
 ) {
     if (dirent == NULL || (dirent->attribute & FYGUE_FAT_ATTR_DIRECTORY)) {
         resolve->type = FYGUE_FAT_FILE_TYPE_DIR;
-        return _fygue_dirent_resolve_dir(fat, &(resolve->dir), dirent);
+        return fygue_fat_dir_open(fat, &(resolve->dir), dirent);
     }
     resolve->type = FYGUE_FAT_FILE_TYPE_FILE;
-    return _fygue_dirent_resolve_file(fat, &(resolve->file), dirent);
+    return fygue_fat_file_open(fat, &(resolve->file), dirent);
 }
 
 //---
@@ -194,7 +92,7 @@ int fygue_fat_resolve(
     while (true)
     {
         if (is_root) {
-            if (_fygue_dirent_resolve_dir(fat, &dir, NULL) != 0)
+            if (fygue_fat_dir_open(fat, &dir, NULL) != 0)
                 return -3;
             if (_fygue_path_get_name(&prefix, &start, &len) != 0)
                 break;
@@ -205,7 +103,7 @@ int fygue_fat_resolve(
             return -4;
         if (_fygue_path_get_name(&prefix, &start, &len) != 0)
             break;
-        if (_fygue_dirent_resolve_dir(fat, &dir, &dirent) != 0)
+        if (fygue_fat_dir_open(fat, &dir, &dirent) != 0)
             return -5;
     }
     if (is_root)

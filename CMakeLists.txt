@@ -274,9 +274,11 @@ set(SOURCES
   src/fs/fygue/fygue_file_read.c
   src/fs/fygue/fat/cluster.c
   src/fs/fygue/fat/fat.c
+  src/fs/fygue/fat/fat_dir_open.c
   src/fs/fygue/fat/fat_dir_read.c
   src/fs/fygue/fat/fat_dir_close.c
   src/fs/fygue/fat/fat_dir_stat.c
+  src/fs/fygue/fat/fat_file_open.c
   src/fs/fygue/fat/fat_file_stat.c
   src/fs/fygue/fat/fat_file_close.c
   src/fs/fygue/fat/fat_file_read.c

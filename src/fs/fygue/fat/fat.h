@@ -82,11 +82,13 @@ struct fygue_fat_file
     int cluster_entry;
     int attribute;
     size_t size;
+    off_t cursor;
     struct {
         uintptr_t addr;
         size_t size;
         int cluster_count;
     } *chunk;
+    int chunk_table_max_index;
     int chunk_count;
     int chunk_rd_index;
     int chunk_rd_offset;
@@ -105,11 +107,11 @@ struct fygue_fat_resolve
     };
 };
 
-/* fygue_fat_init_cold() - fully initialize the FAT information */
-extern int fygue_fat_init_cold(struct fygue_fat *fat);
+/* fygue_fat_initialize() - fully initialize the FAT information */
+extern int fygue_fat_initialize(struct fygue_fat *fat);
 
-/* fygue_fat_init_hot() - re-initialize the FAT information */
-extern int fygue_fat_init_hot(struct fygue_fat *fat);
+/* fygue_fat_sync() - re-initialize the FAT information */
+extern int fygue_fat_sync(struct fygue_fat *fat);
 
 /* fygue_fat_resolve() - resolve the path and set the dirent information */
 extern int fygue_fat_resolve(
@@ -121,6 +123,13 @@ extern int fygue_fat_resolve(
 //---
 // Directory interface
 //---
+
+/* fugue_fat_dir_open(): convert dirent to dir */
+extern int fygue_fat_dir_open(
+    struct fygue_fat *fat,
+    struct fygue_fat_dir *dir,
+    struct fygue_fat_dirent *dirent
+);
 
 /* fygue_fat_dir_read(): readdir primitive */
 extern int fygue_fat_dir_read(
@@ -142,9 +151,22 @@ extern int fygue_fat_dir_stat(
     struct stat *statbuf
 );
 
+/* fygue_fat_dir_sync(): sync directory information */
+extern int fygue_fat_dir_sync(
+    struct fygue_fat *fat,
+    struct fygue_fat_dir *dir
+);
+
 //---
 // File interface
 //---
+
+/* _fygue_fat_file_open(): generate file information */
+extern int fygue_fat_file_open(
+    struct fygue_fat *fat,
+    struct fygue_fat_file *file,
+    struct fygue_fat_dirent *dirent
+);
 
 /* fygue_fat_file_read(): read primitive */
 extern int fygue_fat_file_read(
@@ -171,7 +193,13 @@ extern int fygue_fat_file_seek(
 /* fygue_fat_file_close(): close primitive */
 extern int fygue_fat_file_close(
     struct fygue_fat *fat,
-    struct fygue_fat_file *dir
+    struct fygue_fat_file *file
+);
+
+/* fygue_fat_file_sync(): sync internal information */
+extern int fygue_fat_file_sync(
+    struct fygue_fat *fat,
+    struct fygue_fat_file *file
 );
 
 //---

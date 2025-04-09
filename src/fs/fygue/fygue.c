@@ -27,7 +27,7 @@ int fygue_mount(struct fygue_fsinfo **fsinfo, bool refresh)
         __fygue_fsinfo = calloc(1, sizeof(struct fygue_fsinfo));
         if (__fygue_fsinfo == NULL)
             return -2;
-        if (fygue_fat_init_cold(&(__fygue_fsinfo->fat)) != 0) {
+        if (fygue_fat_initialize(&(__fygue_fsinfo->fat)) != 0) {
             free(__fygue_fsinfo);
             __fygue_fsinfo = NULL;
             return -3;
@@ -35,7 +35,7 @@ int fygue_mount(struct fygue_fsinfo **fsinfo, bool refresh)
         __fygue_fsinfo->dirty = false;
     }
     if (refresh && __fygue_fsinfo->dirty) {
-        if (fygue_fat_init_hot(&(__fygue_fsinfo->fat)) != 0)
+        if (fygue_fat_sync(&(__fygue_fsinfo->fat)) != 0)
             return -4;
         __fygue_fsinfo->dirty = false;
     }
@@ -78,6 +78,34 @@ int fygue_resolve(char const * const path, struct fygue_resolve *resolve)
             &(fat_resolve.dir),
             sizeof(struct fygue_fat_dir)
         );
+    }
+    return 0;
+}
+
+//---
+// Syncronization
+//---
+
+/* fygue_descriptor_sync(): sync internal descriptor information */
+int fygue_descriptor_sync(
+    struct fygue_fsinfo **fsinfo,
+    struct fygue_descriptor *desc
+) {
+    int (*sync)(struct fygue_descriptor*);
+    struct fygue_fsinfo *ffsinfo;
+
+    if (fygue_mount(&ffsinfo, true) != 0)
+        return -2;
+    if (fsinfo != NULL)
+        *fsinfo = ffsinfo;
+    if (desc != NULL && desc->dirty)
+    {
+        sync = &fygue_file_sync;
+        if (desc->resolve.type == FYGUE_FILE_TYPE_DIR)
+            sync = &fygue_dir_sync;
+        if (sync(desc) != 0)
+            return -1;
+        desc->dirty = false;
     }
     return 0;
 }

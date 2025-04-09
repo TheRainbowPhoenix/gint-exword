@@ -1,6 +1,6 @@
 #include "fygue.h"
 
-/* fygue_file_lseek(): seek directory */
+/* fygue_file_lseek(): seek file */
 off_t fygue_file_lseek(
     struct fygue_descriptor *desc,
     off_t offset,
@@ -17,7 +17,7 @@ off_t fygue_file_lseek(
         errno = EINVAL;
         return -1;
     }
-    if (fygue_mount(&fsinfo, true) != 0) {
+    if (fygue_descriptor_sync(&fsinfo, desc) != 0) {
         errno = EIO;
         return -1;
     }

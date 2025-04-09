@@ -65,7 +65,6 @@ struct fygue_resolve {
         struct {
             off_t cursor;
             struct fygue_fat_file fat;
-            off_t size;
         } file;
         struct {
             struct fygue_fat_dir fat;
@@ -88,6 +87,11 @@ struct fygue_descriptor
 /* fygue_mount(): mount and return the filesystem info */
 extern int fygue_mount(struct fygue_fsinfo **fsinfo, bool refresh);
 
+/* fygue_descriptor_sync(): sync internal descriptor information */
+extern int fygue_descriptor_sync(
+    struct fygue_fsinfo **fsinfo,
+    struct fygue_descriptor *desc
+);
 
 /* fygue_resolve() - try to resolve path */
 extern int fygue_resolve(
@@ -123,6 +127,9 @@ extern ssize_t fygue_dir_write(
 /* fygue_dir_close(): close directory */
 extern int fygue_dir_close(struct fygue_descriptor *desc);
 
+/* fygue_dir_sync(): directory-specific sync */
+extern int fygue_dir_sync(struct fygue_descriptor *desc);
+
 //---
 // File interface
 //---
@@ -150,6 +157,9 @@ extern ssize_t fygue_file_write(
 
 /* fygue_file_close(): close directory */
 extern int fygue_file_close(struct fygue_descriptor *desc);
+
+/* fygue_file_sync(): file-specific sync */
+extern int fygue_file_sync(struct fygue_descriptor *desc);
 
 #ifdef __cplusplus
 }
