@@ -2,7 +2,7 @@
 ** fygue/fat/cluster   - FAT cluster handling
 */
 #include "fat.h"
-#include "../flash/flash.h"
+#include "flash/flash.h"
 
 //---
 // Internals

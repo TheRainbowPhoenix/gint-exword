@@ -264,31 +264,38 @@ set(SOURCES
   src/fs/fygue/fygue_open.c
   src/fs/fygue/fygue_syncfs.c
   src/fs/fygue/fygue_stat.c
+  src/fs/fygue/fygue_mount.c
+  src/fs/fygue/fygue_dir_open.c
   src/fs/fygue/fygue_dir_read.c
-  src/fs/fygue/fygue_dir_lseek.c
   src/fs/fygue/fygue_dir_write.c
+  src/fs/fygue/fygue_dir_lseek.c
   src/fs/fygue/fygue_dir_close.c
-  src/fs/fygue/fygue_file_lseek.c
-  src/fs/fygue/fygue_file_write.c
-  src/fs/fygue/fygue_file_close.c
+  src/fs/fygue/fygue_dir_sync.c
+  src/fs/fygue/fygue_file_open.c
   src/fs/fygue/fygue_file_read.c
-  src/fs/fygue/fat/cluster.c
+  src/fs/fygue/fygue_file_write.c
+  src/fs/fygue/fygue_file_lseek.c
+  src/fs/fygue/fygue_file_close.c
+  src/fs/fygue/fygue_file_sync.c
   src/fs/fygue/fat/fat.c
+  src/fs/fygue/fat/cluster.c
+  src/fs/fygue/fat/sector.c
   src/fs/fygue/fat/fat_dir_open.c
   src/fs/fygue/fat/fat_dir_read.c
-  src/fs/fygue/fat/fat_dir_close.c
   src/fs/fygue/fat/fat_dir_stat.c
+  src/fs/fygue/fat/fat_dir_close.c
+  src/fs/fygue/fat/fat_dir_sync.c
   src/fs/fygue/fat/fat_file_open.c
-  src/fs/fygue/fat/fat_file_stat.c
-  src/fs/fygue/fat/fat_file_close.c
   src/fs/fygue/fat/fat_file_read.c
   src/fs/fygue/fat/fat_file_seek.c
-  src/fs/fygue/fat/resolve.c
-  src/fs/fygue/fat/sector.c
-  src/fs/fygue/flash/cluster.c
-  src/fs/fygue/flash/cmap.c
-  src/fs/fygue/flash/flash.c
-  src/fs/fygue/flash/sector.c
+  src/fs/fygue/fat/fat_file_stat.c
+  src/fs/fygue/fat/fat_file_close.c
+  src/fs/fygue/fat/fat_file_sync.c
+  src/fs/fygue/fat/fat_open.c
+  src/fs/fygue/fat/flash/cluster.c
+  src/fs/fygue/fat/flash/cmap.c
+  src/fs/fygue/fat/flash/flash.c
+  src/fs/fygue/fat/flash/sector.c
 )
 
 set(ASSETS_FX src/font5x7.png src/gdb/icons-i1msb.png)

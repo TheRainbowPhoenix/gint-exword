@@ -4,14 +4,14 @@
 #include <gint/defs/types.h>
 #include <sys/stat.h>
 
-#include "../flash/flash.h"
+#include "flash/flash.h"
 
 /* _FAT_WORD() : helper for 16bit value */
 #define FAT_WORD(x) \
     (((x & 0xff00) >> 8) | ((x & 0x00ff) << 8))
 
 /* _FAT_DWORD() : helper for 32bit value */
-#define FAT_DWORD(x) (           \
+#define FAT_DWORD(x) (            \
       (((x) & 0xff000000) >> 24)  \
     | (((x) & 0x00ff0000) >> 8)   \
     | (((x) & 0x0000ff00) << 8)   \
@@ -94,12 +94,12 @@ struct fygue_fat_file
     int chunk_rd_offset;
 };
 
-/* fygue_fat_resolve: internal resolve information */
-struct fygue_fat_resolve
+/* fygue_fat_descriptor: FAT descriptor information */
+struct fygue_fat_descriptor
 {
     enum {
-        FYGUE_FAT_FILE_TYPE_FILE,
-        FYGUE_FAT_FILE_TYPE_DIR,
+        FYGUE_FAT_DESC_TYPE_FILE,
+        FYGUE_FAT_DESC_TYPE_DIR,
     } type;
     union {
         struct fygue_fat_file file;
@@ -107,17 +107,21 @@ struct fygue_fat_resolve
     };
 };
 
+//---
+// Public interface
+//---
+
 /* fygue_fat_initialize() - fully initialize the FAT information */
 extern int fygue_fat_initialize(struct fygue_fat *fat);
 
 /* fygue_fat_sync() - re-initialize the FAT information */
 extern int fygue_fat_sync(struct fygue_fat *fat);
 
-/* fygue_fat_resolve() - resolve the path and set the dirent information */
-extern int fygue_fat_resolve(
+/* fygue_fat_open() - resolve the path and set the dirent information */
+extern int fygue_fat_open(
     struct fygue_fat *fat,
     char const * const path,
-    struct fygue_fat_resolve *resolve
+    struct fygue_fat_descriptor *desc
 );
 
 //---
@@ -154,7 +158,8 @@ extern int fygue_fat_dir_stat(
 /* fygue_fat_dir_sync(): sync directory information */
 extern int fygue_fat_dir_sync(
     struct fygue_fat *fat,
-    struct fygue_fat_dir *dir
+    struct fygue_fat_dir *dir,
+    int cluster_id
 );
 
 //---
@@ -199,7 +204,8 @@ extern int fygue_fat_file_close(
 /* fygue_fat_file_sync(): sync internal information */
 extern int fygue_fat_file_sync(
     struct fygue_fat *fat,
-    struct fygue_fat_file *file
+    struct fygue_fat_file *file,
+    int cluster_id
 );
 
 //---

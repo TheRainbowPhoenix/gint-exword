@@ -52,15 +52,16 @@ static int _fygue_dirent_find(
 /* _fygue_resolve_set(): setup the resolve response */
 static int _fygue_resolve_set(
     struct fygue_fat *fat,
-    struct fygue_fat_resolve *resolve,
+    struct fygue_fat_descriptor *desc,
     struct fygue_fat_dirent *dirent
 ) {
     if (dirent == NULL || (dirent->attribute & FYGUE_FAT_ATTR_DIRECTORY)) {
-        resolve->type = FYGUE_FAT_FILE_TYPE_DIR;
-        return fygue_fat_dir_open(fat, &(resolve->dir), dirent);
+        desc->type = FYGUE_FAT_DESC_TYPE_DIR;
+        return fygue_fat_dir_open(fat, &(desc->dir), dirent);
+    } else {
+        desc->type = FYGUE_FAT_DESC_TYPE_FILE;
+        return fygue_fat_file_open(fat, &(desc->file), dirent);
     }
-    resolve->type = FYGUE_FAT_FILE_TYPE_FILE;
-    return fygue_fat_file_open(fat, &(resolve->file), dirent);
 }
 
 //---
@@ -71,10 +72,10 @@ static int _fygue_resolve_set(
  *
  * notes
  *   - assume that the path is clean */
-int fygue_fat_resolve(
+int fygue_fat_open(
     struct fygue_fat *fat,
     char const * const path,
-    struct fygue_fat_resolve *resolve
+    struct fygue_fat_descriptor *desc
 ) {
     struct fygue_fat_dirent dirent;
     struct fygue_fat_dir dir;
@@ -83,7 +84,7 @@ int fygue_fat_resolve(
     size_t len;
     bool is_root;
 
-    if (fat == NULL || path == NULL || resolve == NULL)
+    if (fat == NULL || path == NULL || desc == NULL)
         return -1;
     if (path[0] != '/')
         return -1;
@@ -107,6 +108,6 @@ int fygue_fat_resolve(
             return -5;
     }
     if (is_root)
-        return _fygue_resolve_set(fat, resolve, NULL);
-    return _fygue_resolve_set(fat, resolve, &dirent);
+        return _fygue_resolve_set(fat, desc, NULL);
+    return _fygue_resolve_set(fat, desc, &dirent);
 }

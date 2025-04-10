@@ -60,7 +60,7 @@ bool fs_descriptor_is_fygue(fs_descriptor_t const *desc)
 {
     return (
         (desc->type == &fygue_dir_descriptor_type) ||
-        (desc->type == &fygue_descriptor_type)
+        (desc->type == &fygue_file_descriptor_type)
     );
 }
 

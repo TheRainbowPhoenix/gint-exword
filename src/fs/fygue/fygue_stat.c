@@ -1,35 +1,22 @@
+#include <gint/hardware.h>
 #include "fygue.h"
 #include "fat/fat.h"
 
 /* fygue_stat(): stat primitive */
 int fygue_stat(char const * const path, struct stat *statbuf)
 {
-    struct fygue_resolve resolve;
+    struct fygue_descriptor desc;
     struct fygue_fsinfo *fsinfo;
 
-    ENOTSUP_IF_NOT_FYGUE(-1);
-    if (path == NULL || statbuf == NULL) {
-        errno = EFAULT;
-        return -1;
-    }
-    if (fygue_mount(&fsinfo, true) != 0) {
-        errno = EIO;
-        return -1;
-    }
-    if (fygue_resolve(path, &resolve) != 0) {
-        errno = ENOENT;
-        return -1;
-    }
-    if (resolve.type == FYGUE_FILE_TYPE_DIR) {
-        fygue_fat_dir_stat(
-            &(fsinfo->fat),
-            &(resolve.dir.fat),
-            statbuf
-        );
-    }
-    return fygue_fat_file_stat(
-        &(fsinfo->fat),
-        &(resolve.file.fat),
-        statbuf
-    );
+    if(gint[HWFS] != HWFS_FUGUE)
+       FYGUE_RET_ERRNO(ENOTSUP);
+    if (path == NULL || statbuf == NULL)
+       FYGUE_RET_ERRNO(EFAULT);
+    if (fygue_mount(&fsinfo) != 0)
+       FYGUE_RET_ERRNO(EIO);
+    if (fygue_open_resolve(path, &desc) != 0)
+       FYGUE_RET_ERRNO(ENOENT);
+    if (desc.type == FYGUE_DESC_TYPE_DIR)
+        return fygue_fat_dir_stat(&(fsinfo->fat), &(desc.dir.fat), statbuf);
+    return fygue_fat_file_stat(&(fsinfo->fat), &(desc.file.fat), statbuf);
 }

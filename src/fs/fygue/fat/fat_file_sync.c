@@ -60,15 +60,15 @@ static int _fygue_chunk_error(struct fygue_fat_file *file)
 /* fygue_fat_file_sync(): sync internal information */
 int fygue_fat_file_sync(
     struct fygue_fat *fat,
-    struct fygue_fat_file *file
+    struct fygue_fat_file *file,
+    int cluster_id
 ) {
     uintptr_t cluster_addr;
-    int cluster_id;
 
     if (fat == NULL || file == NULL)
         return -1;
     file->chunk_count = 0;
-    cluster_id = file->cluster_entry;
+    file->cluster_entry = cluster_id;
     while (true)
     {
         if (fygue_fat_cluster_get_addr(fat, &cluster_addr, cluster_id) != 0)

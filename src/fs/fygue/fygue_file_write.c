@@ -2,21 +2,16 @@
 
 /* fygue_file_write(): write directory (EISDIR) */
 ssize_t fygue_file_write(
-    struct fygue_descriptor *desc,
+    struct fygue_fsinfo *fsinfo,
+    struct fygue_file *file,
     void *buffer,
     size_t size
 ) {
-    ENOTSUP_IF_NOT_FYGUE(-1);
-    if (desc == NULL || desc->resolve.type != FYGUE_FILE_TYPE_FILE) {
-        errno = EBADF;
-        return -1;
-    }
-    if (buffer == NULL) {
-        errno = EFAULT;
-        return -1;
-    }
-    if (size == 0)
-        return 0;
-    errno = EROFS;
-    return -1;
+    if (fsinfo == NULL || file == NULL)
+        FYGUE_RET_ERRNO(EIO);
+    if (buffer == NULL)
+        FYGUE_RET_ERRNO(EFAULT);
+    if (size != 0)
+        FYGUE_RET_ERRNO(EROFS);
+    return 0;
 }
