@@ -16,6 +16,7 @@ int fygue_file_open(
     if (file->path == NULL)
         FYGUE_RET_ERRNO(ENOMEM);
     file->cursor = 0;
+    file->size = fat_file->size;
     memcpy(&(file->fat), fat_file, sizeof(struct fygue_fat_file));
     return 0;
 }

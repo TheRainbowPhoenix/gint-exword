@@ -66,7 +66,7 @@ static int _fygue_dir_open_discover(
     while (true)
     {
         rc = fygue_fat_dir_read(&(fsinfo->fat), &(dir->fat), &dirent);
-        if (rc == -1)
+        if (rc > 0)
             return 0;
         if (rc < 0)
             break;
@@ -74,7 +74,7 @@ static int _fygue_dir_open_discover(
             if (_fygue_dir_open_table_realloc(dir) != 0)
                 break;
         }
-        rc = _fygue_dir_open_convert(&(dir->dirent[dir->pos]), &dirent);
+        rc = _fygue_dir_open_convert(&(dir->dirent[dir->count]), &dirent);
         if (rc != 0)
             break;
         dir->count += 1;
@@ -87,6 +87,7 @@ static int _fygue_dir_open_discover(
 // Public
 //---
 
+
 /* fygue_dir_open(): directory-specific open */
 int fygue_dir_open(
     struct fygue_fsinfo *fsinfo,
@@ -95,7 +96,7 @@ int fygue_dir_open(
     struct fygue_fat_dir *fat_dir
 ) {
     if (fsinfo == NULL || dir == NULL || path == NULL || fat_dir == NULL)
-        return 1;
+        return -1;
 
     memset(dir, 0x00, sizeof(struct fygue_dir));
     dir->path = strdup(path);

@@ -44,7 +44,10 @@ extern int fygue_open(char const *path, int flags, mode_t mode);
 /* fygue_stat() - get file or directory information */
 extern int fygue_stat(char const *path, struct stat *statbuf);
 
-/* fygue_syncfs() - request filesystem re-synchronisation */
+/* fygue_sync() - request filesystem re-synchronisation */
+extern int fygue_sync(void);
+
+/* fygue_syncfs() - request filesystem and file re-synchronisation */
 extern int fygue_syncfs(void *data);
 
 /* fygue_mount() - mount the filesystem */

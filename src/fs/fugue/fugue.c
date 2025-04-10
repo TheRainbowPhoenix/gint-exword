@@ -100,15 +100,13 @@ ssize_t fugue_write(void *data0, const void *buf, size_t size)
 	else {
         gint_world_enter(GINT_WORLD_OS);
 		int rc = BFile_Write(fugue_fd, buf, size);
+        gint_world_leave();
 		if(rc < 0) {
 			errno = bfile_error_to_errno(rc);
-			rc = -1;
-		} else {
-		    data->pos += rc;
-            rc = 0;
-        }
-        gint_world_leave();
-		return rc;
+			return -1;
+		}
+		data->pos += rc;
+        return rc;
 	}
 }
 

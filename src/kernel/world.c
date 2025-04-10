@@ -197,7 +197,6 @@ void gint_world_leave(void)
 
 int gint_world_switch(gint_call_t call)
 {
-	extern void *gint_stack_top;
     gint_world_enter(GINT_WORLD_OS);
 
 	void *ILRAM = (void *)0xe5200000;
@@ -205,6 +204,7 @@ int gint_world_switch(gint_call_t call)
 	void *YRAM  = (void *)0xe5010000;
 
 	/* Watch out for stack overflows */
+	extern void *gint_stack_top;
 	uint32_t *canary = gint_stack_top;
 	if(canary)
 		*canary = 0xb7c0ffee;

@@ -33,6 +33,7 @@ static int fygue_flash_cmap_update(
     struct fygue_flash_cluster *fcluster
 ) {
     struct fygue_flash_cmap_entry *entry;
+    int i;
 
     if (cmap == NULL || fcluster == NULL)
         return -1;
@@ -48,14 +49,13 @@ static int fygue_flash_cmap_update(
             return 1;
         }
     } else {
-        cmap->lcluster = realloc(
+        cmap->lcluster = reallocarray(
             cmap->lcluster,
-            (fcluster->lcluster_id + 1) * sizeof(
-                struct fygue_flash_cmap_entry
-            )
+            (fcluster->lcluster_id + 1),
+            sizeof(struct fygue_flash_cmap_entry)
         );
         for (
-            int i = cmap->lcluster_id_max ;
+            i = cmap->lcluster_id_max ;
             i < fcluster->lcluster_id ;
             i++
         ) {
@@ -71,6 +71,42 @@ static int fygue_flash_cmap_update(
     entry->fcluster_id_bfile = fcluster->fcluster_id_bfile;
     entry->fcluster_addr     = fcluster->data_addr;
     entry->version           = fcluster->version;
+    return 0;
+}
+
+/* _fygue_flash_cmap_discover(): discover flash information */
+static int _fygue_flash_cmap_discover(
+    struct fygue_flash *flash,
+    struct fygue_flash_cmap *cmap
+) {
+    struct fygue_flash_cluster fcluster;
+    int fsector_id;
+    int fsector;
+    int rc;
+    int j;
+
+    fsector_id = 0;
+    for (
+        fsector = 0 ;
+        fsector < flash->geometry.fsector_count ;
+        fsector++
+    ) {
+        if (fsector != 0)
+            fsector_id += flash->geometry.fcluster_per_fsector;
+        if (fygue_flash_cluster_get(flash, &fcluster, fsector_id) != 0)
+            continue;
+        if (fcluster.kind != 0x22)
+            continue;
+        for (j = 1 ; j < (flash->geometry.fcluster_per_fsector - 1) ; j++)
+        {
+            rc = fygue_flash_cluster_get(flash, &fcluster, fsector_id + j);
+            if (rc != 0)
+                continue;
+            if (fcluster.kind != 0x11)
+                continue;
+            fygue_flash_cmap_update(cmap, &fcluster);
+        }
+    }
     return 0;
 }
 
@@ -126,37 +162,11 @@ int fygue_flash_cmap_initialize(
     struct fygue_flash *flash,
     struct fygue_flash_cmap *cmap
 ) {
-    struct fygue_flash_cluster fcluster;
-    int fsector_id;
-    int fsector;
-    int rc;
-    int j;
-
     if (flash == NULL || cmap == NULL)
         return -1;
-    fsector_id = 0;
     memset(cmap, 0x00, sizeof(struct fygue_flash_cmap));
-    for (
-        fsector = 0 ;
-        fsector < flash->geometry.fsector_count ;
-        fsector++
-    ) {
-        if (fsector != 0)
-            fsector_id += flash->geometry.fcluster_per_fsector;
-        if (fygue_flash_cluster_get(flash, &fcluster, fsector_id) != 0)
-            continue;
-        if (fcluster.kind != 0x22)
-            continue;
-        for (j = 1 ; j < (flash->geometry.fcluster_per_fsector - 1) ; j++)
-        {
-            rc = fygue_flash_cluster_get(flash, &fcluster, fsector_id + j);
-            if (rc != 0)
-                continue;
-            if (fcluster.kind != 0x11)
-                continue;
-            fygue_flash_cmap_update(cmap, &fcluster);
-        }
-    }
+    if (_fygue_flash_cmap_discover(flash, cmap) != 0)
+        return -1;
     if (cmap->lcluster == NULL)
         return -2;
     if (cmap->lcluster[0].fcluster_id == 0xffff)
@@ -173,7 +183,7 @@ int fygue_flash_cmap_sync(
         return -1;
     for (int i = 0 ; i < cmap->lcluster_id_max ; i++)
         cmap->lcluster[i].version = 0xffffffff;
-    if (fygue_flash_cmap_initialize(flash, cmap) != 0)
+    if (_fygue_flash_cmap_discover(flash, cmap) != 0)
         return -2;
     return 0;
 }

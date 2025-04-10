@@ -25,8 +25,6 @@ struct _bfile_cluster_metadata
     uint8_t     ecc_bitmask_position[3];
 } GPACKED(1);
 
-uintptr_t debug_meta = 0;
-
 /* _fygue_flash_cluster_convert - ensure that the provided meta is valid
  *
  * notes
@@ -179,7 +177,6 @@ static int _fygue_flash_cluster_details(
         data = (geometry->phy_start | 0xa0000000) + (fsector_id * 0x20000);
         meta = data + 0x1f000;
     }
-    debug_meta = meta;
     if (_fygue_flash_cluster_convert(flash, fcluster, meta) != 0)
         return -1;
     if (fcluster->version != 0xffffffff)

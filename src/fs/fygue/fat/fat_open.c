@@ -86,8 +86,6 @@ int fygue_fat_open(
 
     if (fat == NULL || path == NULL || desc == NULL)
         return -1;
-    if (path[0] != '/')
-        return -1;
     prefix = path;
     is_root = true;
     while (true)

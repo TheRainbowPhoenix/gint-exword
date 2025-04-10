@@ -374,10 +374,10 @@ static int _fygue_readdir_fat_check(struct _fat_info *finfo)
 /* fygue_fat_dir_read() - readdir-like primitive
  *
  * return
- *   -3     no dirent remaning
  *   -2     internal error
  *   -1     argument error
- *    0     success */
+ *    0     success
+ *    1     no directory found */
 int fygue_fat_dir_read(
     struct fygue_fat *fat,
     struct fygue_fat_dir *dir,
@@ -415,5 +415,5 @@ int fygue_fat_dir_read(
             return 0;
     }
     dir->end_of_dirent = true;
-    return -3;
+    return 1;
 }

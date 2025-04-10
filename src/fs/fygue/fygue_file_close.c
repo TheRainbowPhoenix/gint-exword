@@ -1,6 +1,6 @@
 #include <stdlib.h>
+#include <string.h>
 #include "fygue.h"
-#include "fat/fat.h"
 
 /* fygue_file_close(): close directory */
 int fygue_file_close(
@@ -10,6 +10,8 @@ int fygue_file_close(
     if (fsinfo == NULL || file == NULL)
         FYGUE_RET_ERRNO(EIO);
     fygue_fat_file_close(&(fsinfo->fat), &(file->fat));
-    free(file);
+    if (file->path != NULL)
+        free(file->path);
+    memset(file, 0x00, sizeof(struct fygue_file));
     return 0;
 }

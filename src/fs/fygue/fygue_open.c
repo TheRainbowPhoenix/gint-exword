@@ -23,7 +23,7 @@ int fygue_open_resolve(
     struct fygue_fat_descriptor fat_desc;
     struct fygue_fsinfo *fsinfo;
 
-    if (path == NULL || path[0] != '/' || desc == NULL)
+    if (path == NULL || desc == NULL)
         return -1;
     if (fygue_mount(&fsinfo) != 0)
         return -2;

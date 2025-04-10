@@ -9,8 +9,6 @@ int fygue_dir_close(
     struct fygue_fsinfo *fsinfo,
     struct fygue_dir *dir
 ) {
-    if(gint[HWFS] != HWFS_FUGUE)
-       FYGUE_RET_ERRNO(ENOTSUP);
     if (fsinfo == NULL || dir == NULL)
         FYGUE_RET_ERRNO(EIO);
     fygue_fat_dir_close(&(fsinfo->fat), &(dir->fat));

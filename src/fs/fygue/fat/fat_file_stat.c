@@ -9,8 +9,8 @@
 static mode_t _get_mode(int attribute)
 {
     if (attribute & FYGUE_FAT_ATTR_READ_ONLY)
-        return S_IFDIR | 0444;
-    return S_IFDIR | 0777;
+        return S_IFREG | 0444;
+    return S_IFREG | 0777;
 }
 
 /* _get_block_size(): return one cluster size */

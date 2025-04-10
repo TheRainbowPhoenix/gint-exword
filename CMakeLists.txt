@@ -263,6 +263,7 @@ set(SOURCES
   src/fs/fygue/fygue.c
   src/fs/fygue/fygue_open.c
   src/fs/fygue/fygue_syncfs.c
+  src/fs/fygue/fygue_sync.c
   src/fs/fygue/fygue_stat.c
   src/fs/fygue/fygue_mount.c
   src/fs/fygue/fygue_dir_open.c

@@ -28,7 +28,7 @@ static int _fygue_gfdi_ensure_valid(
        FYGUE_RET_ERRNO(ENOTSUP);
     if (fsinfo == NULL)
         FYGUE_RET_ERRNO(EIO);
-    if (desc == NULL || desc->type == type)
+    if (desc == NULL || desc->type != type)
         FYGUE_RET_ERRNO(EBADF);
     if (fygue_mount(fsinfo) != 0)
         FYGUE_RET_ERRNO(EIO);
