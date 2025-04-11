@@ -34,7 +34,6 @@ static int _fygue_fat16_cluster_get_next(
 }
 
 /* _fygue_fat12_cluster_get_next(): FAT12 cluster handling */
-// TODO: assume fixed sector size to 512
 // TODO: better calculus
 static int _fygue_fat12_cluster_get_next(
     struct fygue_fat *fat,
@@ -51,39 +50,38 @@ static int _fygue_fat12_cluster_get_next(
 
     fat_index0  = *cluster + (*cluster / 2);
     fat_index1  = fat_index0 + 1;
-    fat_sector0 = fat->FAT0SectorID + (fat_index0 / fat->SectorSize);
-    fat_sector1 = fat->FAT0SectorID + (fat_index1 / fat->SectorSize);
+    fat_sector0 = fat->FAT0SectorID + (fat_index0 / 512);
+    fat_sector1 = fat->FAT0SectorID + (fat_index1 / 512);
 
     if (fat_sector0 == fat_sector1) {
         if (fygue_fat_sector_get_addr(fat, &fat_data0, fat_sector0) != 0)
             return -1;
         fat_data1 = fat_data0;
-        fat_offset0 = fat_index0 - (fat_sector0 * fat->SectorSize);
+        fat_offset0 = fat_index0 - ((fat_index0 / 512) * 512);
         fat_offset1 = fat_offset0 + 1;
     } else {
         if (fygue_fat_sector_get_addr(fat, &fat_data0, fat_sector0) != 0)
             return -1;
         if (fygue_fat_sector_get_addr(fat, &fat_data1, fat_sector1) != 0)
             return -1;
-        fat_offset0 = fat_index0 - (fat_sector0 * fat->SectorSize);
-        fat_offset1 = fat_index1 - (fat_sector1 * fat->SectorSize);
+        fat_offset0 = fat_index0 - ((fat_index0 / 512) * 512);
+        fat_offset1 = fat_index1 - ((fat_index1 / 512) * 512);
     }
 
     if (*cluster & 1) {
         *cluster = (
-            ((((uint8_t*)fat_data0)[fat_offset0] & 0xf0) >> 4) |
-            ((((uint8_t*)fat_data1)[fat_offset1] & 0xff) << 4)
+            (((((uint8_t*)fat_data0)[fat_offset0] & 0xf0) >> 4) << 0) |
+            (((((uint8_t*)fat_data1)[fat_offset1] & 0xff) >> 0) << 4)
         );
     } else {
         *cluster = (
-            ((((uint8_t*)fat_data0)[fat_offset0] & 0xff) >> 0) |
-            ((((uint8_t*)fat_data1)[fat_offset1] & 0xf0) << 8)
+            (((((uint8_t*)fat_data0)[fat_offset0] & 0xff) >> 0) << 0) |
+            (((((uint8_t*)fat_data1)[fat_offset1] & 0x0f) >> 0) << 8)
         );
     }
-
     if (*cluster == 0x0fff)
         *cluster = 0xffff;
-    return -1;
+    return 0;
 }
 
 //---

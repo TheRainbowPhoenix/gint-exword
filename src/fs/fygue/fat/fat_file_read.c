@@ -2,6 +2,10 @@
 #include <string.h>
 #include "fat.h"
 
+uintptr_t debug_read_addr = 0;
+size_t debug_read_size = 0;
+int debug_read_off = 0;
+
 /* fygue_fat_file_read(): read primitive */
 int fygue_fat_file_read(
     struct fygue_fat *fat,
@@ -30,6 +34,9 @@ int fygue_fat_file_read(
         chunk_data_available -= chunk_data_offset;
         if (read + chunk_data_available > size)
         {
+            debug_read_addr = chunk_data_addr;
+            debug_read_size = size - read;
+            debug_read_off = chunk_data_offset;
             chunk_data_offset += size - read;
             memcpy(buffer, (void*)chunk_data_addr, size - read);
             read += size - read;
