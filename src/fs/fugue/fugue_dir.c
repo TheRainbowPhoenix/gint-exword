@@ -98,7 +98,7 @@ void *fugue_dir_explore(char const *path)
 	/* We allocate by batches of 8 */
 	int sd=-1, rc, allocated=0;
 
-    gint_world_enter(GINT_WORLD_OS);
+	gint_world_enter(GINT_WORLD_OS);
 
 	dir_t *dp = malloc(sizeof *dp);
 	if(!dp) goto alloc_failure;
@@ -165,6 +165,6 @@ end:
 	free(fc_path);
 	if(sd >= 0)
 		BFile_FindClose(sd);
-    gint_world_leave();
+	gint_world_leave();
 	return dp;
 }

@@ -28,13 +28,13 @@ extern const fs_descriptor_type_t fygue_dir_descriptor_type;
 
 /* helper to set errno and return -1 */
 #define FYGUE_RET_ERRNO(error) \
-    do { errno = error; return -1; } while(0);
+	do { errno = error; return -1; } while(0);
 
 /* fygue_fsinfo: internal fygue FS information */
 struct fygue_fsinfo
 {
-    struct fygue_fat fat;
-    bool dirty;
+	struct fygue_fat fat;
+	bool dirty;
 };
 
 /* fygue_open() - open file or directory */
@@ -60,35 +60,35 @@ extern int fygue_mount(struct fygue_fsinfo **fsinfo);
 /* fygue_file - file information */
 struct fygue_file
 {
-    struct fygue_fat_file fat;
-    off_t cursor;
-    size_t size;
-    char *path;
+	struct fygue_fat_file fat;
+	off_t cursor;
+	size_t size;
+	char *path;
 };
 
 /* fygue_dir - directory information */
 struct fygue_dir
 {
-    struct fygue_fat_dir fat;
-    struct dirent **dirent;
-    int dirent_idx_max;
-    int count;
-    int pos;
-    char *path;
+	struct fygue_fat_dir fat;
+	struct dirent **dirent;
+	int dirent_idx_max;
+	int count;
+	int pos;
+	char *path;
 };
 
 /* fygue_descriptor - fygue file descriptor */
 struct fygue_descriptor
 {
-    enum {
-        FYGUE_DESC_TYPE_FILE,
-        FYGUE_DESC_TYPE_DIR,
-    } type;
-    union {
-        struct fygue_file file;
-        struct fygue_dir dir;
-    };
-    bool dirty;
+	enum {
+		FYGUE_DESC_TYPE_FILE,
+		FYGUE_DESC_TYPE_DIR,
+	} type;
+	union {
+		struct fygue_file file;
+		struct fygue_dir dir;
+	};
+	bool dirty;
 };
 
 //---
@@ -97,8 +97,8 @@ struct fygue_descriptor
 
 /* fygue_open_resolve() - open file or directory */
 extern int fygue_open_resolve(
-    char const *path,
-    struct fygue_descriptor *desc
+	char const *path,
+	struct fygue_descriptor *desc
 );
 
 //---
@@ -107,46 +107,46 @@ extern int fygue_open_resolve(
 
 /* fygue_dir_open(): directory-specific open */
 extern int fygue_dir_open(
-    struct fygue_fsinfo *fsinfo,
-    struct fygue_dir *dir,
-    char const * const path,
-    struct fygue_fat_dir *fat_dir
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_dir *dir,
+	char const * const path,
+	struct fygue_fat_dir *fat_dir
 );
 
 /* fygue_dir_read(): directory read implementation */
 extern ssize_t fygue_dir_read(
-    struct fygue_fsinfo *fsinfo,
-    struct fygue_dir *dir,
-    struct dirent **dirent,
-    size_t size
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_dir *dir,
+	struct dirent **dirent,
+	size_t size
 );
 
 /* fygue_dir_lseek(): seek directory */
 extern off_t fygue_dir_lseek(
-    struct fygue_fsinfo *fsinfo,
-    struct fygue_dir *dir,
-    off_t offset,
-    int whence
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_dir *dir,
+	off_t offset,
+	int whence
 );
 
 /* fygue_dir_write(): write directory (EISDIR) */
 extern ssize_t fygue_dir_write(
-    struct fygue_fsinfo *fsinfo,
-    struct fygue_dir *dir,
-    void *buffer,
-    size_t size
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_dir *dir,
+	void *buffer,
+	size_t size
 );
 
 /* fygue_dir_close(): close directory */
 extern int fygue_dir_close(
-    struct fygue_fsinfo *fsinfo,
-    struct fygue_dir *dir
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_dir *dir
 );
 
 /* fygue_dir_sync(): directory-specific sync */
 extern int fygue_dir_sync(
-    struct fygue_fsinfo *fsinfo,
-    struct fygue_dir *dir
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_dir *dir
 );
 
 //---
@@ -155,46 +155,46 @@ extern int fygue_dir_sync(
 
 /* fygue_file_open(): file open */
 extern int fygue_file_open(
-    struct fygue_fsinfo *fsinfo,
-    struct fygue_file *file,
-    char const * const path,
-    struct fygue_fat_file *fat_file
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_file *file,
+	char const * const path,
+	struct fygue_fat_file *fat_file
 );
 
 /* fygue_file_read(): read primitive */
 extern ssize_t fygue_file_read(
-    struct fygue_fsinfo *fsinfo,
-    struct fygue_file *file,
-    void *buffer,
-    size_t size
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_file *file,
+	void *buffer,
+	size_t size
 );
 
 /* fygue_file_lseek(): seek directory */
 extern off_t fygue_file_lseek(
-    struct fygue_fsinfo *fsinfo,
-    struct fygue_file *file,
-    off_t offset,
-    int whence
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_file *file,
+	off_t offset,
+	int whence
 );
 
 /* fygue_file_write(): write directory (EROFS) */
 extern ssize_t fygue_file_write(
-    struct fygue_fsinfo *fsinfo,
-    struct fygue_file *file,
-    void *buffer,
-    size_t size
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_file *file,
+	void *buffer,
+	size_t size
 );
 
 /* fygue_file_close(): close directory */
 extern int fygue_file_close(
-    struct fygue_fsinfo *fsinfo,
-    struct fygue_file *file
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_file *file
 );
 
 /* fygue_file_sync(): file-specific sync */
 extern int fygue_file_sync(
-    struct fygue_fsinfo *fsinfo,
-    struct fygue_file *file
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_file *file
 );
 
 #ifdef __cplusplus

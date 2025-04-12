@@ -12,47 +12,47 @@ int bfile_error_to_errno(int e)
 {
 #if GINT_OS_CP
 	switch(e) {
-	case BFileCP_ENOMEM:			return ENOENT;
-	case BFileCP_EINVAL:			return EINVAL;
-	case BFileCP_EDEVFAIL:			return EIO;
-	case BFileCP_EMOUNTED:			return ENODEV;
-	case BFileCP_EACCES:			return EACCES;
-	case BFileCP_EBADFSID:			return ENODEV;
-	case BFileCP_ENOVOLUME:			return ENODEV;
-	case BFileCP_ENOPATH:			return ENOENT;
-	case BFileCP_EEXIST:			return EEXIST;
-	case BFileCP_ENAMETOOLONG:		return EINVAL;
-	case BFileCP_EOUTOFBOUND:		return EINVAL;
-	case BFileCP_EUNFORMAT:			return EINVAL;
-	case BFileCP_ENOSPC:			return ENOSPC;
-	case BFileCP_ENOENT:			return ENOENT;
-	case BFileCP_EISDIRECTORY:		return EISDIR;
-	case BFileCP_ESHARE:			return EINVAL;
-	case BFileCP_EMFILE:			return EMFILE;
-	case BFileCP_EBADF:			return EBADF;
-	case BFileCP_EEOF:			return EINVAL;
-	case BFileCP_ENOTEMPTY:			return EINVAL;
-	case BFileCP_ECLUSTERSIZEMISMATCH:	return EINVAL;
-	case BFileCP_ESYSTEM:			return EINVAL;
-	default:				return errno;
+	case BFileCP_ENOMEM:               return ENOENT;
+	case BFileCP_EINVAL:               return EINVAL;
+	case BFileCP_EDEVFAIL:             return EIO;
+	case BFileCP_EMOUNTED:             return ENODEV;
+	case BFileCP_EACCES:               return EACCES;
+	case BFileCP_EBADFSID:             return ENODEV;
+	case BFileCP_ENOVOLUME:            return ENODEV;
+	case BFileCP_ENOPATH:              return ENOENT;
+	case BFileCP_EEXIST:               return EEXIST;
+	case BFileCP_ENAMETOOLONG:         return EINVAL;
+	case BFileCP_EOUTOFBOUND:          return EINVAL;
+	case BFileCP_EUNFORMAT:            return EINVAL;
+	case BFileCP_ENOSPC:               return ENOSPC;
+	case BFileCP_ENOENT:               return ENOENT;
+	case BFileCP_EISDIRECTORY:         return EISDIR;
+	case BFileCP_ESHARE:               return EINVAL;
+	case BFileCP_EMFILE:               return EMFILE;
+	case BFileCP_EBADF:                return EBADF;
+	case BFileCP_EEOF:                 return EINVAL;
+	case BFileCP_ENOTEMPTY:            return EINVAL;
+	case BFileCP_ECLUSTERSIZEMISMATCH: return EINVAL;
+	case BFileCP_ESYSTEM:              return EINVAL;
+	default:                           return errno;
 	}
 #else
 	/* TODO: Find BFile code for too many fds and map it to ENFILE. */
 	switch(e) {
-	case BFile_EntryNotFound:	return ENOENT;
-	case BFile_IllegalPath:		return EINVAL;
-	case BFile_DeviceFull:		return EDQUOT;
-	case BFile_IllegalDevice:	return EINVAL;
-	case BFile_AccessDenied:	return EACCES;
-	case BFile_PermissionError:	return EACCES;
-	case BFile_EntryFull:		return EDQUOT;
-	case BFile_AlreadyExists:	return EEXIST;
-	case BFile_ReadOnlyFile:	return EACCES;
-	case BFile_EnumerateEnd:	return ENOENT;
-	case BFile_IllegalSeekPos:	return EINVAL;
-	case BFile_NotMountDevice:	return ENOENT;
-	case BFile_DeviceNotFound:	return ENOENT;
-	default:			return errno;
+	case BFile_EntryNotFound:    return ENOENT;
+	case BFile_IllegalPath:      return EINVAL;
+	case BFile_DeviceFull:       return EDQUOT;
+	case BFile_IllegalDevice:    return EINVAL;
+	case BFile_AccessDenied:     return EACCES;
+	case BFile_PermissionError:  return EACCES;
+	case BFile_EntryFull:        return EDQUOT;
+	case BFile_AlreadyExists:    return EEXIST;
+	case BFile_ReadOnlyFile:     return EACCES;
+	case BFile_EnumerateEnd:     return ENOENT;
+	case BFile_IllegalSeekPos:   return EINVAL;
+	case BFile_NotMountDevice:   return ENOENT;
+	case BFile_DeviceNotFound:   return ENOENT;
+	default:                     return errno;
 	}
 #endif
 }
@@ -63,10 +63,10 @@ int bfile_type_to_mode_t(int bfile_type)
 	return bfile_type == BFile_Type_Directory ? S_IFDIR : S_IFREG;
 #else
 	switch(bfile_type) {
-	case BFile_Type_Directory:      return S_IFDIR;
-	case BFile_Type_Dot:            return S_IFDIR;
-	case BFile_Type_DotDot:         return S_IFDIR;
-	default:                        return S_IFREG;
+	case BFile_Type_Directory: return S_IFDIR;
+	case BFile_Type_Dot:       return S_IFDIR;
+	case BFile_Type_DotDot:    return S_IFDIR;
+	default:                   return S_IFREG;
 	}
 #endif
 }
@@ -77,18 +77,18 @@ int bfile_type_to_dirent(int bfile_type)
 	return bfile_type == BFile_Type_Directory ? DT_DIR : DT_REG;
 #else
 	switch(bfile_type) {
-	case BFile_Type_Directory:      return DT_DIR;
-	case BFile_Type_Dot:            return DT_DIR;
-	case BFile_Type_DotDot:         return DT_DIR;
-	case BFile_Type_MainMem:        return DT_REG;
-	case BFile_Type_File:           return DT_REG;
-	case BFile_Type_Addin:          return DT_REG;
-	case BFile_Type_Eact:           return DT_REG;
-	case BFile_Type_Language:       return DT_REG;
-	case BFile_Type_Bitmap:         return DT_REG;
-	case BFile_Type_Volume:         return DT_BLK;
-	case BFile_Type_Archived:       return DT_REG;
-	default:                        return DT_UNKNOWN;
+	case BFile_Type_Directory: return DT_DIR;
+	case BFile_Type_Dot:       return DT_DIR;
+	case BFile_Type_DotDot:    return DT_DIR;
+	case BFile_Type_MainMem:   return DT_REG;
+	case BFile_Type_File:      return DT_REG;
+	case BFile_Type_Addin:     return DT_REG;
+	case BFile_Type_Eact:      return DT_REG;
+	case BFile_Type_Language:  return DT_REG;
+	case BFile_Type_Bitmap:    return DT_REG;
+	case BFile_Type_Volume:    return DT_BLK;
+	case BFile_Type_Archived:  return DT_REG;
+	default:                   return DT_UNKNOWN;
 	}
 #endif
 }

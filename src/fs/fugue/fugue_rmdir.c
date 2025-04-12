@@ -36,9 +36,9 @@ int fugue_rmdir(char const *path)
 	}
 
 #if GINT_OS_CP
-    gint_world_enter(GINT_WORLD_OS);
+	gint_world_enter(GINT_WORLD_OS);
 	int rc = BFile_Remove(path);
-    gint_world_leave();
+	gint_world_leave();
 #else
 	uint16_t *fcpath = fs_path_normalize_fc(path);
 	if(!fcpath) {
@@ -46,9 +46,9 @@ int fugue_rmdir(char const *path)
 		return -1;
 	}
 
-    gint_world_enter(GINT_WORLD_OS);
+	gint_world_enter(GINT_WORLD_OS);
 	int rc = BFile_Remove(fcpath);
-    gint_world_leave();
+	gint_world_leave();
 	free(fcpath);
 #endif
 

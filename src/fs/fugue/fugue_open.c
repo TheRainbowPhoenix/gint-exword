@@ -45,7 +45,7 @@ int fugue_open(char const *path, int flags, GUNUSED mode_t mode)
 		bfile_mode |= BFile_AppendFlag;
 #endif
 
-    gint_world_enter(GINT_WORLD_OS);
+	gint_world_enter(GINT_WORLD_OS);
 
 	/* Stat the entry. A special case is needed for the root, which doesn't
 	   respond well. fs_path_normalize_fc() normalizes the path so we just
@@ -171,7 +171,7 @@ int fugue_open(char const *path, int flags, GUNUSED mode_t mode)
 	}
 
 end:
-    gint_world_leave();
+	gint_world_leave();
 #if GINT_OS_CP
 	free(normpath);
 #endif

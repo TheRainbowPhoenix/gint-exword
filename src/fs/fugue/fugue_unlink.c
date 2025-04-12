@@ -26,7 +26,7 @@ int fugue_unlink(char const *path)
 	}
 #endif
 
-    gint_world_enter(GINT_WORLD_OS);
+	gint_world_enter(GINT_WORLD_OS);
 
 	int type, size, rc;
 	rc = BFile_Ext_Stat(fcpath, &type, &size);
@@ -54,7 +54,7 @@ int fugue_unlink(char const *path)
 	rc = 0;
 
 end:
-    gint_world_leave();
+	gint_world_leave();
 	free(fcpath);
 #if GINT_OS_CP
 	free(normpath);

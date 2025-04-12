@@ -17,9 +17,9 @@ int fugue_mkdir(char const *path, GUNUSED mode_t mode)
 		return -1;
 	}
 
-    gint_world_enter(GINT_WORLD_OS);
+	gint_world_enter(GINT_WORLD_OS);
 	int rc = BFile_Mkdir(normpath);
-    gint_world_leave();
+	gint_world_leave();
 	free(normpath);
 #else
 	uint16_t *fcpath = fs_path_normalize_fc(path);
@@ -28,15 +28,15 @@ int fugue_mkdir(char const *path, GUNUSED mode_t mode)
 		return -1;
 	}
 
-    gint_world_enter(GINT_WORLD_OS);
+	gint_world_enter(GINT_WORLD_OS);
 	int rc = BFile_Create(fcpath, BFile_Folder, NULL);
-    gint_world_leave();
+	gint_world_leave();
 	free(fcpath);
 #endif
 
 	if(rc < 0) {
 		errno = bfile_error_to_errno(rc);
 		return -1;
-    }
+	}
 	return rc;
 }

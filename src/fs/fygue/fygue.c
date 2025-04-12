@@ -9,7 +9,7 @@
 
 /* FYGUE_GFDI_CHEK - shorthand for all GFDI prologue */
 #define FYGUE_GFDI_CHEK(type)   \
-    _fygue_gfdi_ensure_valid(&fsinfo, desc, type)
+	_fygue_gfdi_ensure_valid(&fsinfo, desc, type)
 
 /* _fygue_gfdi_ensure_valid(): ensure GFDI validity
  *
@@ -18,31 +18,31 @@
  *   - auto mount the FS (if needed) and get information
  *   - ensure file sync if needed */
 static int _fygue_gfdi_ensure_valid(
-    struct fygue_fsinfo **fsinfo,
-    struct fygue_descriptor *desc,
-    unsigned int type
+	struct fygue_fsinfo **fsinfo,
+	struct fygue_descriptor *desc,
+	unsigned int type
 ) {
-    int rc;
+	int rc;
 
-    if(gint[HWFS] != HWFS_FUGUE)
-       FYGUE_RET_ERRNO(ENOTSUP);
-    if (fsinfo == NULL)
-        FYGUE_RET_ERRNO(EIO);
-    if (desc == NULL || desc->type != type)
-        FYGUE_RET_ERRNO(EBADF);
-    if (fygue_mount(fsinfo) != 0)
-        FYGUE_RET_ERRNO(EIO);
-    if (desc->dirty)
-    {
-        if (desc->type == FYGUE_DESC_TYPE_DIR)
-            rc = fygue_dir_sync(*fsinfo, &(desc->dir));
-        if (desc->type == FYGUE_DESC_TYPE_FILE)
-            rc = fygue_file_sync(*fsinfo, &(desc->file));
-        if (rc != 0)
-            FYGUE_RET_ERRNO(EIO);
-        desc->dirty = false;
-    }
-    return 0;
+	if(gint[HWFS] != HWFS_FUGUE)
+	   FYGUE_RET_ERRNO(ENOTSUP);
+	if (fsinfo == NULL)
+		FYGUE_RET_ERRNO(EIO);
+	if (desc == NULL || desc->type != type)
+		FYGUE_RET_ERRNO(EBADF);
+	if (fygue_mount(fsinfo) != 0)
+		FYGUE_RET_ERRNO(EIO);
+	if (desc->dirty)
+	{
+		if (desc->type == FYGUE_DESC_TYPE_DIR)
+			rc = fygue_dir_sync(*fsinfo, &(desc->dir));
+		if (desc->type == FYGUE_DESC_TYPE_FILE)
+			rc = fygue_file_sync(*fsinfo, &(desc->file));
+		if (rc != 0)
+			FYGUE_RET_ERRNO(EIO);
+		desc->dirty = false;
+	}
+	return 0;
 }
 
 //---
@@ -51,51 +51,51 @@ static int _fygue_gfdi_ensure_valid(
 
 /* fygue_gfdi_file_write(): write file */
 static ssize_t fygue_gfdi_file_write(
-    struct fygue_descriptor *desc,
-    void *buffer,
-    size_t size
+	struct fygue_descriptor *desc,
+	void *buffer,
+	size_t size
 ) {
-    struct fygue_fsinfo *fsinfo;
+	struct fygue_fsinfo *fsinfo;
 
-    if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_FILE) == 0)
-        return fygue_file_write(fsinfo, &(desc->file), buffer, size);
-    return -1;
+	if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_FILE) == 0)
+		return fygue_file_write(fsinfo, &(desc->file), buffer, size);
+	return -1;
 }
 
 /* fygue_gfdi_file_read(): write directory (EISDIR) */
 static ssize_t fygue_gfdi_file_read(
-    struct fygue_descriptor *desc,
-    void *buffer,
-    size_t size
+	struct fygue_descriptor *desc,
+	void *buffer,
+	size_t size
 ) {
-    struct fygue_fsinfo *fsinfo;
+	struct fygue_fsinfo *fsinfo;
 
-    if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_FILE) == 0)
-        return fygue_file_read(fsinfo, &(desc->file), buffer, size);
-    return -1;
+	if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_FILE) == 0)
+		return fygue_file_read(fsinfo, &(desc->file), buffer, size);
+	return -1;
 }
 
 /* fygue_file_lseek(): seek file */
 static off_t fygue_gfdi_file_lseek(
-    struct fygue_descriptor *desc,
-    off_t offset,
-    int whence
+	struct fygue_descriptor *desc,
+	off_t offset,
+	int whence
 ) {
-    struct fygue_fsinfo *fsinfo;
+	struct fygue_fsinfo *fsinfo;
 
-    if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_FILE) == 0)
-        return fygue_file_lseek(fsinfo, &(desc->file), offset, whence);
-    return -1;
+	if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_FILE) == 0)
+		return fygue_file_lseek(fsinfo, &(desc->file), offset, whence);
+	return -1;
 }
 
 /* fygue_file_close(): close directory */
 static int fygue_gfdi_file_close(struct fygue_descriptor *desc)
 {
-    struct fygue_fsinfo *fsinfo;
+	struct fygue_fsinfo *fsinfo;
 
-    if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_FILE) == 0)
-        return fygue_file_close(fsinfo, &(desc->file));
-    return -1;
+	if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_FILE) == 0)
+		return fygue_file_close(fsinfo, &(desc->file));
+	return -1;
 }
 
 //---
@@ -104,51 +104,51 @@ static int fygue_gfdi_file_close(struct fygue_descriptor *desc)
 
 /* fygue_dir_write(): write directory (EISDIR) */
 ssize_t fygue_gfdi_dir_write(
-    struct fygue_descriptor *desc,
-    void *buffer,
-    size_t size
+	struct fygue_descriptor *desc,
+	void *buffer,
+	size_t size
 ) {
-    struct fygue_fsinfo *fsinfo;
+	struct fygue_fsinfo *fsinfo;
 
-    if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_DIR) == 0)
-        return fygue_dir_write(fsinfo, &(desc->dir), buffer, size);
-    return -1;
+	if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_DIR) == 0)
+		return fygue_dir_write(fsinfo, &(desc->dir), buffer, size);
+	return -1;
 }
 
 /* fygue_gfdi_dir_read(): readdir */
 ssize_t fygue_gfdi_dir_read(
-    struct fygue_descriptor *desc,
-    struct dirent **dirent,
-    size_t size
+	struct fygue_descriptor *desc,
+	struct dirent **dirent,
+	size_t size
 ) {
-    struct fygue_fsinfo *fsinfo;
+	struct fygue_fsinfo *fsinfo;
 
-    if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_DIR) == 0)
-        return fygue_dir_read(fsinfo, &(desc->dir), dirent, size);
-    return -1;
+	if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_DIR) == 0)
+		return fygue_dir_read(fsinfo, &(desc->dir), dirent, size);
+	return -1;
 }
 
 /* fygue_gfdi_dir_lseek(): seek directory */
 off_t fygue_gfdi_dir_lseek(
-    struct fygue_descriptor *desc,
-    off_t offset,
-    int whence
+	struct fygue_descriptor *desc,
+	off_t offset,
+	int whence
 ) {
-    struct fygue_fsinfo *fsinfo;
+	struct fygue_fsinfo *fsinfo;
 
-    if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_DIR) == 0)
-        return fygue_dir_lseek(fsinfo, &(desc->dir), offset, whence);
-    return -1;
+	if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_DIR) == 0)
+		return fygue_dir_lseek(fsinfo, &(desc->dir), offset, whence);
+	return -1;
 }
 
 /* fygue_gfdi_dir_close(): close directory */
 int fygue_gfdi_dir_close(struct fygue_descriptor *desc)
 {
-    struct fygue_fsinfo *fsinfo;
+	struct fygue_fsinfo *fsinfo;
 
-    if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_DIR) == 0)
-        return fygue_dir_close(fsinfo, &(desc->dir));
-    return -1;
+	if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_DIR) == 0)
+		return fygue_dir_close(fsinfo, &(desc->dir));
+	return -1;
 }
 
 //---
@@ -157,15 +157,15 @@ int fygue_gfdi_dir_close(struct fygue_descriptor *desc)
 
 /* fygue_file_descriptor_type - fygue file descriptor */
 const fs_descriptor_type_t fygue_file_descriptor_type = {
-    .read   = (void*)&fygue_gfdi_file_read,
-    .write  = (void*)&fygue_gfdi_file_write,
-    .lseek  = (void*)&fygue_gfdi_file_lseek,
-    .close  = (void*)&fygue_gfdi_file_close,
+	.read   = (void*)&fygue_gfdi_file_read,
+	.write  = (void*)&fygue_gfdi_file_write,
+	.lseek  = (void*)&fygue_gfdi_file_lseek,
+	.close  = (void*)&fygue_gfdi_file_close,
 };
 
 const fs_descriptor_type_t fygue_dir_descriptor_type = {
-    .read   = (void*)&fygue_gfdi_dir_read,
-    .write  = (void*)&fygue_gfdi_dir_write,
-    .lseek  = (void*)&fygue_gfdi_dir_lseek,
-    .close  = (void*)&fygue_gfdi_dir_close,
+	.read   = (void*)&fygue_gfdi_dir_read,
+	.write  = (void*)&fygue_gfdi_dir_write,
+	.lseek  = (void*)&fygue_gfdi_dir_lseek,
+	.close  = (void*)&fygue_gfdi_dir_close,
 };

@@ -6,6 +6,6 @@ int rename(char const *oldpath, char const *newpath)
 {
 	/* Standard rename() is the Fugue filesystem only */
 	int rc = fugue_rename(oldpath, newpath);
-    fs_fygue_sync();
-    return rc;
+	fs_fygue_sync();
+	return rc;
 }

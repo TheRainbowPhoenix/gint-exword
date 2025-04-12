@@ -12,9 +12,9 @@ int fugue_rename(char const *oldpath, char const *newpath)
 	ENOTSUP_IF_NOT_FUGUE(-1);
 
 #if GINT_OS_CP
-    gint_world_enter(GINT_WORLD_OS);
+	gint_world_enter(GINT_WORLD_OS);
 	int rc = BFile_Rename(oldpath, newpath);
-    gint_world_leave();
+	gint_world_leave();
 #else
 	u16 *fcpath_1 = fs_path_normalize_fc(oldpath);
 	if(!fcpath_1) {
@@ -27,9 +27,9 @@ int fugue_rename(char const *oldpath, char const *newpath)
 		free(fcpath_1);
 		return -1;
 	}
-    gint_world_enter(GINT_WORLD_OS);
+	gint_world_enter(GINT_WORLD_OS);
 	int rc = BFile_Rename(fcpath_1, fcpath_2);
-    gint_world_leave();
+	gint_world_leave();
 	free(fcpath_1);
 	free(fcpath_2);
 #endif
@@ -38,5 +38,5 @@ int fugue_rename(char const *oldpath, char const *newpath)
 		errno = bfile_error_to_errno(rc);
 		return -1;
 	}
-    return 0;
+	return 0;
 }

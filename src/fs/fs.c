@@ -50,29 +50,29 @@ void fs_free_descriptor(int fd)
 
 bool fs_descriptor_is_fugue(fs_descriptor_t const *desc)
 {
-    return (
-        (desc->type == &fugue_dir_descriptor_type) ||
-        (desc->type == &fugue_descriptor_type)
-    );
+	return (
+		(desc->type == &fugue_dir_descriptor_type) ||
+		(desc->type == &fugue_descriptor_type)
+	);
 }
 
 bool fs_descriptor_is_fygue(fs_descriptor_t const *desc)
 {
-    return (
-        (desc->type == &fygue_dir_descriptor_type) ||
-        (desc->type == &fygue_file_descriptor_type)
-    );
+	return (
+		(desc->type == &fygue_dir_descriptor_type) ||
+		(desc->type == &fygue_file_descriptor_type)
+	);
 }
 
 void fs_fygue_sync(void)
 {
-    fygue_sync();
-    for (int i = 3 ; i < FS_FD_MAX ; i++) {
-        if (fdtable[i].type == NULL)
-            continue;
-        if (fs_descriptor_is_fygue(fdtable[i].data))
-            fygue_syncfs(fdtable[i].data);
-    }
+	fygue_sync();
+	for (int i = 3 ; i < FS_FD_MAX ; i++) {
+		if (fdtable[i].type == NULL)
+			continue;
+		if (fs_descriptor_is_fygue(fdtable[i].data))
+			fygue_syncfs(fdtable[i].data);
+	}
 }
 
 int open_generic(fs_descriptor_type_t const *type, void *data, int fd)

@@ -19,9 +19,9 @@ int fugue_stat(char const * restrict path, struct stat * restrict statbuf)
 	}
 
 	int type, size, rc;
-    gint_world_enter(GINT_WORLD_OS);
+	gint_world_enter(GINT_WORLD_OS);
 	rc = BFile_Ext_Stat(fcpath, &type, &size);
-    gint_world_leave();
+	gint_world_leave();
 	free(fcpath);
 
 	if(rc < 0) {

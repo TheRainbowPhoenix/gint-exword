@@ -11,13 +11,13 @@ int open(char const *path, int flags, ...)
 	va_end(args);
 
 	/* Standard open() use Fugue filesystem if a write operation
-     * is requested, otherwise use the Fygue filesystem */
-    int rc = -1;
-    if ((flags & O_WRONLY) || (flags & O_RDWR)) {
-        rc = fugue_open(path, flags, mode);
-        fs_fygue_sync();
-    } else {
-        rc = fygue_open(path, flags, mode);
-    }
-    return rc;
+	 * is requested, otherwise use the Fygue filesystem */
+	int rc = -1;
+	if ((flags & O_WRONLY) || (flags & O_RDWR)) {
+		rc = fugue_open(path, flags, mode);
+		fs_fygue_sync();
+	} else {
+		rc = fygue_open(path, flags, mode);
+	}
+	return rc;
 }

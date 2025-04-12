@@ -12,10 +12,10 @@ ssize_t read(int fd, void *buf, size_t size)
 
 	/* No read function: we can't read anything */
 	if(d->type->read == NULL)
-        return 0;
-    /* BFile_Read() can flush data in some circumstances, force-sync Fygue */
-    ssize_t rc = d->type->read(d->data, buf, size);
-    if (fs_descriptor_is_fugue(d))
-        fs_fygue_sync();
-    return rc;
+		return 0;
+	/* BFile_Read() can flush data in some circumstances, force-sync Fygue */
+	ssize_t rc = d->type->read(d->data, buf, size);
+	if (fs_descriptor_is_fugue(d))
+		fs_fygue_sync();
+	return rc;
 }

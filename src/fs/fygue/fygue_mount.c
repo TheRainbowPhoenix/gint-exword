@@ -18,28 +18,28 @@ static struct fygue_fsinfo *__fygue_fsinfo = NULL;
  *   - assume that this global is const after initialisation */
 int fygue_mount(struct fygue_fsinfo **fsinfo)
 {
-    if (fsinfo == NULL)
-        return -1;
-    *fsinfo = NULL;
-    if (__fygue_fsinfo == NULL)
-    {
-        __fygue_fsinfo = calloc(1, sizeof(struct fygue_fsinfo));
-        if (__fygue_fsinfo == NULL)
-            return -2;
-        if (fygue_fat_initialize(&(__fygue_fsinfo->fat)) != 0)
-        {
-            free(__fygue_fsinfo);
-            __fygue_fsinfo = NULL;
-            return -3;
-        }
-        __fygue_fsinfo->dirty = false;
-    }
-    if (__fygue_fsinfo->dirty)
-    {
-        if (fygue_fat_sync(&(__fygue_fsinfo->fat)) != 0)
-            return -4;
-        __fygue_fsinfo->dirty = false;
-    }
-    *fsinfo = __fygue_fsinfo;
-    return 0;
+	if (fsinfo == NULL)
+		return -1;
+	*fsinfo = NULL;
+	if (__fygue_fsinfo == NULL)
+	{
+		__fygue_fsinfo = calloc(1, sizeof(struct fygue_fsinfo));
+		if (__fygue_fsinfo == NULL)
+			return -2;
+		if (fygue_fat_initialize(&(__fygue_fsinfo->fat)) != 0)
+		{
+			free(__fygue_fsinfo);
+			__fygue_fsinfo = NULL;
+			return -3;
+		}
+		__fygue_fsinfo->dirty = false;
+	}
+	if (__fygue_fsinfo->dirty)
+	{
+		if (fygue_fat_sync(&(__fygue_fsinfo->fat)) != 0)
+			return -4;
+		__fygue_fsinfo->dirty = false;
+	}
+	*fsinfo = __fygue_fsinfo;
+	return 0;
 }
