@@ -15,19 +15,19 @@
 /* fygue_flash_cmap_update()  - update the cluster redirection map
  *
  * notes
- *   Since Casio use its own methods to handle flash sector and cluster we
+ *   Since Casio uses its own methods to handle flash sector and cluster we
  *   need to rebuild the translation page between "logical cluster"
  *   (lcluster) and "flash cluster" (fcluster).
  *
- *   Casio do not erase systematicaly each sector when they become
- *   outdated, instead, they use a `age` mechanism which indicate "when"
- *   the cluster has been created a keep the more recent one
+ *   Casio does not erase systematically each sector when they become
+ *   outdated, instead, they use a `version` mechanism which indicates
+ *   "when"  the cluster has been created to keep the more recent one.
  *
  * return
  *   -1   if the provided information is not valid
- *	0   if the provided lcluster exists and has not been updated
- *	1   if the provided lcluster has been created
- *	2   if the provided lcluster exists and has been updated */
+ *    0   if the provided lcluster exists and has not been updated
+ *    1   if the provided lcluster has been created
+ *    2   if the provided lcluster exists and has been updated */
 static int fygue_flash_cmap_update(
 	struct fygue_flash_cmap *cmap,
 	struct fygue_flash_cluster *fcluster
@@ -144,20 +144,20 @@ int fygue_flash_cmap_lsector_get_addr(
 /* fygue_flash_cmap_init() - initialize fcluster translation
  *
  * notes:
- *   Casio have its own flash handling layer that hook Fugue primitives to
- *   control how/when the hardware will perform IO operation
+ *   Casio has its own flash handling layer that hooks Fugue primitives to
+ *   control how/when the hardware will perform IO operations
  *   (read,write,erase). This because the Flash used in recent devices use
- *   sector of 128ko which imply, when you want to update one byte of
+ *   sector of 128ko which implies, when you want to update one byte of
  *   memory, you need to:
- *	  - copy the whole page in RAM
- *	  - perform the modification
- *	  - write the new page information
+ *    - copy the whole page in RAM
+ *    - perform the modification
+ *    - write the new page information
  *
- *   So, todo
+ *   todo: docs
  *
  * returns:
  *   -1 if the sector 0 is not found
- *	0 success */
+ *    0 success */
 int fygue_flash_cmap_initialize(
 	struct fygue_flash *flash,
 	struct fygue_flash_cmap *cmap

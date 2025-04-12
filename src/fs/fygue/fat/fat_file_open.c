@@ -9,11 +9,11 @@ int fygue_fat_file_open(
 	struct fygue_fat_dirent *dirent
 ) {
 	memset(file, 0x00, sizeof(struct fygue_fat_file));
-	file->attribute			 = dirent->attribute;
-	file->cluster_entry		 = dirent->cluster_id;
-	file->size				  = dirent->size;
-	file->chunk				 = NULL;
-	file->chunk_count		   = 0;
+	file->attribute			= dirent->attribute;
+	file->cluster_entry		= dirent->cluster_id;
+	file->size				= dirent->size;
+	file->chunk				= NULL;
+	file->chunk_count		= 0;
 	file->chunk_table_max_index = 0;
 	if (fygue_fat_file_sync(fat, file, dirent->cluster_id) != 0)
 		return -1;

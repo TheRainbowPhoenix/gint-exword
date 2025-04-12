@@ -6,7 +6,7 @@
 // Internals
 //---
 
-/* realloc a prepare the internal table */
+/* realloc and prepare the internal table */
 static int _fygue_dir_open_table_realloc(struct fygue_dir *dir)
 {
 	void *tmp;

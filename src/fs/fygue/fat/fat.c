@@ -51,8 +51,7 @@ struct _fat_bpb
  *
  * notes
  *   Fugue use the special sector0 to fetch critical flash information
- *   (total logical sector count and number of hidden sector). Then, based
- *   on fecthed information, Fugue select an hardcoded FAT configuration
+ *   (total logical sector count and number of hidden sector).
  *
  * return
  *   -1	 unable to load the sector0
@@ -89,8 +88,8 @@ static int _fygue_fat_sector0(struct fygue_fat *fat)
 /* _fygue_fat_configure() - configure the FAT information
  *
  * notes
- *   the objectif is to find the first FAT address and the reserved root
- *   cluster (at the end of FATs since we only have to handle FAT12/16)
+ *   Find the first FAT address and the reserved root cluster (at the end
+ *   of FATs since we only have to handle FAT12/16)
  *
  *   note that for FAT12/16 two special cluster entry are added, this is
  *   why we have a manual offset to calculate the number of sector per

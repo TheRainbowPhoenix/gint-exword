@@ -10,8 +10,8 @@ int open(char const *path, int flags, ...)
 	mode_t mode = va_arg(args, int);
 	va_end(args);
 
-	/* Standard open() use Fugue filesystem if a write operation
-	 * is requested, otherwise use the Fygue filesystem */
+	/* Standard open() uses Fugue filesystem if a write operation
+	 * is requested, otherwise uses the Fygue filesystem */
 	int rc = -1;
 	if ((flags & O_WRONLY) || (flags & O_RDWR)) {
 		rc = fugue_open(path, flags, mode);

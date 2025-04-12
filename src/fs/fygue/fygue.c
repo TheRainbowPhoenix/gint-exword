@@ -99,7 +99,7 @@ static int fygue_gfdi_file_close(struct fygue_descriptor *desc)
 }
 
 //---
-// Gint File Descriptor Interface (gfdi) for file
+// Gint File Descriptor Interface (gfdi) for directory
 //---
 
 /* fygue_dir_write(): write directory (EISDIR) */

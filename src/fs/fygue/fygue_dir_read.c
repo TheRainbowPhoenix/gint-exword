@@ -5,7 +5,7 @@
 /* fygue_dir_read(): directory read implementation
  *
  * notes
- *   - assume that the directory have read permission */
+ *   - assume that the directory has read permission */
 ssize_t fygue_dir_read(
 	struct fygue_fsinfo *fsinfo,
 	struct fygue_dir *dir,

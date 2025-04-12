@@ -14,8 +14,7 @@
  *
  * notes
  *   - assume that path is clean
- *   - automatically mount the filesystem if needed
- *   - the saved pathname will not be saved in stat */
+ *   - automatically mount the filesystem if needed */
 int fygue_open_resolve(
 	char const * const path,
 	struct fygue_descriptor *desc
@@ -59,7 +58,7 @@ int fygue_open(char const *path, int flags, GUNUSED mode_t mode)
 	if ((exists < 0 && (!(flags & O_CREAT) || (flags & O_DIRECTORY))))
 		FYGUE_RET_ERRNO(ENOENT);
 
-	/* if opening fails and the previous check as not returned an error,
+	/* if opening fails and the previous check has not returned an error,
 	 * it is certainly because of a creation request. We are a read-only
 	 * file-system, so, fail */
 	if (exists < 0)

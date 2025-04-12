@@ -34,7 +34,7 @@ static int _get_block_nb(struct fygue_fat *fat, int cluster)
 // Public
 //---
 
-/* fygue_fat_file_stat(): directory-specific stat primitive */
+/* fygue_fat_file_stat(): stat primitive */
 int fygue_fat_file_stat(
 	struct fygue_fat *fat,
 	struct fygue_fat_file *file,
@@ -44,14 +44,14 @@ int fygue_fat_file_stat(
 		errno = EIO;
 		return -1;
 	}
-	statbuf->st_dev	 = 0; /* not supported */
-	statbuf->st_ino	 = file->cluster_entry;
-	statbuf->st_mode	= _get_mode(file->attribute);
+	statbuf->st_dev     = 0; /* not supported */
+	statbuf->st_ino     = file->cluster_entry;
+	statbuf->st_mode    = _get_mode(file->attribute);
 	statbuf->st_nlink   = 0; /* not supported */
-	statbuf->st_uid	 = 0; /* not supported */
-	statbuf->st_gid	 = 0; /* not supported */
-	statbuf->st_rdev	= 0; /* not supported */
-	statbuf->st_size	= file->size;
+	statbuf->st_uid     = 0; /* not supported */
+	statbuf->st_gid     = 0; /* not supported */
+	statbuf->st_rdev    = 0; /* not supported */
+	statbuf->st_size    = file->size;
 	statbuf->st_atime   = 0; /* not supported */
 	statbuf->st_mtime   = 0; /* not supported */
 	statbuf->st_ctime   = 0; /* not supported */

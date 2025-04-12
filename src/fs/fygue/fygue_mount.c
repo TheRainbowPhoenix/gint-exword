@@ -15,7 +15,7 @@ static struct fygue_fsinfo *__fygue_fsinfo = NULL;
 /* fygue_mount() - mount (if needed) and return the filesystem information
  *
  * notes
- *   - assume that this global is const after initialisation */
+ *   - assume that `__fygue_fsinfo` is const after initialisation */
 int fygue_mount(struct fygue_fsinfo **fsinfo)
 {
 	if (fsinfo == NULL)

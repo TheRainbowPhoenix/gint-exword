@@ -2,7 +2,7 @@
 #include <string.h>
 #include "fygue.h"
 
-/* fygue_file_close(): close directory */
+/* fygue_file_close(): close file */
 int fygue_file_close(
 	struct fygue_fsinfo *fsinfo,
 	struct fygue_file *file

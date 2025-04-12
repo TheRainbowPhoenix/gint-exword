@@ -1,6 +1,6 @@
 #include "fygue.h"
 
-/* fygue_file_write(): write directory (EISDIR) */
+/* fygue_file_write(): write file (EROFS) */
 ssize_t fygue_file_write(
 	struct fygue_fsinfo *fsinfo,
 	struct fygue_file *file,

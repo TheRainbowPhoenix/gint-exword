@@ -3,8 +3,8 @@
 
 int stat(char const * restrict path, struct stat * restrict statbuf)
 {
-	/* Standard stat() is also provided by Fugue, but rely on Casio's
-	 * syscall which do not provide all of the information and request
-	 * a world-switch (internally) to works */
+	/* Standard stat() is also provided by Fugue, but relies on Casio's
+	 * syscall which does not provide all of the information and requests
+	 * a world-switch (internally) to work */
 	return fygue_stat(path, statbuf);
 }

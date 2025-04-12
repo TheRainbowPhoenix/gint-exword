@@ -29,15 +29,11 @@ struct _bfile_cluster_metadata
  *
  * notes
  *   - assume that fcluster is not NULL
- *   - try using P1 information first then, P2 if this greedy-read fail
  *   - to ensure that the provided bfile metadata is valid we will perform
- *	   some test (also performed by Casio). First, ensure that the
- *	   fcluster "kind" is valid (only 0x88, 0x22 or 0x11 are known and
- *	   used) and then ensure that the "constant" part is also valid
+ *       some test (also performed by Casio).
  *
  *   todo : ensure checksum
  *   todo : ensure ecc handling (?)
- *   todo : try P1 then P2
  *
  * return
  *   -1  if the provided `fcluster` is not NULL
@@ -93,10 +89,10 @@ static int _fygue_flash_cluster_convert(
 	) {
 		return -5;
 	}
-	// on the fxcp400, have only some flash sector with the constants used
-	// in other device. Internally, on the fxcp400, Casio only perform
-	// a check an CRC that is performed on the whole cluster
-	// TODO: CRC check
+	// The fxcp400 has only some flash sectors with the constants used
+	// by other devices. Internally, on the fxcp400, Casio only performs
+	// a CRC check that is performed on the whole target cluster
+	// TODO: CRC check ?
 #if 0
 	if (
 		memcmp(&(bfile_meta->constant), _constant1, 0x18) != 0 &&
@@ -114,7 +110,7 @@ static int _fygue_flash_cluster_convert(
 /* _fygue_flash_cluster_meta(): special metadata cluster handling
  *
  * notes:
- *   metadata cluster are the last flash cluster of a flash sector it does
+ *   metadata clusters are the last flash cluster of a flash sector it does
  *   not have Bfile information. Generate a fake flash cluster with a
  *   special custom kind to allow quick identification */
 static int _fygue_flash_cluster_meta(
@@ -142,19 +138,20 @@ static int _fygue_flash_cluster_meta(
 /* _fygue_flash_cluster_details(): special flash sector details handling
  *
  * notes:
- *   flash sector details is a particular flash cluster that contains
+ *   flash sector details are a particular flash cluster that contains
  *   critical versioning information needed to rebuild Casio's flash
  *   mapping.
- *   However, this particular flash cluster are not represented in the
- *   same way between machines. For example, the G35EII that use flash
- *   sector of 64ko merge the details sector inside the metadata cluster to
- *   keep some space which is not the case with the FXCP400 or CG50 that
+ *
+ *   However, this particular flash cluster is not represented in the
+ *   same way between machines. For example, the G35EII that uses a flash
+ *   sector of 64ko merges the details sector inside the metadata cluster
+ *   to keep some space which is not the case with the FXCP400 or CG50 that
  *   use 128ko flash sector and which the first cluster should be a details
  *   one type.
  *
  *   for 64k cluster the 0xf3c0 offset can be calculated as:
- *	  0x10000 - (8*512)   = 0xf000  | sector size minus cluster size
- *	  15 * 0x40		   = 0x3c0   | skip all data cluster meta info */
+ *     0x10000 - (8*512)   = 0xf000  | sector size minus cluster size
+ *     15 * 0x40           = 0x3c0   | skip all data cluster meta info */
 static int _fygue_flash_cluster_details(
 	struct fygue_flash *flash,
 	struct fygue_flash_cluster *fcluster,
@@ -199,7 +196,7 @@ static int _fygue_flash_cluster_details(
  *
  * notes
  *   flash cluster data (0x11 or 0x88) are handled in the same way between
- *   all device */
+ *   all devices */
 static int _fygue_flash_cluster_data(
 	struct fygue_flash *flash,
 	struct fygue_flash_cluster *fcluster,
@@ -257,7 +254,7 @@ static int _fygue_flash_cluster_data(
  * return
  *   -1  if the provided `fline` is not valid
  *   -2  if the provided `fline` have invalid Bfile metadata
- *	0  if the meta information has been generated */
+ *    0  if the meta information has been generated */
 int fygue_flash_cluster_get(
 	struct fygue_flash *flash,
 	struct fygue_flash_cluster *fcluster,
@@ -299,13 +296,13 @@ int fygue_flash_cluster_get(
 /* fygue_flash_cluster_geometry() - get geometry information
  *
  * notes
- *   generate flash cluster geometry information. Note that we handle
- *   sector as a full 32 entry table, which differ from logical cluster ID
- *   that ignore the last entry which contain meta information
+ *  generate flash cluster geometry information. Note that we handle
+ *  sectors as a full 32/16 entry table, which differs from logical
+ *  cluster ID that ignores the last entry which contains meta information.
  *
  * returns
- *   -1	 if the provided address is not valid
- *	0	 success */
+ *   -1  if the provided address is not valid
+ *    0  success */
 int fygue_flash_cluster_geometry(
 	struct fygue_flash *flash,
 	uintptr_t addr,

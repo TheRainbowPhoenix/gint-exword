@@ -317,9 +317,9 @@ static int _fygue_readdir_fat(struct _fat_info *finfo)
  * notes
  *   check special first character of the FAT entry and try to determine
  *   if it is:
- *	 0x00   unused entry and all remaning entry will be unused
- *	 0xe5   unused entry
- *	 0x2e   special "." or ".." entry
+ *     0x00   unused entry and all remaning entry will be unused
+ *     0xe5   unused entry
+ *     0x2e   special "." or ".." entry
  *  then check the dirent attribute to distinguish an VFAT entry from an
  *  classic FAT entry
  *
@@ -376,8 +376,8 @@ static int _fygue_readdir_fat_check(struct _fat_info *finfo)
  * return
  *   -2	 internal error
  *   -1	 argument error
- *	0	 success
- *	1	 no directory found */
+ *    0	 success
+ *    1	 no directory found */
 int fygue_fat_dir_read(
 	struct fygue_fat *fat,
 	struct fygue_fat_dir *dir,

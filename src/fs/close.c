@@ -13,9 +13,9 @@ int close(int fd)
 	int rc = 0;
 	if(d->type->close == NULL)
 		goto end;
-	/* Fugue's close primitive can flush pending IO write operation. So, we
+	/* Fugue's close primitive can flush pending IO write operations. So, we
 	 * are in the same situation than the write() primitive: force-sync
-	 * Fygue's descriptor to ensure data intergrity */
+	 * Fygue's descriptor to ensure data integrity */
 	rc = d->type->close(d->data);
 	if (fs_descriptor_is_fugue(d))
 		fs_fygue_sync();
