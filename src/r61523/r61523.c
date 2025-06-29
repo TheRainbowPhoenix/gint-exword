@@ -16,6 +16,7 @@
 #define REG_HRANGE                0x2a
 #define REG_VRANGE                0x2b
 #define REG_DATA                  0x2c
+#define REG_BACKLIGHT_CONTROL     0xb9
 #define REG_DEVICE_CODE_READ      0xbf
 #define REG_DEVICE_CODE_VARIANT   0xda
 
@@ -94,6 +95,64 @@ void r61523_identify(
         *variant = read();
         *variant = read();
     }
+}
+
+//---
+// Display control
+//---
+
+void r61523_get_backlight(int *level, int *PWM_div, bool *dimming)
+{
+    uint16_t packets[5];
+    select(REG_BACKLIGHT_CONTROL);
+    read_Nu16(packets, 5);
+
+    *level = packets[2];
+    *PWM_div = packets[3];
+    *dimming = packets[4] & 1;
+}
+
+void r61523_set_backlight(int level, int PWM_div, bool dimming)
+{
+    select(REG_BACKLIGHT_CONTROL);
+
+    /* Default value of PWMON */
+    write(0);
+    synco();
+
+    write(level);
+    synco();
+    write(PWM_div);
+    synco();
+    write(0b1000 | dimming);
+    synco();
+}
+
+void r61523_get_display_timing(bool mode, bool *waveform, int *CPL, int *BP, int *FP)
+{
+    uint16_t packets[6];
+    select(mode ? 195 : 193);
+    read_Nu16(packets, 6);
+
+    *waveform = packets[1];
+    *CPL = packets[3];
+    *BP = packets[4];
+    *FP = packets[5];
+}
+
+void r61523_set_display_timing(bool mode, bool waveform, int CPL, int BP, int FP)
+{
+    select(mode ? 195 : 193);
+
+    write(waveform);
+    synco();
+    read();
+    write(CPL);
+    synco();
+    write(BP);
+    synco();
+    write(FP);
+    synco();
 }
 
 //---
