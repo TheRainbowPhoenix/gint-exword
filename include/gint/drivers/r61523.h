@@ -36,11 +36,12 @@ void r61523_display_rect(
 
 /* r61523_get_backlight() and r61523_set_backlight(): Backlight settings
 
+   @EN2         Backlight high bit
    @level       Brightness level (0-255)
    @PWM_div     PWM frequency division
    @dimming     Toggle dimming function */
-void r61523_get_backlight(int *level, int *PWM_div, bool *dimming);
-void r61523_set_backlight(int level, int PWM_div, bool dimming);
+void r61523_get_backlight(bool *EN2, int *level, int *PWM_div, bool *dimming);
+void r61523_set_backlight(bool EN2, int level, int PWM_div, bool dimming);
 
 /* r61523_get_display_timing() and r61523_set_display_timing(): Display timing settings
 

@@ -101,8 +101,11 @@ void r61523_identify(
 // Display control
 //---
 
-void r61523_get_backlight(int *level, int *PWM_div, bool *dimming)
+void r61523_get_backlight(bool *EN2, int *level, int *PWM_div, bool *dimming)
 {
+    int8_t volatile *PNDR = (void *)0xa4050138;
+    *EN2 = *PNDR & 0x10;
+    
     uint16_t packets[5];
     select(REG_BACKLIGHT_CONTROL);
     read_Nu16(packets, 5);
@@ -112,10 +115,17 @@ void r61523_get_backlight(int *level, int *PWM_div, bool *dimming)
     *dimming = packets[4] & 1;
 }
 
-void r61523_set_backlight(int level, int PWM_div, bool dimming)
+void r61523_set_backlight(bool EN2, int level, int PWM_div, bool dimming)
 {
-    select(REG_BACKLIGHT_CONTROL);
+    int8_t volatile *PNDR = (void *)0xa4050138;
+	if(EN2)
+		*PNDR |= 0x10;
+	else
+		*PNDR &= 0xef;
+	synco();
 
+    select(REG_BACKLIGHT_CONTROL);
+    
     /* Default value of PWMON */
     write(0);
     synco();
