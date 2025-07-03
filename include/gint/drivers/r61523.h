@@ -34,6 +34,13 @@ void r61523_display(uint16_t *vram);
 void r61523_display_rect(
     uint16_t *vram, int xmin, int xmax, int ymin, int ymax);
 
+/* r61523_exit_idle_mode() and r61523_enter_idle_mode(): Toggle idle mode */
+void r61523_exit_idle_mode(void);
+void r61523_enter_idle_mode(void);
+
+/* r61523_get_power_mode(): Get current power mode */
+uint16_t r61523_get_power_mode(void);
+
 /* r61523_get_backlight() and r61523_set_backlight(): Backlight settings
 
    @EN2         Backlight high bit

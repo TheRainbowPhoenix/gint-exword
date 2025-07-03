@@ -13,9 +13,12 @@
 #if GINT_HW_CP
 
 /* Registers */
+#define REG_POWER_MODE            0x0a
 #define REG_HRANGE                0x2a
 #define REG_VRANGE                0x2b
 #define REG_DATA                  0x2c
+#define REG_EXIT_IDLE_MODE        0x38
+#define REG_ENTER_IDLE_MODE       0x39
 #define REG_BACKLIGHT_CONTROL     0xb9
 #define REG_DEVICE_CODE_READ      0xbf
 #define REG_DEVICE_CODE_VARIANT   0xda
@@ -97,6 +100,23 @@ void r61523_identify(
     }
 }
 
+void r61523_exit_idle_mode(void)
+{
+    select(REG_EXIT_IDLE_MODE);
+}
+
+void r61523_enter_idle_mode(void)
+{
+    select(REG_ENTER_IDLE_MODE);
+}
+
+uint16_t r61523_get_power_mode(void)
+{
+    select(REG_POWER_MODE);
+    read();
+    return read();
+}
+
 //---
 // Display control
 //---
@@ -125,7 +145,7 @@ void r61523_set_backlight(bool EN2, int level, int PWM_div, bool dimming)
 	synco();
 
     select(REG_BACKLIGHT_CONTROL);
-    
+
     /* Default value of PWMON */
     write(0);
     synco();
