@@ -23,6 +23,20 @@ enum {
 	R61524_CPU,
 };
 
+enum {
+   /* 2^16 color */
+   R61524_NORMAL,
+   /* 2^3 color */
+   R61524_8COLOR
+};
+
+enum {
+   /* Frame inversion waveform (battery saver) */
+   R61524_FRAME,
+   /* Line inversion waveform (better display quality) */
+   R61524_LINE
+};
+
 /* r61524_display(): Send an image to the display
 
    This function sends [height] lines of the provided [vram] starting from line
@@ -86,6 +100,31 @@ void r61524_start_frame(int xmin, int xmax, int ymin, int ymax);
    impacted. */
 void r61524_win_get(uint16_t *HSA, uint16_t *HEA, uint16_t *VSA,uint16_t *VEA);
 void r61524_win_set(uint16_t HSA, uint16_t HEA, uint16_t VSA, uint16_t VEA);
+
+//---
+// Backlight management
+//---
+
+/* r61524_get_low_power() and r61524_set_low_power(): Low power control */
+bool r61524_get_low_power(void);
+void r61524_set_low_power(bool color);
+
+/* r61524_get_backlight() and r61524_set_backlight(): Backlight settings
+
+   @EN2         Backlight high bit
+   @level       Brightness level (0-255)
+   @PWM_div     PWM frequency division
+   @dimming     Toggle dimming function */
+void r61524_get_backlight(bool *EN2, int *level, int *PWM_div, bool *dimming);
+void r61524_set_backlight(bool EN2, int level, int PWM_div, bool dimming);
+
+/* r61524_get_display_timing() and r61524_set_display_timing(): Display timing settings
+
+   @waveform    Frame or Line waveform inversion
+   @CPL         Clocks per line (16-63)
+   @BP @FP      Number of back/front porch lines (2-14) */
+void r61524_get_display_timing(bool *waveform, int *CPL, int *BP, int *FP);
+void r61524_set_display_timing(bool waveform, int CPL, int BP, int FP);
 
 //---
 // Low-level functions

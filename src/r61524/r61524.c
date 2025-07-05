@@ -18,9 +18,11 @@
 /* Registers */
 #define REG_DEVICE_CODE_READ    0x000
 #define REG_DRIVER_OUTPUT_CTL   0x001
+#define REG_DRIVING_WAVE_CTL    0x002
 #define REG_ENTRY_MODE          0x003
 #define REG_DISPLAY_CTL2        0x008
 #define REG_LOW_POWER_CTL       0x00b
+#define REG_PANEL_IF_CTL1       0x010
 #define REG_HADDR               0x200
 #define REG_VADDR               0x201
 #define REG_DATA                0x202
@@ -28,6 +30,9 @@
 #define REG_HEND                0x211
 #define REG_VSTART              0x212
 #define REG_VEND                0x213
+#define REG_PWMDUTY             0x5a1
+#define REG_PWMDIV              0x5a2
+#define REG_DIMMING             0x5a3
 
 /* Interface with the controller */
 static volatile uint16_t *DISPLAY = (void *)0xb4000000;
@@ -88,36 +93,53 @@ void r61524_win_set(uint16_t HSA, uint16_t HEA, uint16_t VSA, uint16_t VEA)
 // Backlight management
 //---
 
-void r61525_brightness_set(int level)
+bool r61524_get_low_power(void)
 {
-	bool GLOBAL_backlight_high_bit[7] = { /* at 0x80399530 */
-	    false, false, false, false,
-	    true, true, true,
-	};
-	uint8_t GLOBAL_backlight_table[7] = { /* at 0x80399537 */
-	    0x14, 0x4b, 0x78, 0xd2,
-	    0x6e, 0xa0, 0xc8,
-	};
-	uint8_t GLOBAL_0[10] = { /* at 0x8039953e */
-	    0x00, 0x01, 0x02, 0x03, 0x07,
-	    0x0f, 0x1f, 0x3f, 0x7f, 0xff,
-	};
+    return r61524_get(REG_LOW_POWER_CTL);
+}
 
-	if(level < 1)
-		level = 1;
-	if(level > 5)
-		level = 5;
+void r61524_set_low_power(bool color)
+{
+	r61524_set(REG_LOW_POWER_CTL, color);
+}
 
+void r61524_get_backlight(bool *EN2, int *level, int *PWM_div, bool *dimming)
+{
 	int8_t volatile *PNDR = (void *)0xa4050138;
-	if(GLOBAL_backlight_high_bit[level])
+	*EN2 = *PNDR & 0x10;
+	
+	*level = r61524_get(REG_PWMDUTY);
+	*PWM_div = r61524_get(REG_PWMDIV);
+	*dimming = r61524_get(REG_DIMMING) & 1;
+}
+
+void r61524_set_backlight(bool EN2, int level, int PWM_div, bool dimming)
+{
+	int8_t volatile *PNDR = (void *)0xa4050138;
+	if(EN2)
 		*PNDR |= 0x10;
 	else
 		*PNDR &= 0xef;
-
 	synco();
 
-	r61524_set(0x5a2, GLOBAL_0[(level < 2) ? 9 : 5]);
-	r61524_set(0x5a1, GLOBAL_backlight_table[level]);
+	r61524_set(REG_PWMDUTY, level);
+	r61524_set(REG_PWMDIV, PWM_div);
+	r61524_set(REG_DIMMING, 0b1000 | dimming);
+}
+
+void r61524_get_display_timing(bool *waveform, int *CPL, int *BP, int *FP)
+{
+	*waveform = r61524_get(REG_DRIVING_WAVE_CTL) & 0x100;
+	*CPL = r61524_get(REG_PANEL_IF_CTL1);
+	*BP = r61524_get(REG_DISPLAY_CTL2) & 0xf;
+	*FP = r61524_get(REG_DISPLAY_CTL2) >> 8;
+}
+
+void r61524_set_display_timing(bool waveform, int CPL, int BP, int FP)
+{
+	r61524_set(REG_DRIVING_WAVE_CTL, waveform << 8);
+	r61524_set(REG_PANEL_IF_CTL1, CPL);
+	r61524_set(REG_DISPLAY_CTL2, BP | (FP << 8));
 }
 
 //---
