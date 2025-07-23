@@ -34,6 +34,7 @@ typedef struct {
 /* Direct Memory Access controller (see dma/dma.c) */
 typedef struct {
 	sh7305_dma_channel_t ch[6];
+    uint16_t DMARS[3];
 	uint16_t OR;
 } dma_state_t;
 

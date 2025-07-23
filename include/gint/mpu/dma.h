@@ -64,6 +64,15 @@ typedef volatile struct
 
 } GPACKED(4) sh7305_dma_channel_t;
 
+/* sh7305_dma_save_channel - Saved SAR(B)/DAR(B)/TCR(B) */
+typedef volatile struct
+{
+    uint32_t SARB;
+    uint32_t DARB;
+    uint32_t TCRB;
+    pad(4);
+} GPACKED(4) sh7305_dma_save_channel;
+
 /* sh7305_dma_t - DMA Controller */
 typedef volatile struct
 {
@@ -86,7 +95,13 @@ typedef volatile struct
 	sh7305_dma_channel_t DMA4;
 	sh7305_dma_channel_t DMA5;
 
-    pad(0xF70);
+    pad(0x90);
+
+    sh7305_dma_save_channel DMAB0;
+    sh7305_dma_save_channel DMAB1;
+    sh7305_dma_save_channel DMAB2;
+
+    pad(0xEB0);
     word_union(DMARS0,
         byte_union(RID1,
             uint8_t C1MID                   : 6;

@@ -35,6 +35,46 @@ static channel_t *dma_channel(int channel)
 	return ((uint)channel >= 6 ? NULL : addr[channel]);
 }
 
+/* dma_get_initial_sar(): Returns the initial SAR of a DMA channel */
+static uint32_t dma_get_initial_sar(int channel)
+{
+    sh7305_dma_save_channel *saves[3] = {
+        &DMA.DMAB0, &DMA.DMAB1, &DMA.DMAB2
+    };
+    if (channel >= 6) 
+        return 0;
+    /* why don't these channels have a SARB? */
+    if (channel >= 3)
+        return dma_channel(channel)->SAR;
+    return saves[channel]->SARB;
+}
+/* dma_get_initial_dar(): Returns the initial DAR of a DMA channel */
+static uint32_t dma_get_initial_dar(int channel)
+{
+    sh7305_dma_save_channel *saves[3] = {
+        &DMA.DMAB0, &DMA.DMAB1, &DMA.DMAB2
+    };
+    if (channel >= 6) 
+        return 0;
+    /* why don't these channels have a DARB? */
+    if (channel >= 3)
+        return dma_channel(channel)->DAR;
+    return saves[channel]->DARB;
+}
+/* dma_get_initial_tcr(): Returns the initial TCR of a DMA channel */
+static uint32_t dma_get_initial_tcr(int channel)
+{
+    sh7305_dma_save_channel *saves[3] = {
+        &DMA.DMAB0, &DMA.DMAB1, &DMA.DMAB2
+    };
+    if (channel >= 6) 
+        return 0;
+    /* why don't these channels have a TCRB? */
+    if (channel >= 3)
+        return dma_channel(channel)->TCR;
+    return saves[channel]->TCRB;
+}
+
 /* dma_channelrid(): Get address of the RID field for the channel */
 static volatile uint16_t *dma_channelrid(int channel)
 {
@@ -107,6 +147,10 @@ static int dma_setup(int channel, dma_size_t size, uint blocks,
 	int interrupts, dma_repeat_t repeatmode, dma_mode_t rs, int half_end, dma_rid_t rid)
 {
 	channel_t *ch = dma_channel(channel);
+
+    /* DMA channels beyond 2 do not get repeats */
+    if (channel >= 3 && repeatmode != DMA_REPEAT_NONE)
+        return 1;
 	if(!ch) return 1;
 
 	/* Safety guard: only start a transfer if there's not one running */
@@ -265,15 +309,21 @@ static void dma_channel_wait(int channel, bool foreign)
 	dma_wait_ics[channel] = NULL;
 }
 
-/* dma_transfer_stop(): Stops a repeating transfer */
-void dma_transfer_stop(int channel)
+/* dma_transfer_pause(): "Pauses" a repeating transfer */
+static void dma_transfer_pause(int channel)
 {
 	channel_t *ch = dma_channel(channel);
     if (!dma_repeaters[channel]) 
         return;
-    ch->CHCR.IE = 0;
     ch->CHCR.DE = 0;
     ch->CHCR.TE = 0;
+}
+/* dma_transfer_stop(): Stops a repeating transfer */
+void dma_transfer_stop(int channel)
+{
+	channel_t *ch = dma_channel(channel);
+    dma_transfer_pause(channel);
+    ch->CHCR.IE = 0;
     dma_repeaters[channel] = false;
 }
 
@@ -382,7 +432,11 @@ static void unbind(void)
 
 	/* Make sure all DMA transfers are finished before leaving gint */
 	for(int channel = 0; channel < 6; channel++)
-		dma_channel_wait(channel, false);
+    {
+        if (!dma_repeaters[channel])
+            dma_channel_wait(channel, false);
+        /* We intentionally do not unbind any repeating DMA channels */
+    }
 }
 
 static bool hpowered(void)
@@ -414,12 +468,15 @@ static void hsave(dma_state_t *s)
 	for(int i = 0; i < 6; i++)
 	{
 		channel_t *ch = dma_channel(i);
-		s->ch[i].SAR        = ch->SAR;
-		s->ch[i].DAR        = ch->DAR;
-		s->ch[i].TCR        = ch->TCR;
+		s->ch[i].SAR        = dma_get_initial_sar(i);
+		s->ch[i].DAR        = dma_get_initial_dar(i);
+		s->ch[i].TCR        = dma_get_initial_tcr(i);
 		s->ch[i].CHCR.lword = ch->CHCR.lword;
 	}
-	s->OR = DMA.OR.word;
+    s->DMARS[0] = DMA.DMARS0.word;
+    s->DMARS[1] = DMA.DMARS1.word;
+    s->DMARS[2] = DMA.DMARS2.word;
+    s->OR = DMA.OR.word;
 }
 
 static void hrestore(dma_state_t const *s)
@@ -429,6 +486,9 @@ static void hrestore(dma_state_t const *s)
 	/* Disable the DMA while editing */
 	DMA.OR.DME = 0;
 
+    DMA.DMARS0.word = s->DMARS[0];
+    DMA.DMARS1.word = s->DMARS[1];
+    DMA.DMARS2.word = s->DMARS[2];
 	for(int i = 0; i < 6; i++)
 	{
 		channel_t *ch = dma_channel(i);
