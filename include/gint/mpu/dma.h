@@ -44,8 +44,8 @@ typedef volatile struct
 		uint32_t DO	:1;	/* DMA Overrun  [0,1] */
 		uint32_t	:1;
 		uint32_t TS_32	:2;	/* Transfer Size (upper half) */
-		uint32_t HE	:1;	/* Half-End flag [0..3] */
-		uint32_t HIE	:1;	/* Half-end Interrupt Enable [0..3] */
+		uint32_t HE	:1;	/* Half-End flag [0,1] */
+		uint32_t HIE	:1;	/* Half-end Interrupt Enable [0,1] */
 		uint32_t AM	:1;	/* Acknowledge mode [0,1] */
 		uint32_t AL	:1;	/* Acknowledge level [0,1] */
 

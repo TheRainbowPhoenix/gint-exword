@@ -43,10 +43,35 @@ typedef enum
 
 } dma_address_t;
 
+/* dma_rid_t - RID field for on-chip mode */
+typedef enum
+{
+    /* TXI interrupts */
+    DMA_RID_NONE      = 0x00,
+    DMA_RID_SCIF0_TXI = 0x21
+} dma_rid_t;
+typedef enum 
+{
+    DMA_REPEAT_NONE   = 0,
+    DMA_REPEAT_SARDAR = 1,
+    DMA_REPEAT_DAR    = 2,
+    DMA_REPEAT_SAR    = 3,
+
+    DMA_RELOAD_SARDAR = 5,
+    DMA_RELOAD_DAR    = 6,
+    DMA_RELOAD_SAR    = 7
+} dma_repeat_t;
+typedef enum
+{
+    DMA_MODE_EXTERNAL = 0,
+    DMA_MODE_AUTOREQ  = 4,
+    DMA_MODE_DMARS    = 8
+} dma_mode_t;
+
 /* dma_transfer_async(): Perform an asynchronous DMA data transfer
 
    This function starts a DMA data transfer and returns immediately. The
-   provided callback will be invoked once the transfer is finish. You can also
+   provided callback will be invoked once the transfer is finished. You can also
    call dma_transfer_wait() to wait until the transfer completes. You can
    create a callback with GINT_CALL() or pass GINT_CALL_NULL.
 
@@ -62,6 +87,35 @@ typedef enum
 bool dma_transfer_async(int channel, dma_size_t size, uint blocks,
 	void const *src, dma_address_t src_mode, void *dst,
 	dma_address_t dst_mode, gint_call_t callback);
+
+/* dma_transfer_repeat(): Perform a long-running asynchronous DMA data transfer
+
+   This function starts a DMA data transfer and returns immediately. The
+   provided callback will be invoked on every interrupt (which can include half-end). 
+   You can create a callback with GINT_CALL() or pass GINT_CALL_NULL.
+
+   @channel   DMA channel (0..5)
+   @size      Transfer size
+   @blocks    Number of blocks (transferred memory = size * blocks)
+   @src       Source pointer, must be aligned with transfer size
+   @src_mode  Source address mode
+   @dst       Destination address, must be aligned with transfer size
+   @dst_mode  Destination address mode
+   @repeat    Repeat mode to be used
+   @mode      DMA resource select mode
+   @rid       If mode is DMA_MODE_DMARS, selects interrupt source
+   @halfint   Whenever to generate an interrupt whenever half of the data has been processed
+   
+   @callback  Function to invoke when the transfer finishes
+   -> Returns true on success. */
+bool dma_transfer_repeat(int channel, dma_size_t size, uint blocks,
+	void const *src, dma_address_t src_mode, void *dst,
+	dma_address_t dst_mode, dma_repeat_t repeat, dma_mode_t mode, 
+    dma_rid_t rid, bool halfint, gint_call_t callback);
+
+/* dma_transfer_stop(): Stops a long-running DMA transfer
+   @channel   DMA channel (0..5) */
+void dma_transfer_stop(int channel);
 
 /* dma_transfer_wait(): Wait for an asynchronous transfer to finish
    @channel   DMA channel (0..5) */

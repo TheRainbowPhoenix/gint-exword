@@ -19,6 +19,8 @@ typedef volatile sh7305_dma_channel_t channel_t;
 static gint_call_t dma_callbacks[6] = { 0 };
 /* Sleep blocking flags for all channels */
 static bool dma_sleep_blocking[6] = { 0 };
+/* "Repeating" flags for all channels */
+static bool dma_repeaters[6] = { 0 };
 /* ICS for dma_channel_wait() for all channels */
 static cpu_csleep_t *dma_wait_ics[6] = { 0 };
 
@@ -31,6 +33,34 @@ static channel_t *dma_channel(int channel)
 	};
 
 	return ((uint)channel >= 6 ? NULL : addr[channel]);
+}
+
+/* dma_channelrid(): Get address of the RID field for the channel */
+static volatile uint16_t *dma_channelrid(int channel)
+{
+    volatile uint16_t *dmars_list[3] = {
+        (volatile uint16_t *) &DMA.DMARS0, 
+        (volatile uint16_t *) &DMA.DMARS1, 
+        (volatile uint16_t *) &DMA.DMARS2    
+    };
+    int dmars_id = channel >> 1;
+
+    if(dmars_id >= 3)
+        return NULL;
+    return dmars_list[dmars_id];
+}
+static void dma_writerid(int channel, dma_rid_t rid)
+{
+    int subchan = channel & 1;
+    volatile uint16_t *dma_rid = dma_channelrid(channel);
+
+    if(!dma_rid)
+        return;
+
+    if(subchan)
+        *dma_rid = (*dma_rid & 0x00FF) | (((uint16_t) rid) << 8);
+    else
+        *dma_rid = (*dma_rid & 0xFF00) | (((uint16_t) rid) << 0);
 }
 
 /* dma_translate(): Translate virtual address to DMA-suitable form */
@@ -74,7 +104,7 @@ static uint32_t dma_translate(void const *address)
 static int dma_setup(int channel, dma_size_t size, uint blocks,
 	void const *src, dma_address_t src_mode,
 	void *dst, dma_address_t dst_mode,
-	int interrupts)
+	int interrupts, dma_repeat_t repeatmode, dma_mode_t rs, int half_end, dma_rid_t rid)
 {
 	channel_t *ch = dma_channel(channel);
 	if(!ch) return 1;
@@ -95,11 +125,15 @@ static int dma_setup(int channel, dma_size_t size, uint blocks,
 
 	/* Fill in CHCR. Set RS=0100 (auto-request) and the user-provided
 	   values for TS (transfer size), DM and SM (address modes) */
-	ch->CHCR.lword = 0x00000400;
+	ch->CHCR.lword = 0x00000000;
+    ch->CHCR.RS = rs & 15;
+    dma_writerid(channel, rid);
+    ch->CHCR.HIE = !!half_end;
 	ch->CHCR.TS_32 = (size >> 2);
 	ch->CHCR.TS_10 = (size & 3);
 	ch->CHCR.DM = dst_mode;
 	ch->CHCR.SM = src_mode;
+    ch->CHCR.RPT = repeatmode;
 	ch->CHCR.IE = !!interrupts;
 
 	/* Prepare DMAOR by enabling the master switch and clearing the
@@ -107,6 +141,8 @@ static int dma_setup(int channel, dma_size_t size, uint blocks,
 	DMA.OR.DME = 1;
 	DMA.OR.AE = 0;
 	DMA.OR.NMIF = 0;
+
+	dma_repeaters[channel] = repeatmode != DMA_REPEAT_NONE;
 
 	/* Block sleep when the transfer involves on-chip memory */
 	dma_sleep_blocking[channel] = false;
@@ -128,7 +164,25 @@ bool dma_transfer_async(int channel, dma_size_t size, uint blocks,
 	void const *src, dma_address_t src_mode, void *dst,
 	dma_address_t dst_mode, gint_call_t callback)
 {
-	if(dma_setup(channel, size, blocks, src, src_mode, dst, dst_mode, 1))
+	if(dma_setup(channel, size, blocks, src, src_mode, dst, dst_mode, 1, DMA_REPEAT_NONE, DMA_MODE_AUTOREQ, 0, DMA_RID_NONE))
+		return false;
+
+	dma_callbacks[channel] = callback;
+
+	if(dma_sleep_blocking[channel])
+		sleep_block();
+
+	/* Enable channel, starting the DMA transfer. */
+	channel_t *ch = dma_channel(channel);
+	ch->CHCR.DE = 1;
+	return true;
+}
+bool dma_transfer_repeat(int channel, dma_size_t size, uint blocks,
+	void const *src, dma_address_t src_mode, void *dst,
+	dma_address_t dst_mode, dma_repeat_t repeat, dma_mode_t mode, 
+    dma_rid_t rid, bool halfint, gint_call_t callback)
+{
+	if(dma_setup(channel, size, blocks, src, src_mode, dst, dst_mode, 1, repeat, mode, halfint, rid))
 		return false;
 
 	dma_callbacks[channel] = callback;
@@ -142,16 +196,19 @@ bool dma_transfer_async(int channel, dma_size_t size, uint blocks,
 	return true;
 }
 
+
 /* Interrupt handler for all finished DMA transfers */
 static void dma_interrupt_transfer_ended(int channel)
 {
 	channel_t *ch = dma_channel(channel);
-	ch->CHCR.IE = 0;
-	ch->CHCR.DE = 0;
-	ch->CHCR.TE = 0;
+    if (!dma_repeaters[channel]) {
+        ch->CHCR.IE = 0;
+        ch->CHCR.DE = 0;
+        ch->CHCR.TE = 0;
+        DMA.OR.AE = 0;
+        DMA.OR.NMIF = 0;
+    }
 
-	DMA.OR.AE = 0;
-	DMA.OR.NMIF = 0;
 
 	if(dma_sleep_blocking[channel])
 		sleep_unblock();
@@ -161,7 +218,9 @@ static void dma_interrupt_transfer_ended(int channel)
 		cpu_csleep_cancel(dma_wait_ics[channel]);
 
 	gint_call(dma_callbacks[channel]);
-	dma_callbacks[channel] = GINT_CALL_NULL;
+
+    if (!dma_repeaters[channel])
+        dma_callbacks[channel] = GINT_CALL_NULL;
 }
 
 /* dma_channel_wait(): Wait for a particular channel's transfer to finish
@@ -206,6 +265,18 @@ static void dma_channel_wait(int channel, bool foreign)
 	dma_wait_ics[channel] = NULL;
 }
 
+/* dma_transfer_stop(): Stops a repeating transfer */
+void dma_transfer_stop(int channel)
+{
+	channel_t *ch = dma_channel(channel);
+    if (!dma_repeaters[channel]) 
+        return;
+    ch->CHCR.IE = 0;
+    ch->CHCR.DE = 0;
+    ch->CHCR.TE = 0;
+    dma_repeaters[channel] = false;
+}
+
 /* dma_transfer_wait(): Wait for a transfer to finish */
 void dma_transfer_wait(int channel)
 {
@@ -227,7 +298,7 @@ void dma_transfer_atomic(int channel, dma_size_t size, uint blocks,
 	void const *src, dma_address_t src_mode,
 	void *dst, dma_address_t dst_mode)
 {
-	if(dma_setup(channel, size, blocks, src, src_mode, dst, dst_mode, 0))
+	if(dma_setup(channel, size, blocks, src, src_mode, dst, dst_mode, 0, DMA_REPEAT_NONE, DMA_MODE_AUTOREQ, 0, DMA_RID_NONE))
 		return;
 
 	/* Enable channel, starting the DMA transfer. */
