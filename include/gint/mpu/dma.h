@@ -86,6 +86,39 @@ typedef volatile struct
 	sh7305_dma_channel_t DMA4;
 	sh7305_dma_channel_t DMA5;
 
+    pad(0xF70);
+    word_union(DMARS0,
+        byte_union(RID1,
+            uint8_t C1MID                   : 6;
+            uint8_t C1RID                   : 2;
+        );
+        byte_union(RID0,
+            uint8_t C0MID                   : 6;
+            uint8_t C0RID                   : 2;
+        );
+    );
+    pad(2);
+    word_union(DMARS1,
+        byte_union(RID3,
+            uint8_t C3MID                   : 6;
+            uint8_t C3RID                   : 2;
+        );
+        byte_union(RID2,
+            uint8_t C2MID                   : 6;
+            uint8_t C2RID                   : 2;
+        );
+    );
+    pad(2);
+    word_union(DMARS2,
+        byte_union(RID5,
+            uint8_t C5MID                   : 6;
+            uint8_t C5RID                   : 2;
+        );
+        byte_union(RID4,
+            uint8_t C4MID                   : 6;
+            uint8_t C4RID                   : 2;
+        );
+    );
 } GPACKED(4) sh7305_dma_t;
 
 #define SH7305_DMA (*((sh7305_dma_t *)0xfe008020))
