@@ -3,6 +3,7 @@
 //---
 
 // TODO: This is a template for a future implementation.
+// TODO: make the most boring and least interesting SCIF driver out there
 
 #ifndef GINT_SERIAL
 #define GINT_SERIAL
