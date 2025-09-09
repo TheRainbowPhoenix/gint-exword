@@ -2,6 +2,9 @@
 //	prof: A manual profiling interface for gint
 //---
 
+// Don't use if libprof was included.
+#ifndef LIBPROF_LIBPROF
+
 #ifndef GINT_PROF
 #define GINT_PROF
 
@@ -111,3 +114,5 @@ uint32_t prof_time(prof_t prof);
 #endif
 
 #endif /* GINT_PROF */
+
+#endif /* LIBPROF_LIBPROF */
