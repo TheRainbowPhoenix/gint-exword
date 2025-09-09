@@ -33,6 +33,8 @@
 .global	_BFile_FindFirst
 .global	_BFile_FindNext
 .global	_BFile_FindClose
+.global	_BFile_FStat // fx-CP
+.global	_BFile_Mkdir // fx-CP
 
 /* Return to menu */
 .global ___Timer_Install
@@ -144,82 +146,127 @@ syscall_table:
 #endif /* GINT_OS_FX */
 
 #if GINT_OS_CG
+#define CASIOWIN_API_VERSIONS 3
+.global _gint_set_CASIOWIN_API
+.global _gint_get_CASIOWIN_API
 
-/* Dynamic allocation */
+/* System for dynamically selecting between the syscall and fixed version of
+   each function based on the OS version.
+   @r0: Internal function ID (from table below) */
+_CASIOWIN_call:
+	mov	#CASIOWIN_API_VERSIONS, r1
+	mulu.w	r0, r1
+	mov.l	3f, r0
+	mov.l	@r0, r2
+	sts	macl, r1
+	add	r2, r1
+	shll2	r1
 
-___malloc:
-	syscall(0x1f44)
-___free:
-	syscall(0x1f42)
-___realloc:
-	syscall(0x1f46)
+	/* API version 0 is the normal syscall table */
+	tst	r2, r2
+	mova	.CASIOWIN_TABLE, r0
+	bt.s	.syscall
+	mov.l	@(r0, r1), r0
 
-/* BFile driver */
+	/* Other API versions are the direct calls */
+	tst	r0, r0
+	bt	.missingCall
 
-_BFile_Remove:
-	syscall(0x1db4)
-_BFile_Rename:
-	syscall(0x1db3)
-_BFile_Create:
-	syscall(0x1dae)
-_BFile_Open:
-	mov #0, r6
-	syscall(0x1da3)
-_BFile_Close:
-	syscall(0x1da4)
-_BFile_Size:
-	syscall(0x1da6)
-_BFile_Seek:
-	syscall(0x1da9)
-_BFile_GetPos:
-	syscall(0x1dab)
-_BFile_Write:
-	syscall(0x1daf)
-_BFile_Read:
-	syscall(0x1dac)
-_BFile_FindFirst:
-	syscall(0x1db6)
-_BFile_FindNext:
-	syscall(0x1db8)
-_BFile_FindClose:
-	syscall(0x1dba)
+	jmp	@r0
+	nop
 
-/* Return to menu */
+.missingCall:
+	mov.l	.gint_panic, r0
+	mov.w	2f, r4
+	jmp	@r0
+	nop
 
-___Timer_Install:
-	syscall(0x8d9)
-___Timer_Start:
-	syscall(0x8db)
-___Timer_Stop:
-	syscall(0x8dc)
-___Timer_Deinstall:
-	syscall(0x8da)
-___PutKeyCode:
-	syscall(0x12c6)
-___GetKeyWait:
-	syscall(0x12bf)
-___ClearKeyBuffer:
-	syscall(0x12c7)
-___GetVRAMAddress:
-	syscall(0x1e6)
-___ConfigureStatusArea:
-	syscall(0x2b7)
-___SetQuitHandler:
-	syscall(0x1e6e)
+.syscall:
+	mov.l	1f, r1
+	jmp	@r1
+	nop
 
-.global ___SpecialMatrixCodeProcessing
-___SpecialMatrixCodeProcessing:
-	syscall(0x1e60)
+2:	.word	0x10c0
+.balign 4
+1:	.long	0x80020070
+.gint_panic:
+	.long	_gint_panic
 
-/* Reset */
+_gint_set_CASIOWIN_API:
+	mov.l	3f, r0
+	rts
+	mov.l	r4, @r0
 
-___PowerOff:
-	syscall(0x1839)
-___Reset:
-	syscall(0x1187)
+_gint_get_CASIOWIN_API:
+	mov.l	3f, r0
+	rts
+	mov.l	@r0, r0
 
-syscall_table:
-	.long	0x80020070
+.balign 4
+3:	.long	.CASIOWIN_API
+
+.CASIOWIN_TABLE:
+	.long 0x1f44, 0x8025e0fc, 0x80366708  /* malloc */
+	.long 0x1f42, 0x8025dec8, 0x803664d4  /* free */
+	.long 0x1f46, 0x8025ec3c, 0x803672c8  /* realloc */
+	.long 0x1db4, 0x802404d2, 0x80334212  /* BFile_Remove */
+	.long 0x1db3, 0x80240482, 0x803341c2  /* BFile_Rename */
+	.long 0x1dae, 0x802401b0, 0x80333ef0  /* BFile_Create */
+	.long 0x1da3, 0x8023fb90, 0x803338d0  /* BFile_Open */
+	.long 0x1da4, 0x8023fd0e, 0x80333a4e  /* BFile_Close */
+	.long 0x1da6, 0x8023fdc4, 0x80333b04  /* BFile_Size */
+	.long 0x1da9, 0x8023ff2c, 0x80333c6c  /* BFile_Seek */
+	.long 0x1dab, 0x8024003c, 0x80333d7c  /* BFile_GetPos */
+	.long 0x1daf, 0x8024025e, 0x80333f9e  /* BFile_Write */
+	.long 0x1dac, 0x80240082, 0x80333dc2  /* BFile_Read */
+	.long 0x1db6, 0x80240888, 0x803345c8  /* BFile_FindFirst */
+	.long 0x1db8, 0x80240b06, 0x80334846  /* BFile_FindNext */
+	.long 0x1dba, 0x80240c10, 0x80334950  /* BFile_FindClose */
+	.long 0x08d9, 0x800b130c, 0x8010de28  /* Timer_Install */
+	.long 0x08db, 0x800b1456, 0x8010df72  /* Timer_Start */
+	.long 0x08dc, 0x800b14b2, 0x8010dfce  /* Timer_Stop */
+	.long 0x08da, 0x800b13d4, 0x8010def0  /* Timer_Deinstall */
+	.long 0x12c6, 0,          0           /* PutKeyCode */
+	.long 0x12bf, 0x8017be56, 0x802382fe  /* GetKeyWait */
+	.long 0x12c7, 0,          0           /* ClearKeyBuffer */
+	.long 0x01e6, 0x8004579a, 0x8007569e  /* GetVRAMAddress */
+	.long 0x1e6e, 0,          0           /* SetQuitHandler */
+	.long 0x1839, 0,          0           /* PowerOff */
+	.long 0x1187, 0,          0           /* Reset */
+
+#define casiowin_call(id) bra _CASIOWIN_call; mov id, r0
+
+___malloc:               casiowin_call(#0)
+___free:                 casiowin_call(#1)
+___realloc:              casiowin_call(#2)
+_BFile_Remove:           casiowin_call(#3)
+_BFile_Rename:           casiowin_call(#4)
+_BFile_Create:           casiowin_call(#5)
+_BFile_Open:             mov #0, r6; casiowin_call(#6)
+_BFile_Close:            casiowin_call(#7)
+_BFile_Size:             casiowin_call(#8)
+_BFile_Seek:             casiowin_call(#9)
+_BFile_GetPos:           casiowin_call(#10)
+_BFile_Write:            casiowin_call(#11)
+_BFile_Read:             casiowin_call(#12)
+_BFile_FindFirst:        casiowin_call(#13)
+_BFile_FindNext:         casiowin_call(#14)
+_BFile_FindClose:        casiowin_call(#15)
+___Timer_Install:        casiowin_call(#16)
+___Timer_Start:          casiowin_call(#17)
+___Timer_Stop:           casiowin_call(#18)
+___Timer_Deinstall:      casiowin_call(#19)
+___PutKeyCode:           casiowin_call(#20)
+___GetKeyWait:           casiowin_call(#21)
+___ClearKeyBuffer:       casiowin_call(#22)
+___GetVRAMAddress:       casiowin_call(#23)
+___SetQuitHandler:       casiowin_call(#24)
+___PowerOff:             casiowin_call(#25)
+___Reset:                casiowin_call(#26)
+
+.data
+.CASIOWIN_API:
+	.long 0
 
 #endif /* GINT_OS_CG */
 
@@ -243,5 +290,42 @@ ___VRAMRestore:
 
 ___Reset:
 	fixed(0xa0000000)
+
+_BFile_FindFirst:
+	fixed(0x8005a2ac)
+_BFile_FindNext:
+	fixed(0x8005a5f0)
+_BFile_FindClose:
+	fixed(0x8005a8ba)
+_BFile_Remove:
+	fixed(0x80057fc8)
+_BFile_Open:
+	fixed(0x80057f1c)
+_BFile_Write:
+	fixed(0x80057f74)
+_BFile_Close:
+	fixed(0x80057fa2)
+_BFile_Read:
+	fixed(0x80057f46)
+// _BFile_Flush:
+// 	fixed(0x8005809a)
+_BFile_Mkdir:
+	fixed(0x80057ef6)
+// _BFile_Mount:
+// 	fixed(0x80057e7c)
+_BFile_Stat:
+	fixed(0x80057fee)
+// _BFile_Reclaim:
+// 	fixed(0x80058114)
+// _BFile_FsInfo:
+// 	fixed(0x800580ea)
+// _BFile_Salvage:
+// 	fixed(0x8005813e)
+_BFile_Rename:
+	fixed(0x80058042)
+_BFile_FStat:
+	fixed(0x80057fee)
+_BFile_Seek:
+	fixed(0x8005806c)
 
 #endif /* GINT_OS_CP */

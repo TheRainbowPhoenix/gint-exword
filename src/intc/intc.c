@@ -62,15 +62,20 @@ static struct info {
 	{ IPRF, 0x0f00, IMR5,  0x40, _ },
 	/* SCIF */
 	{ IPRG, 0xf000, IMR5,  0x01, _ /* Driver not SH3-compatible yet */ },
-	/* RTC */
-	{ IPRK, 0xf000, IMR10, 0x04, IPRA, 0x000f },
-	{ IPRK, 0xf000, IMR10, 0x02, IPRA, 0x000f },
+	/* RTC; IMR order is opposite SH7724 manual! */
 	{ IPRK, 0xf000, IMR10, 0x01, IPRA, 0x000f },
+	{ IPRK, 0xf000, IMR10, 0x02, IPRA, 0x000f },
+	{ IPRK, 0xf000, IMR10, 0x04, IPRA, 0x000f },
 	/* SPU */
 	{ IPRC, 0x000f, IMR3, 0x04, _ /* Not supported on SH3! */ },
 	{ IPRC, 0x000f, IMR4, 0x08, _ },
 	/* USB */
 	{ IPRF, 0x00f0, IMR9, 0x02, _ /* Driver not SH3-compatible yet */ },
+    /* I2C */
+    { IPRH, 0x000f, IMR7, 0x10, _ },
+    { IPRH, 0x000f, IMR7, 0x20, _ },
+    { IPRH, 0x000f, IMR7, 0x40, _ },
+    { IPRH, 0x000f, IMR7, 0x80, _ },
 };
 
 /* Compact SH3 VBR-space scheme
@@ -168,8 +173,8 @@ void *intc_handler(int event_code, const void *handler, size_t size)
 	/* On SH4, just use the code as offset */
 	else
 	{
-		/* 0x40 is the size of the entry gate */
-		dest = (void *)cpu_getVBR() + 0x640 + (event_code - 0x400);
+		/* 0x20 is the size of the entry gate */
+		dest = (void *)cpu_getVBR() + 0x620 + (event_code - 0x400);
 	}
 
 	return memcpy(dest, handler, size);

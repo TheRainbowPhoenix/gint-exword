@@ -11,6 +11,9 @@
 #ifndef GINT_DEFS_CALL
 #define GINT_DEFS_CALL
 
+#include <stdbool.h>
+#include <gint/defs/attributes.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -38,6 +41,7 @@ typedef union {
 	type volatile const *name ## _cv;
 
 	POINTER(void, pv)
+	POINTER(bool, pb)
 	POINTER(char, pc)
 	POINTER(unsigned char, puc)
 	POINTER(short, ps)

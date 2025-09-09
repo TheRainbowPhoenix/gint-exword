@@ -184,6 +184,8 @@ typedef struct {
 
 	/* Candidate key for repeats (or 0 if no key is candidate yet) */
 	int16_t rep_key;
+        /* Matrix code for rep_key, if rep_key is not 0. */
+        uint8_t rep_row, rep_col;
 	/* Number of repeats already sent */
 	int16_t rep_count;
 	/* Time since key was first pressed (us) */
@@ -251,6 +253,10 @@ void keydev_tick(keydev_t *d, uint us);
 //---
 //	Low-level API to read events from the device
 //---
+
+/* keydev_queue_event(): Add an event in a device's buffer
+   Returns false if the event cannot be pushed. */
+bool keydev_queue_event(keydev_t *d, key_event_t ev);
 
 /* keydev_unqueue_event(): Retrieve the next keyboard event in queue
 

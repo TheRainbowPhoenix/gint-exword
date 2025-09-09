@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /* gdb_cpu_state_t: State of the CPU when breaking
    This struct keep the same register indices as those declared by GDB to allow

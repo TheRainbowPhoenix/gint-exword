@@ -13,7 +13,6 @@ int   __Timer_Deinstall(int id);
 int   __PutKeyCode(int row, int column, int keycode);
 int   __GetKeyWait(int *col,int *row,int type,int time,int menu,uint16_t *key);
 void  __ClearKeyBuffer(void); /* ? */
-void  __ConfigureStatusArea(int mode);
 void __SetQuitHandler(void (*callback)(void));
 
 #if !GINT_OS_CP
@@ -96,15 +95,17 @@ static os_menu_function_t *find_os_menu_function(void)
 
 void gint_osmenu_native(void)
 {
+#if GINT_OS_CG
+	if(gint[HWCALC] == HWCALC_FXCG100)
+		return;
+#endif
+
 // TODO: OS menu on fx-CP
 #if !GINT_OS_CP
 	__ClearKeyBuffer();
 	gint_copy_vram();
 
 	#if GINT_OS_CG
-	/* Unfortunately ineffective (main menu probably reenables it)
-	__ConfigureStatusArea(3); */
-
 	/* Try to use the internal function directly if we could figure out its
 	   address by dynamically disassembling */
 	os_menu_function_t *fun = find_os_menu_function();
@@ -121,11 +122,6 @@ void gint_osmenu_native(void)
 		return;
 	}
 	#endif
-
-	/* Mysteriously crashes when coming back; might be useful another time
-	   instead of GetKeyWait()
-	int C=0x04, R=0x09;
-	__SpecialMatrixCodeProcessing(&C, &R); */
 
 	__osmenu_id = __Timer_Install(0, __osmenu_handler, 0 /* ms */);
 	if(__osmenu_id <= 0) return;

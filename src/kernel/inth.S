@@ -63,15 +63,12 @@ _gint_inth_7305:
 1:	.long	0xff000028
 #endif
 
-/* SH7305-TYPE INTERRUPT HANDLER ENTRY - 40 BYTES */
+/* SH7305-TYPE INTERRUPT HANDLER ENTRY - 28 BYTES */
 
 _gint_inth_7305:
 	/* Save caller-saved registers which might currently be in use by the
 	   interrupted function, as we don't know what the callback will do */
 	sts.l	pr, @-r15
-	stc.l	gbr, @-r15
-	sts.l	mach, @-r15
-	sts.l	macl, @-r15
 
 	/* Get the event code from the INTEVT register */
 	mov.l	1f, r0
@@ -89,15 +86,11 @@ _gint_inth_7305:
 
 .jump_over:
 	/* Restore caller-saved registers */
-	lds.l	@r15+, macl
-	lds.l	@r15+, mach
-	ldc.l	@r15+, gbr
 	lds.l	@r15+, pr
-
 	rte
 	nop
 
-	.zero	24
+	.zero	4
 1:	.long	0xff000028
 .first_entry:
 
@@ -200,16 +193,19 @@ _inth_remap:
    @r4  Address of callback function
    -> Returns the return value of the callback (int). */
 _gint_inth_callback_reloc:
-	stc.l	r0_bank, @-r15
-	stc.l	r1_bank, @-r15
-	stc.l	r2_bank, @-r15
-	stc.l	r3_bank, @-r15
-	stc.l	r4_bank, @-r15
-	stc.l	r5_bank, @-r15
-	stc.l	r6_bank, @-r15
 	stc.l	r7_bank, @-r15
+	stc.l	r6_bank, @-r15
+	stc.l	r5_bank, @-r15
+	stc.l	r4_bank, @-r15
+	stc.l	r3_bank, @-r15
+	stc.l	r2_bank, @-r15
+	stc.l	r1_bank, @-r15
+	stc.l	r0_bank, @-r15
 	stc.l	spc, @-r15
 	stc.l	ssr, @-r15
+	stc.l	gbr, @-r15
+	sts.l	macl, @-r15
+	sts.l	mach, @-r15
 	/* We backup the address of the gint_inth_callback_context_t built on
 	   the stack to the user bank. */
 	ldc	r15, r4_bank
@@ -279,17 +275,20 @@ _gint_inth_callback_reloc:
 	/* We can now pull the return value since interrupts are disabled */
 	stc	r0_bank, r0
 
+	lds.l	@r15+, mach
+	lds.l	@r15+, macl
+	ldc.l	@r15+, gbr
 	ldc.l	@r15+, ssr
 	ldc.l	@r15+, spc
-	ldc.l	@r15+, r7_bank
-	ldc.l	@r15+, r6_bank
-	ldc.l	@r15+, r5_bank
-	ldc.l	@r15+, r4_bank
-	ldc.l	@r15+, r3_bank
-	ldc.l	@r15+, r2_bank
-	ldc.l	@r15+, r1_bank
-	rts
 	ldc.l	@r15+, r0_bank
+	ldc.l	@r15+, r1_bank
+	ldc.l	@r15+, r2_bank
+	ldc.l	@r15+, r3_bank
+	ldc.l	@r15+, r4_bank
+	ldc.l	@r15+, r5_bank
+	ldc.l	@r15+, r6_bank
+	rts
+	ldc.l	@r15+, r7_bank
 
 .align 4
 .SR_clear_RB_BL:

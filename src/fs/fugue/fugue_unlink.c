@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include "util.h"
+#include "bfilecp.h"
 
 int fugue_unlink(char const *path)
 {
@@ -14,6 +15,15 @@ int fugue_unlink(char const *path)
 		errno = ENOMEM;
 		return -1;
 	}
+
+#if GINT_OS_CP
+	char *normpath = fs_path_normalize_opt(path, "\\fls0\\", '\\');
+	if(!normpath) {
+		errno = ENOMEM;
+		free(fcpath);
+		return -1;
+	}
+#endif
 
 	int type, size, rc;
 	rc = BFile_Ext_Stat(fcpath, &type, &size);
@@ -28,14 +38,22 @@ int fugue_unlink(char const *path)
 		goto end;
 	}
 
+#if GINT_OS_CP
+	rc = BFile_Remove(normpath);
+#else
 	rc = BFile_Remove(fcpath);
+#endif
+
 	if(rc < 0) {
 		errno = bfile_error_to_errno(rc);
 		rc = -1;
 	}
-	else rc = 0;
+	rc = 0;
 
 end:
 	free(fcpath);
+#if GINT_OS_CP
+	free(normpath);
+#endif
 	return rc;
 }

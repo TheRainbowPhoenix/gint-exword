@@ -64,7 +64,12 @@
 extern "C" {
 #endif
 
+#include <gint/config.h>
 #include <stdint.h>
+
+// BFile has a different interface on CP-400, which is not exposed by gint
+// because the standard API is always available.
+#if !GINT_OS_CP
 
 //---
 // Common file access functions
@@ -307,6 +312,8 @@ int BFile_FindClose(int shandle);
 
 /* BFile_Ext_Stat(): Stat an entry for type and size */
 int BFile_Ext_Stat(uint16_t const *path, int *type, int *size);
+
+#endif /* !GINT_OS_CP */
 
 #ifdef __cplusplus
 }

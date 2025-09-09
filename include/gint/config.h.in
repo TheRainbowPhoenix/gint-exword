@@ -80,4 +80,26 @@
 #define GINT_RENDER_MONO (GINT_HW_FX || GINT_FX9860G_G3A)
 #define GINT_RENDER_RGB ((GINT_HW_CG || GINT_HW_CP) && !GINT_FX9860G_G3A)
 
+/* Macros for specifying HH2 binary metadata fields. Here because this header
+   is guaranteed to be included with every gint header. */
+#if GINT_HW_CP
+#define HH2_NAME(STR) \
+	GSECTION(".hh2.info.name") GVISIBLE \
+	char _hh2info_name[] = (STR);
+#define HH2_DESCRIPTION(STR) \
+	GSECTION(".hh2.info.description") GVISIBLE \
+	char _hh2info_description[] = (STR);
+#define HH2_AUTHOR(STR) \
+	GSECTION(".hh2.info.author") GVISIBLE \
+	char _hh2info_author[] = (STR);
+#define HH2_VERSION(STR) \
+	GSECTION(".hh2.info.version") GVISIBLE \
+	char _hh2info_version[] = (STR);
+#else
+#define HH2_NAME(STR)
+#define HH2_DESCRIPTION(STR)
+#define HH2_AUTHOR(STR)
+#define HH2_VERSION(STR)
+#endif
+
 #endif /* GINT_CONFIG */

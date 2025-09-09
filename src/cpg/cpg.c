@@ -84,10 +84,12 @@ static void sh7305_probe(void)
 	int divb = CPG.FRQCR.BFC;
 	int divi = CPG.FRQCR.IFC;
 	int divp = CPG.FRQCR.P1FC;
+	int divs = CPG.FRQCR.SFC;
 
 	freq.Bphi_div = 1 << (divb + 1);
 	freq.Iphi_div = 1 << (divi + 1);
 	freq.Pphi_div = 1 << (divp + 1);
+	freq.Sphi_div = 1 << (divs + 1);
 
 	/* Deduce the input frequency of divider 1 */
 	int base = 32768;
@@ -99,6 +101,7 @@ static void sh7305_probe(void)
 	freq.Bphi_f   = base >> (divb + 1);
 	freq.Iphi_f   = base >> (divi + 1);
 	freq.Pphi_f   = base >> (divp + 1);
+	freq.Sphi_f   = base >> (divs + 1);
 }
 
 #undef CPG

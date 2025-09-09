@@ -35,6 +35,7 @@ typedef struct
 	int Bphi_div;
 	int Iphi_div;
 	int Pphi_div;
+	int Sphi_div;
 
 	union {
 		int CKIO_f;
@@ -44,6 +45,7 @@ typedef struct
 	int Bphi_f;
 	int Iphi_f;
 	int Pphi_f;
+	int Sphi_f;
 
 } clock_frequency_t;
 
@@ -154,6 +156,11 @@ void cpg_get_overclock_setting(struct cpg_overclock_setting *s);
 
 /* Applies the specified overclock setting. */
 void cpg_set_overclock_setting(struct cpg_overclock_setting const *s);
+
+/* Sets whether or node CPG parameters are retained when world switching, i.e.
+   mostly whether overclock setting will remain while in the OS world and when
+   leaving the add-in. */
+void cpg_set_overclock_permanent(bool permanent);
 
 //---
 //	Sleep functions

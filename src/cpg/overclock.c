@@ -12,6 +12,7 @@
 #include <gint/clock.h>
 #include <gint/gint.h>
 #include <gint/hardware.h>
+#include <gint/drivers.h>
 #include <gint/mpu/cpg.h>
 #include <gint/mpu/bsc.h>
 #include <gint/mpu/wdt.h>
@@ -20,8 +21,8 @@
 // Low-level clock speed access
 //---
 
-#define SH7305_SDMR3_CL2 ((volatile uint8_t *)0xFEC15040)
-#define SH7305_SDMR3_CL3 ((volatile uint8_t *)0xFEC15060)
+#define SH7305_SDMR3_CL2 ((volatile uint16_t *)0xFEC15040)
+#define SH7305_SDMR3_CL3 ((volatile uint16_t *)0xFEC15060)
 
 //---
 // Predefined clock speeds
@@ -30,6 +31,7 @@
 /* SH7305 CPG */
 #define SH4_PLL_32x  0b011111
 #define SH4_PLL_26x  0b011001
+#define SH4_PLL_25x  0b011000
 #define SH4_PLL_16x  0b001111
 #define SH4_DIV_2    0
 #define SH4_DIV_4    1
@@ -139,6 +141,17 @@ void cpg_set_overclock_setting(struct cpg_overclock_setting const *s)
     timer_rescale(old_Pphi, new_Pphi);
 
     cpu_atomic_end();
+}
+
+void cpg_set_overclock_permanent(bool permanent)
+{
+    extern gint_driver_t drv_cpg;
+    int i = &drv_cpg - gint_drivers;
+
+    if(permanent)
+        gint_driver_flags[i] |= GINT_DRV_SHARED;
+    else
+        gint_driver_flags[i] &= ~GINT_DRV_SHARED;
 }
 
 #if GINT_HW_FX
@@ -421,7 +434,7 @@ static struct cpg_overclock_setting const settings_fxcg50[5] = {
       .CS5aWCR = 0x000203C1 },
     /* CLOCK_SPEED_F5 */
     { .FLLFRQ  = 0x00004000 + 900,
-      .FRQCR  = (SH4_PLL_26x<<24)+(SH4_DIV_2<<20)+(SH4_DIV_4<<12)+(SH4_DIV_4<<8)+SH4_DIV_8,
+      .FRQCR  = (SH4_PLL_25x<<24)+(SH4_DIV_2<<20)+(SH4_DIV_4<<12)+(SH4_DIV_4<<8)+SH4_DIV_8,
       .CS0BCR  = 0x24920400,
       .CS2BCR  = 0x24923400,
       .CS3BCR  = 0x24924400,
@@ -432,6 +445,66 @@ static struct cpg_overclock_setting const settings_fxcg50[5] = {
       .CS5aWCR = 0x000203C1 },
 };
 
+// TODO: These structures are big and many settings overlap. Make it smaller.
+// This is fxcg50[0,1,2,3,3].
+static struct cpg_overclock_setting const settings_fxcg100[5] = {
+    /* CLOCK_SPEED_F1 */
+    { .FLLFRQ  = 0x00004000 + 900,
+      .FRQCR   = 0x0F011112,
+      .CS0BCR  = 0x36DA0400,
+      .CS2BCR  = 0x36DA3400,
+      .CS3BCR  = 0x36DB4400,
+      .CS5aBCR = 0x17DF0400,
+      .CS0WCR  = 0x000003C0,
+      .CS2WCR  = 0x000003C0,
+      .CS3WCR  = 0x000024D1,
+      .CS5aWCR = 0x000203C1 },
+    /* CLOCK_SPEED_F2 */
+    { .FLLFRQ  = 0x00004000 + 900,
+      .FRQCR   = (SH4_PLL_16x<<24)+(SH4_DIV_4<<20)+(SH4_DIV_8<<12)+(SH4_DIV_8<<8)+SH4_DIV_8,
+      .CS0BCR  = 0x24920400,
+      .CS2BCR  = 0x24923400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x17DF0400,
+      .CS0WCR  = 0x00000340,
+      .CS2WCR  = 0x000003C0,
+      .CS3WCR  = 0x000024D1,
+      .CS5aWCR = 0x000203C1 },
+    /* CLOCK_SPEED_F3 */
+    { .FLLFRQ  = 0x00004000 + 900,
+      .FRQCR  = (SH4_PLL_26x<<24)+(SH4_DIV_4<<20)+(SH4_DIV_8<<12)+(SH4_DIV_8<<8)+SH4_DIV_8,
+      .CS0BCR  = 0x24920400,
+      .CS2BCR  = 0x24923400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x17DF0400,
+      .CS0WCR  = 0x00000240,
+      .CS2WCR  = 0x000003C0,
+      .CS3WCR  = 0x000024D1,
+      .CS5aWCR = 0x000203C1 },
+    /* CLOCK_SPEED_F4 */
+    { .FLLFRQ  = 0x00004000 + 900,
+      .FRQCR  = (SH4_PLL_32x<<24)+(SH4_DIV_2<<20)+(SH4_DIV_4<<12)+(SH4_DIV_8<<8)+SH4_DIV_16,
+      .CS0BCR  = 0x24920400,
+      .CS2BCR  = 0x24923400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x17DF0400,
+      .CS0WCR  = 0x000002C0,
+      .CS2WCR  = 0x000003C0,
+      .CS3WCR  = 0x000024D1,
+      .CS5aWCR = 0x000203C1 },
+    /* CLOCK_SPEED_F5 is made identical to CLOCK_SPEED_F4 because clearly the
+       Graph Math+ cannot handle the higher bus speed. */
+    { .FLLFRQ  = 0x00004000 + 900,
+      .FRQCR  = (SH4_PLL_32x<<24)+(SH4_DIV_2<<20)+(SH4_DIV_4<<12)+(SH4_DIV_8<<8)+SH4_DIV_16,
+      .CS0BCR  = 0x24920400,
+      .CS2BCR  = 0x24923400,
+      .CS3BCR  = 0x24924400,
+      .CS5aBCR = 0x17DF0400,
+      .CS0WCR  = 0x000002C0,
+      .CS2WCR  = 0x000003C0,
+      .CS3WCR  = 0x000024D1,
+      .CS5aWCR = 0x000203C1 },
+};
 #endif
 
 static struct cpg_overclock_setting const *get_settings(void)
@@ -450,6 +523,8 @@ static struct cpg_overclock_setting const *get_settings(void)
         return settings_prizm;
     if(gint[HWCALC] == HWCALC_FXCG50)
         return settings_fxcg50;
+    if(gint[HWCALC] == HWCALC_FXCG100)
+        return settings_fxcg100;
 #endif
 
     return NULL;

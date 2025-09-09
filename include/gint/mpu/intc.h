@@ -192,7 +192,7 @@ typedef volatile struct
 		uint16_t _MSIOF0:4;	/* SH7724: Sync SCIF channel 0 */
 		uint16_t _MSIOF1:4;	/* SH7724: Sync SCIF channel 1 */
 		uint16_t _1	:4;	/* Unknown (TODO) */
-		uint16_t _2	:4;	/* Unknown (TODO) */
+		uint16_t I2C:4;	/* I2C */
 	);
 	pad(2);
 

@@ -114,27 +114,46 @@ extern "C" {
    * 0xffff is "just before" 0x0000, not "long after". */
 typedef struct
 {
-	uint time	:16;	/* Time of event, unique over short periods */
+	/* Time of event, unique over short periods */
+	u16 time;
 
 	uint		:2;	/* Reserved for future use */
-
 	uint mod	:1;	/* Whether modifiers are used */
 	uint shift	:1;	/* If mod=1, whether SHIFT was pressed */
 	uint alpha	:1;	/* If mod=1, whether ALPHA was pressed */
-
 	uint type	:3;	/* Type of key event */
-	uint key	:8;	/* Hit key */
+
+	/* Key that was pressed or released. */
+	u8 key;
+
+	// The following attributes will be union'd with touch info on the CP.
+
+    union {
+        struct {
+            /* Matrix code: physical location of the key being it. */
+            u8 row;
+            u8 col;
+        };
+        struct {
+            /* X/Y touch-screen coordinate */
+            u16 x;
+            u16 y;
+        };
+    };
 
 } GPACKED(4) key_event_t;
 
 /* Keyboard event types, as in the [type] field of key_event_t */
 enum
 {
-	KEYEV_NONE   = 0,	/* No event available (poll() only) */
-	KEYEV_DOWN   = 1,	/* Key was pressed */
-	KEYEV_UP     = 2,	/* Key was released */
-	KEYEV_HOLD   = 3,	/* A key that was pressed has been held down */
-	KEYEV_OSMENU = 4,	/* We went to the main menu and back */
+    KEYEV_NONE          = 0, /* No event available (poll() only) */
+    KEYEV_DOWN          = 1, /* Key was pressed */
+    KEYEV_UP            = 2, /* Key was released */
+    KEYEV_HOLD          = 3, /* A key that was pressed has been held down */
+    KEYEV_OSMENU        = 4, /* We went to the main menu and back */
+    KEYEV_TOUCH_DOWN    = 5, /* Touch was detected */
+    KEYEV_TOUCH_DRAG    = 6, /* A touch that was detected has been held down */
+    KEYEV_TOUCH_UP      = 7, /* Touch was released */
 };
 
 /* Keyboard frequency analysis is a runtime setting since gint 2.4. This macro

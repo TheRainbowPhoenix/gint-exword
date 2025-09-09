@@ -247,7 +247,7 @@ static void prepend_link(block_t *b, index_t *index)
 //---
 
 /* Round a size to the closest allocatable size */
-static size_t round(size_t size)
+static size_t round_size(size_t size)
 {
 	return (size < 8) ? 8 : ((size + 3) & ~3);
 }
@@ -256,7 +256,7 @@ static void *gint_malloc(size_t size, void *data)
 {
 	index_t *index = data;
 	stats_t *s = index->stats;
-	size = round(size);
+	size = round_size(size);
 	int c = size_class(size);
 
 	/* Try to find a class that has a free block available */
@@ -330,7 +330,7 @@ static void *gint_realloc(void *ptr, size_t size, void *data)
 	index_t *index = data;
 	stats_t *s = index->stats;
 	block_t *b = ptr - sizeof(block_t);
-	size = round(size);
+	size = round_size(size);
 	int size_before = b->size;
 
 	/* When requesting a smaller size, split the original block */

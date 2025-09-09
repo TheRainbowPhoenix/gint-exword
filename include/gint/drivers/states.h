@@ -109,6 +109,16 @@ typedef struct {
 
 } usb_state_t;
 
+/* Touch-screen modules */
+typedef struct {
+    uint16_t PRCR;
+    uint16_t PJCR;
+    uint8_t ICCR;
+    uint8_t ICIC;
+    uint8_t ICCL;
+    uint8_t ICCH;
+} touch_state_t;
+
 #ifdef __cplusplus
 }
 #endif

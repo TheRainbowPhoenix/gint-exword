@@ -4,35 +4,35 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include "util.h"
+#include "bfilecp.h"
 
 int fugue_rename(char const *oldpath, char const *newpath)
 {
 	ENOTSUP_IF_NOT_FUGUE(-1);
-	int rc = -1;
 
-	uint16_t *fcpath_1 = NULL;
-	uint16_t *fcpath_2 = NULL;
-
-	fcpath_1 = fs_path_normalize_fc(oldpath);
+#if GINT_OS_CP
+	int rc = BFile_Rename(oldpath, newpath);
+#else
+	u16 *fcpath_1 = fs_path_normalize_fc(oldpath);
 	if(!fcpath_1) {
 		errno = ENOMEM;
-		goto end;
+		return -1;
 	}
-	fcpath_2 = fs_path_normalize_fc(newpath);
+	u16 *fcpath_2 = fs_path_normalize_fc(newpath);
 	if(!fcpath_2) {
 		errno = ENOMEM;
-		goto end;
+		free(fcpath_1);
+		return -1;
 	}
 
-	rc = BFile_Rename(fcpath_1, fcpath_2);
-	if(rc < 0) {
-		errno = bfile_error_to_errno(rc);
-		rc = -1;
-	}
-	else rc = 0;
-
-end:
+	int rc = BFile_Rename(fcpath_1, fcpath_2);
 	free(fcpath_1);
 	free(fcpath_2);
-	return rc;
+#endif
+
+	if(rc < 0) {
+		errno = bfile_error_to_errno(rc);
+		return -1;
+	}
+    return 0;
 }

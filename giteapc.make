@@ -6,16 +6,19 @@ configure:
 	@ fxsdk build-fx -c $(GINT_CMAKE_OPTIONS)
 	@ fxsdk build-cg -c $(GINT_CMAKE_OPTIONS)
 	@ fxsdk build-fxg3a -c $(GINT_CMAKE_OPTIONS)
+	@ fxsdk build-cp -c $(GINT_CMAKE_OPTIONS)
 
 build:
 	@ fxsdk build-fx
 	@ fxsdk build-cg
 	@ fxsdk build-fxg3a
+	@ fxsdk build-cp
 
 install:
 	@ fxsdk build-fx install
 	@ fxsdk build-cg install
 	@ fxsdk build-fxg3a install
+	@ fxsdk build-cp install
 
 uninstall:
 	@ if [ -e build-fx/install_manifest.txt ]; then \
@@ -26,6 +29,9 @@ uninstall:
           fi
 	@ if [ -e build-fxg3a/install_manifest.txt ]; then \
 	     xargs rm -f < build-fxg3a/install_manifest.txt; \
+          fi
+	@ if [ -e build-cp/install_manifest.txt ]; then \
+	     xargs rm -f < build-cp/install_manifest.txt; \
           fi
 
 .PHONY: configure build install uninstall

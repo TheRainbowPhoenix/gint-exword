@@ -8,6 +8,7 @@
 #include <gint/drivers/keydev.h>
 #include <gint/defs/types.h>
 #include <gint/defs/util.h>
+#include <gint/hardware.h>
 
 #include <string.h>
 #include <stdarg.h>
@@ -45,14 +46,49 @@ static void keycode_to_keymatrix(int keycode, int *row, int *col)
 	*col = 0;
 }
 #else
-static GINLINE int keymatrix_to_keycode(int row, int col)
+static uint8_t const CG100_keymap[] = {
+  KEY_ON,       KEY_HOME,  KEY_PREVTAB, KEY_UP,    KEY_NEXTTAB, KEY_PAGEUP,
+  KEY_SETTINGS, KEY_BACK,  KEY_LEFT,    KEY_OK,    KEY_RIGHT,   KEY_PAGEDOWN,
+  KEY_SHIFT,    KEY_ALPHA, KEY_VARS,    KEY_DOWN,  KEY_CATALOG, KEY_TOOLS,
+  KEY_XOT,      KEY_FRAC,  KEY_SQRT,    KEY_POWER, KEY_SQUARE,  KEY_EXPFUN,
+  KEY_COMMA,    KEY_SIN,   KEY_COS,     KEY_TAN,   KEY_LEFTP,   KEY_RIGHTP,
+};
+static int keymatrix_to_keycode(int row, int col)
 {
+	if(gint[HWCALC] == HWCALC_FXCG100) {
+		if(row >= 7 && row <= 9)
+			return CG100_keymap[6 * (9-row) + (6-col)];
+		if(row == 1 && col == 3)
+			return KEY_FORMAT;
+	}
 	return (row << 4) + (7 - col);
 }
-static GINLINE void keycode_to_keymatrix(int keycode, int *row, int *col)
+static void keycode_to_keymatrix(int keycode, int *row, int *col)
 {
+	if(gint[HWCALC] == HWCALC_FXCG100) {
+		if(keycode == KEY_FORMAT) {
+			*row = 1;
+			*col = 3;
+			return;
+		}
+		for(int i = 0; i < (int)sizeof(CG100_keymap); i++) {
+			if(CG100_keymap[i] == keycode) {
+				*row = 9 - i / 6;
+				*col = 6 - (i % 6);
+				return;
+			}
+		}
+	}
+
 	*row = keycode >> 4;
 	*col = 7 - (keycode & 7);
+
+	if(gint[HWCALC] == HWCALC_FXCG100 &&
+		(*row > 4 || (*row == 1 && *col == 3))) {
+		// key that doesn't exist
+		*row = 0;
+		*col = 1;
+	}
 }
 #endif
 
@@ -72,9 +108,7 @@ static int standard_repeater(GUNUSED int key, GUNUSED int duration, int count)
 // Driver event generation
 //---
 
-/* keydev_queue_push(): Add an event in a device's buffer
-   Returns false if the event cannot be pushed. */
-bool keydev_queue_push(keydev_t *d, key_event_t ev)
+bool keydev_queue_event(keydev_t *d, key_event_t ev)
 {
 	if(d->async_filter && !d->async_filter(ev))
 		return true;
@@ -125,9 +159,11 @@ void keydev_process_state(keydev_t *d, uint8_t scan[12])
 
 			for(int mask = 0x80, col = 7; mask; mask >>= 1, col--)
 			{
+				ev.row = row;
+				ev.col = col;
 				ev.key = keymatrix_to_keycode(row, col);
 				/* Update state only if the push succeeds */
-				if((diff & mask) && keydev_queue_push(d, ev))
+				if((diff & mask) && keydev_queue_event(d, ev))
 					d->state_now[row] = mode
 					? d->state_now[row] | mask
 					: d->state_now[row] & ~mask;
@@ -173,6 +209,8 @@ key_event_t keydev_repeat_event(keydev_t *d)
 
 	ev.type = KEYEV_HOLD;
 	ev.key = d->rep_key;
+	ev.row = d->rep_row;
+	ev.col = d->rep_col;
 	return ev;
 }
 
@@ -181,18 +219,18 @@ void keydev_tick(keydev_t *d, uint us)
 	/* Generate the next repeat */
 	key_event_t repeat = keydev_repeat_event(d);
 	if(repeat.type != KEYEV_NONE)
-		keydev_queue_push(d, repeat);
+		keydev_queue_event(d, repeat);
 
 	d->time++;
 
 	/* Disable repeat if the repeating key was released */
 	if(d->rep_key != 0)
 	{
-		int row, col;
-		keycode_to_keymatrix(d->rep_key, &row, &col);
-		if(!(d->state_now[row] & (1 << col)))
+		if(!(d->state_now[d->rep_row] & (1 << d->rep_col)))
 		{
 			d->rep_key = 0;
+			d->rep_row = 0;
+			d->rep_col = 0;
 			d->rep_count = -1;
 			d->rep_time = -1;
 			d->rep_delay = -1;
@@ -231,19 +269,27 @@ key_event_t keydev_unqueue_event(keydev_t *d)
 	if(!queue_poll(d, &ev))
 		return ev;
 
+	/* Compatibility combinations can transform the .key attribute */
+#if GINT_HW_CG
+	if(gint[HWCALC] == HWCALC_FXCG100) {
+		if(keydev_keydown(d, KEY_CATALOG) && ev.row == 6)
+			ev.key = KEY_F1 + (6 - ev.col);
+	}
+#endif
+
 	/* Update the event state accordingly */
-	int row, col;
-	keycode_to_keymatrix(ev.key, &row, &col);
-	int mask = 1 << col;
+	int mask = 1 << ev.col;
 
 	if(ev.type == KEYEV_DOWN)
 	{
-		d->state_queue[row] |= mask;
-		d->state_flips[row] ^= mask;
+		d->state_queue[ev.row] |= mask;
+		d->state_flips[ev.row] ^= mask;
 		/* Mark this key as the currently repeating one */
 		if(d->rep_key == 0 && can_repeat(d, ev.key))
 		{
 			d->rep_key = ev.key;
+			d->rep_row = ev.row;
+			d->rep_col = ev.col;
 			d->rep_count = -1;
 			d->rep_time = 0;
 			d->rep_delay = 0;
@@ -251,8 +297,8 @@ key_event_t keydev_unqueue_event(keydev_t *d)
 	}
 	else if(ev.type == KEYEV_UP)
 	{
-		d->state_queue[row] &= ~mask;
-		d->state_flips[row] ^= mask;
+		d->state_queue[ev.row] &= ~mask;
+		d->state_flips[ev.row] ^= mask;
 	}
 
 	return ev;

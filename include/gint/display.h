@@ -289,10 +289,14 @@ typedef struct
 	/* Number of total glyphs */
 	uint32_t glyph_count;
 
-    /* Character spacing (usually 1) */
-    uint8_t char_spacing;
+	/* Character spacing (usually 1) */
+	uint8_t char_spacing;
+	/* Distance between the y positions for two consecutive lines. This is
+	   an informative metric for text wrapping tools, not used by dtext()
+	   and other standard functions that always write a single line. */
+	uint8_t line_distance;
 
-    uint :24;
+	uint :16;
 
 	struct {
 		/* Unicode point of first character in block */

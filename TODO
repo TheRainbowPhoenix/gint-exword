@@ -60,23 +60,20 @@ enum {
     IMAGE_FORMAT_2I1MSB,
 };
 
-fx-CP port progress.
+fx-CP port progress. Vibe: can write simple programs, advanced features coming
 DONE:
-- kernel can start add-ins, take over interrupts (but no interrupt sources yet)
-- panic handler works (no interactive choices, only RESET)
-- no OS menu (likely never) and poweroff (maybe later)
-- memory: 64 kB total + OS heap (no gint arena, no MMU)
-- r61523: prototype display driver
-- can use the rendering pipeline with no DMA acceleration
+- load: stage-2 to VRAM backup (unused memory uses gint arena), no MMU
+- kernel basics: malloc, interrupts, exceptions
+- r61523 driver (no DMA), rendering (no DMA), keyboard driver, timer driver
 IN-PROGRESS:
 - unification of the image/video interface
-TODO:
-- hardware info: rom and fs type
-- quit handler
-- DMA acceleration for dclear and dupdate
-- keyboard and touch screen input
-- drivers: cpg, dma, intc, rtc, tmu
-- find more memory, 64 kB is not enough
+- porting the GUIs in gintctl, many of which are hardcoded for 396x224
+- figure out why the DMA doesn't work (should make dclear/dupdate faster)
+MEDIUM TERM:
+- touch driver, cpg driver (w/ potential overclock, given settings), rtc driver
 - benchmark memory and display performance
-- improve API and performance of display driver
-- way off: filesystem, remote debugging, usb
+- (details: hardware info, quit handler, poweroff)
+LONGER TERM:
+- port azur's rendering pipeline (might work out of the box)
+- port libraries
+- filesystem, remote debugging, usb, (serial once added)

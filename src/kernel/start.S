@@ -122,4 +122,12 @@ _stage2:
 	   it's overriding the correct location. */
 	.long 1, 2, 3, 4, 5, 6, 7, 8
 
+/* Also provide default values for metadata fields. */
+
+.section .hh2.info.name
+.global __hh2info_name
+.weak __hh2info_name
+/* Zero byte will skip specifiying any of the data */
+__hh2info_name: .byte 0x00
+
 #endif /* GINT_OS_CP */

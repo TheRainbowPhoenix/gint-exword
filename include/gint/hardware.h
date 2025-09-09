@@ -111,6 +111,8 @@ void hw_detect(void);
 #define HWCALC_FX9860G_SLIM  7
 /* fx-CP 400 */
 #define HWCALC_FXCP400       8
+/* fx-CG 100, successor to the CG-50 in the Prizm family. Also Graph Math+ */
+#define HWCALC_FXCG100       9
 
 /*
 **  Keyboard

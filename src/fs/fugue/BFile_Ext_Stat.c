@@ -1,6 +1,10 @@
 #include <gint/bfile.h>
 #include "util.h"
+#include "bfilecp.h"
 
+// TODO: BFile_Ext_Stat: Use native stat function on CP-400?
+// Unlike find functions, it doesn't provide type, as per documented API at
+// least, and stat really needs it. So for now I'm sticking to the find check.
 int BFile_Ext_Stat(uint16_t const *path, int *type, int *size)
 {
 	int search_handle, rc;

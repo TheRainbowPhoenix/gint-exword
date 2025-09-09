@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include "util.h"
+#include "bfilecp.h"
 
 int fugue_stat(char const * restrict path, struct stat * restrict statbuf)
 {

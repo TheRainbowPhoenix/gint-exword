@@ -5,6 +5,7 @@ font5x7.png:
   grid.size: 5x7
   grid.padding: 1
   grid.border: 0
+  line-distance: 8
 
 font8x9.png:
   name: gint_font8x9
@@ -15,3 +16,4 @@ font8x9.png:
   grid.border: 0
   proportional: true
   height: 9
+  line-distance: 14

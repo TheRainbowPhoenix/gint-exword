@@ -32,8 +32,7 @@ _inth_tmu:
 	sts.l	pr, @-r15
 	mov.l	r5, @-r15
 
-	/* Clear the interrupt flag. Because r5 contains 0, 1 or 2 the 16 top
-	   bits are 0 so we can compare without extending */
+	/* Clear the interrupt flag */
 1:	mov.w	@r1, r5
 	extu.b	r5, r3
 	cmp/eq	r5, r3

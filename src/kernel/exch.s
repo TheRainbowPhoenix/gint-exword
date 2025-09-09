@@ -4,54 +4,68 @@
 
 _gint_exch:
 	sts.l	pr, @-r15
-	stc.l	gbr, @-r15
-	sts.l	mach, @-r15
-	sts.l	macl, @-r15
-	mov.l	r8, @-r15
-	mov.l	r9, @-r15
 
 	/* Get the first word of the gint hardware array (HWMPU). If it has the
 	   last bit set, we're SH3 */
 	mov.l	.gint, r0
 	mov.l	@r0, r0
 	tst	#1, r0
-	mov.l	.expevt_sh4, r8
-	bt	catch
-	mov.l	.expevt_sh3, r8
+	mov.l	.expevt_sh4, r6
+	mov.l	.tra_sh4, r7
+	bt	syscall
+	mov.l	.expevt_sh3, r6
+	mov.l	.tra_sh3, r7
+
+syscall:
+	/* If this is trapa #31, save context and run the syscall interface. */
+	mov.l	@r6, r4
+	mov.w	.expevt_trapa, r5
+	mov.l	@r7, r0
+	cmp/eq	r4, r5
+	bf	catch
+	cmp/eq	#31*4, r0
+	bf	catch
+
+	add	#-20, r15
+	mov.l	.syscall_entry_plus1, r0
+	mov	r15, r4
+	mov.l	.callback, r1
+	mov.l	@r1, r1
+	jsr	@r1
+	mov.l	r0, @r4
+
+	bra	end
+	add	#20, r15
 
 catch:
 	/* Panic if the catcher is NULL */
 	mov.l	.catcher, r0
+	mov.l	r4, @-r15
 	mov.l	@r0, r0
 	tst	r0, r0
 	bt	panic
 
 	/* Set BL=0, IMASK=15 */
-	stc	sr, r9
+	stc	sr, r7
+	mov.l	r7, @-r15
 	mov.l	.SR_set_IMASK, r1
-	or	r9, r1
+	or	r7, r1
 	mov.l	.SR_clear_BL, r2
 	and	r2, r1
 	ldc	r1, sr
 
 	/* Call the catcher and leave if it returns zero (exception handled) */
 	jsr	@r0
-	mov.l	@r8, r4
+	nop
 
-	ldc	r9, sr
+	ldc.l	@r15+, sr
 	tst	r0, r0
-	bt	end
+	bt.s	end
+	mov.l	@r15+, r4
 
 panic:
 	/* RTE to the panic function, but manually, so that SPC is preserved */
-	mov.l	@r8, r4
 	ldc	r4, r4_bank
-
-	mov.l	@r15+, r9
-	mov.l	@r15+, r8
-	lds.l	@r15+, macl
-	lds.l	@r15+, mach
-	ldc.l	@r15+, gbr
 	lds.l	@r15+, pr
 
 	/* Here we switch banks so r0..r7 change meaning! */
@@ -64,11 +78,6 @@ panic:
 	nop
 
 end:
-	mov.l	@r15+, r9
-	mov.l	@r15+, r8
-	lds.l	@r15+, macl
-	lds.l	@r15+, mach
-	ldc.l	@r15+, gbr
 	lds.l	@r15+, pr
 	rte
 	nop
@@ -89,3 +98,13 @@ end:
 	.long	(0xf << 4)
 .SR_clear_BL:
 	.long	~(1 << 28)
+.callback:
+	.long	_gint_inth_callback
+.syscall_entry_plus1:
+	.long	_syscall_entry + 1
+.tra_sh3:
+	.long	0xffffffd0
+.tra_sh4:
+	.long	0xff000020
+.expevt_trapa:
+	.word	0x160

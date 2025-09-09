@@ -23,6 +23,8 @@ endif()
 configure_file(include/gint/config.h.in include/gint/config.h)
 
 set(SOURCES
+  # Hardware Abstraction Layer for the standard library
+  src/fxlibc_hal.c
   # Clock Pulse Generator driver
   src/cpg/cpg.c
   src/cpg/overclock.c
@@ -125,6 +127,7 @@ set(SOURCES
   src/kernel/osmenu.c
   src/kernel/start.c
   src/kernel/start.S
+  src/kernel/syscall.c
   src/kernel/syscalls.S
   src/kernel/tlbh.S
   src/kernel/world.c
@@ -145,6 +148,8 @@ set(SOURCES
   src/kmalloc/kmalloc.c
   # MMU driver
   src/mmu/mmu.c
+  # Profiling
+  src/prof/prof.c
   # R61523 display driver
   src/r61523/r61523.c
   # R61524 display driver
@@ -250,6 +255,11 @@ set(SOURCES
   src/usb/write4.S
   # Video driver interface
   src/video/video.c
+  # Touch-screen driver
+  src/touch/i2c.c
+  src/touch/i2c_inth.c
+  src/touch/touch.c
+  src/touch/driver.c
 )
 
 set(ASSETS_FX src/font5x7.png src/gdb/icons-i1msb.png)

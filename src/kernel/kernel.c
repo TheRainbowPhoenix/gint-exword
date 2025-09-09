@@ -33,13 +33,29 @@ uint8_t *gint_driver_flags = NULL;
 /* Top of the stack */
 void *gint_stack_top = NULL;
 
+u32 *gint_load_info = NULL;
+
 //---
 //	Initialization and unloading
 //---
 
 /* kinit(): Install and start gint */
-void kinit(void)
+void kinit(u32 *load_info)
 {
+	gint_load_info = load_info;
+
+	/* Figure out which CASIOWIN API to use based on the OS type. */
+	#if GINT_OS_CG
+	char *version = (void *)0x80020020;
+	if(!memcmp(version, "01.00", 5))
+		gint_set_CASIOWIN_API(1);
+	else if(gint[HWCALC] == HWCALC_FXCG100 && !memcmp(version, "02.00", 5))
+		gint_set_CASIOWIN_API(2);
+	else
+		gint_set_CASIOWIN_API(0);
+	#endif
+
+
 	#if GINT_HW_FX
 	/* On fx-9860G, VBR is loaded at the end of the user RAM. On SH4, the
 	   end of the user RAM hosts the stack, for which we leave 12 kB
@@ -76,14 +92,20 @@ void kinit(void)
 	#endif
 
 	/* Event handler entry points */
+	extern uint32_t gint_exch_start;
+	extern uint32_t gint_exch_end;
+	extern uint32_t gint_tlbh_start;
+	extern uint32_t gint_tlbh_end;
 	void *inth_entry = isSH3() ? gint_inth_7705 : gint_inth_7305;
-	uint32_t exch_size = (uint32_t)&gint_exch_size;
-	uint32_t tlbh_size = (uint32_t)&gint_tlbh_size;
+	uint32_t exch_size = \
+		(uint32_t)&gint_exch_end - (uint32_t)&gint_exch_start;
+	uint32_t tlbh_size = \
+		(uint32_t)&gint_tlbh_end - (uint32_t)&gint_tlbh_start;
 
 	/* Load the event handler entry points into memory */
 	memcpy((void *)VBR + 0x100, gint_exch, exch_size);
 	memcpy((void *)VBR + 0x400, gint_tlbh, tlbh_size);
-	memcpy((void *)VBR + 0x600, inth_entry, 64);
+	memcpy((void *)VBR + 0x600, inth_entry, isSH3() ? 64 : 32);
 
 	/* Initialize memory allocators */
 	kmalloc_init();
@@ -102,16 +124,45 @@ void kinit(void)
 
 	/* Create an arena in the OS stack as well, for VRAM and more data */
 	#if GINT_HW_CG && !defined(GINT_NO_OS_STACK)
-	static kmalloc_arena_t os_stack = { 0 };
-	os_stack.name = "_ostk";
-	os_stack.is_default = true;
-	if(gint[HWCALC] == HWCALC_PRIZM || gint[HWCALC] == HWCALC_FXCG_MANAGER)
-		os_stack.start = (void *)0x880f0000;
-	else
-		os_stack.start = (void *)0x8c0f0000;
-	os_stack.end = os_stack.start + (350 * 1024);
-	kmalloc_init_arena(&os_stack, true);
-	kmalloc_add_arena(&os_stack);
+	if(gint[HWCALC] != HWCALC_FXCG100) {
+		static kmalloc_arena_t os_stack = { 0 };
+		os_stack.name = "_ostk";
+		os_stack.is_default = true;
+		if(gint[HWCALC] == HWCALC_PRIZM || gint[HWCALC] == HWCALC_FXCG_MANAGER)
+			os_stack.start = (void *)0x880f0000;
+		else
+			os_stack.start = (void *)0x8c0f0000;
+		os_stack.end = os_stack.start + (350 * 1024);
+		kmalloc_init_arena(&os_stack, true);
+		kmalloc_add_arena(&os_stack);
+	}
+	#endif
+
+	/* Create arenas in locations provided by loader */
+	#if GINT_OS_CG
+	u32 load_arena_start = 0;
+	char const *names[4] = { "_ld1", "_ld2", "_ld3", "_ld4" };
+	int count = 0;
+	for(int i = 0; load_info && load_info[i] && count < 4; i += 2)
+	{
+		if(load_info[i] == 0x00000010)
+			load_arena_start = load_info[i+1];
+		else if(load_info[i] == 0x00000011 && load_arena_start)
+		{
+			u32 load_arena_end = load_info[i+1];
+			kmalloc_arena_t *arena = kmalloc(sizeof *arena, NULL);
+			if(arena)
+			{
+				arena->name = names[count];
+				arena->is_default = true;
+				arena->start = (void *)load_arena_start;
+				arena->end = (void *)load_arena_end;
+				kmalloc_init_arena(arena, true);
+				kmalloc_add_arena(arena);
+			}
+			load_arena_start = 0;
+		}
+	}
 	#endif
 
 	/* Allocate world buffers for the OS and for gint */

@@ -539,7 +539,7 @@ static void USB_LOG_TR(char const *p, asyncio_op_t *t, char const *fmt, ...)
 	if(t->shbuf_size >= 4)
 		sprintf(shbuf, "!!%d", t->shbuf_size);
 	else
-		snprintf(shbuf, t->shbuf_size * 2 + 1, "%08x", t->shbuf);
+		snprintf(shbuf, t->shbuf_size * 2 + 1, "%08lx", t->shbuf);
 
 	char str[128];
 	snprintf(str, sizeof str - 1, "%s: %s buf=%d%s%s req=%d/%d%s |%s| ",

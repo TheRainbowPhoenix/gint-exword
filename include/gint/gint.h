@@ -166,16 +166,10 @@ extern int (*gint_inth_callback)(gint_call_t const *call);
 /* gint_inth_callback_context_t: Context of the interrupted function when an
    interrupt is handled by gint_inth_callback. */
 typedef struct {
-	uint32_t ssr;
-	uint32_t spc;
-	uint32_t r7;
-	uint32_t r6;
-	uint32_t r5;
-	uint32_t r4;
-	uint32_t r3;
-	uint32_t r2;
-	uint32_t r1;
-	uint32_t r0;
+	uint32_t mach, macl, gbr;
+	uint32_t sr;
+	uint32_t pc;
+	uint32_t r[8];
 } gint_inth_callback_context_t;
 
 /* gint_set_quit_handler(): Setup a call to be invoked when leaving the add-in

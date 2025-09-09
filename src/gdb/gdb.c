@@ -629,7 +629,7 @@ static bool gdb_handle_stubcall(gdb_cpu_state_t* cpu_state)
 	int sc_num = cpu_state->reg.r3;
 
 	if(sc_num == 64) { /* write */
-		int len = snprintf(str, sizeof str, "Fwrite,%x,%08x,%x",
+		int len = snprintf(str, sizeof str, "Fwrite,%lx,%08lx,%lx",
 			cpu_state->reg.r4,
 			cpu_state->reg.r5,
 			cpu_state->reg.r6);
@@ -766,7 +766,7 @@ static void gdb_notifier_function(void)
 	if (gdb_single_step_backup.single_stepped)
 		return;
 
-	gdb_handle_single_step(usb_interrupt_context->spc, UBC_BREAK_AFTER);
+	gdb_handle_single_step(usb_interrupt_context->pc, UBC_BREAK_AFTER);
 }
 
 static int gdb_panic_handler(uint32_t code)
