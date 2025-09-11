@@ -5,43 +5,50 @@
 #include <gint/drivers/states.h>
 #include <gint/mpu/power.h>
 #include <gint/intc.h>
+#include <gint/exc.h>
+
+#include <string.h>
+
+#define BUFFER_SIZE             4096
+// Used to enable loopback testing
+//#define SELF_TESTING
 
 #define POWER SH7305_POWER
 #define SCIF0 SH7305_SCIF
 
-// --- TODO: this is only to test! remove this! ---
-static const char *message = 
-    "Copy that. You're loud and clear. "
-    "It's just who we excepted here. "
-    "Now do your job and catch her in a perfect bullet storm.";
-static int bytes = 1;
-static int counter = 0;
-#include <string.h>
-static GCONSTRUCTOR void setup_pointless_stuff(void)
-{
-    bytes = strlen(message);
-}
+static bool opened = false;
 
-// --- TODO: this is only to test! remove this! ---
+static bool writing = false;
+static gint_call_t tx_callback = GINT_CALL_NULL;
+static uint8_t tx_buffer[BUFFER_SIZE];
+static size_t tx_index = 0, tx_count = 0;
 
-static bool flag = false;
 static void scif_inth(void)
 {
-    if (SCIF0.SCFSR.TDFE)
+    if (SCIF0.SCFSR.TDFE && tx_count != 0)
     {
         // TODO: TXI generated...
         // we should most likely have a buffer around that we read from.
         // if it is too empty, then we request the remaining bytes from a 
         // user callback.
-        int bytes_max = 16 - SCIF0.SCFDR.TFDC;
-        for (int i = 0; i < bytes_max; i++, counter = (counter + 1) % bytes)
-            SCIF0.SCFTDR = message[counter];                                // TODO: a pre-baked string 
-                                                                            // is an AWFUL idea.
+        size_t bytes_max = 16 - SCIF0.SCFDR.TFDC;
+        for (size_t i = 0; i < bytes_max && tx_index < tx_count; i++)
+            SCIF0.SCFTDR = tx_buffer[tx_index++];
         SCIF0.SCFSR.TDFE = 0;
+        if (tx_index == tx_count)
+        {
+            // We're out of data.
+            gint_call(tx_callback);
+            tx_callback = GINT_CALL_NULL;
+            tx_index = 0;
+            tx_count = 0;
+            writing = false;
+            SCIF0.SCSCR.TE = 0;
+            SCIF0.SCSCR.TIE = 0;
+        }
     }
 
     // TODO: we need to manage the receive FIFO...
-    flag = true;
 }
 
 static void configure(void)
@@ -107,8 +114,8 @@ static void funbind(void)
 // "Public" SCIF functions
 //---
 
-// TODO: function to determine the best SCBRR
 #include <gint/clock.h>
+// scale_by_n: Applies some scaling to x depending on the value of n(clock divider)
 static int32_t scale_by_n(int32_t x, int n)
 {
     n = 2 * n - 1;
@@ -116,6 +123,7 @@ static int32_t scale_by_n(int32_t x, int n)
     if (n > 0) return x << n;
     return x >> (-n); // n < 0
 }
+// scif_best_scbrr: Finds the best value for SCBRR and n
 bool scif_best_scbrr(uint32_t baudrate, uint8_t *n, uint8_t *scbrr)
 {
     const clock_frequency_t *info = clock_freq();
@@ -153,7 +161,7 @@ int serial_open(serial_config_t const *config)
 {
     // TODO: have a routine to determine this value
     uint8_t best_n = 0b00, best_scbrr = 95;
-    if (!config) return 0;
+    if (!config || serial_is_open()) return 0;
     if (config->parity > SERIAL_PARITY_ODD)
         return 0;
     if (config->stop_bits != 1 && config->stop_bits != 2)
@@ -184,20 +192,87 @@ int serial_open(serial_config_t const *config)
                                 // ig you could compute its length on the spot?
     
     SCIF0.SCFCR.RTRG = 0b11;        // Full at 14 bytes
-    SCIF0.SCFCR.TTRG = 0b00;        // Empty at 0 bytes (TODO: this is inadequate)
+    SCIF0.SCFCR.TTRG = 0b00;        // Empty at 8 bytes
 
     SCIF0.SCFCR.TFRST = 0;
     SCIF0.SCFCR.RFRST = 0;
 
-    // XXX: if you need to test the SCIF but don't have another calculator, set this to 1.
     SCIF0.SCFCR.LOOP = 0;
 
     // We purposefully disable sending/interrupts. We don't need them right now.
-    SCIF0.SCSCR.TE = 1;
+    SCIF0.SCSCR.TE = 0;
     SCIF0.SCSCR.RE = 0;
-    SCIF0.SCSCR.TIE = 1;
+    SCIF0.SCSCR.TIE = 0;
     SCIF0.SCSCR.RIE = 0;
+
+    opened = true;
     return 1;
+}
+
+#include <gint/display.h>
+#include <gint/keyboard.h>
+void serial_wait(void)
+{
+    // TODO: manage comms happening in async
+    // Right now, I'm only going to busy-loop until TDFC is empty...
+    while (writing) sleep();        // If we're writing here, it must be an async transfer!
+    while (SCIF0.SCFDR.TFDC != 0);  // TODO: we should probably sleep
+}
+bool serial_is_open(void)
+{
+    return opened;
+}
+void serial_close(void)
+{
+    if (!serial_is_open()) return;
+    opened = false;
+    serial_wait();
+    // TODO: disable TE/RE/TIE/RIE
+}
+void serial_write_sync(void const *data, size_t size)
+{
+    uint8_t const *bytes = data;
+
+    if (!bytes || !serial_is_open()) return;
+    serial_wait();
+
+    // TODO: maybe this warrants atomic execution
+    // (maybe a timer might just race condition its way into starting an async 
+    // transfer right as we're doing a sync one?)
+    writing = true;
+    SCIF0.SCSCR.TE = 1;
+    SCIF0.SCSCR.TIE = 0;                        // TX interrupts are not needed!
+    for (size_t i = 0; i < size; i++)
+    {
+        while (SCIF0.SCFSR.TDFE != 1);
+        SCIF0.SCFTDR = bytes[i];
+        SCIF0.SCFSR.TDFE = SCIF0.SCFSR.TEND = 0;
+    }
+    while (SCIF0.SCFSR.TEND != 1);
+    SCIF0.SCSCR.TE = 0;
+    SCIF0.SCSCR.TIE = 0;
+    // TODO: should we really disable TE?
+    writing = false;
+}
+void serial_write_async(void const *data, size_t size, gint_call_t cb)
+{
+    uint8_t const *bytes = data;
+
+    if (!bytes || !serial_is_open()) return;
+    if (size >= BUFFER_SIZE) return;            // TODO: return an error...
+    serial_wait();
+
+    // TODO: should we have a cap? i feel like we need to copy data elsewhere, 
+    // since it could be modified...
+    memcpy(tx_buffer, data, size);
+    tx_count = 0;
+    tx_count = size;
+    tx_callback = cb;
+
+    // Go!
+    writing = true;
+    SCIF0.SCSCR.TE = 1;
+    SCIF0.SCSCR.TIE = 1;
 }
 
 // TODO: the driver messes some things up REAL baaaad...
