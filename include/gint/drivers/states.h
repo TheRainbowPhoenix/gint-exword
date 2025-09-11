@@ -119,6 +119,15 @@ typedef struct {
     uint8_t ICCH;
 } touch_state_t;
 
+/* SCIF module */
+typedef struct {
+    // TODO: this will be populated in the short-term future
+    uint16_t SCSCR;
+    uint16_t SCSMR;
+
+    uint8_t SCBRR;      // XXX: SCBRR depends on Pphi, so do we really want to save it as-is? probably?..
+} scif_state_t;
+
 #ifdef __cplusplus
 }
 #endif
