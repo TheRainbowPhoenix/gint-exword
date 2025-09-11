@@ -13,8 +13,8 @@ extern "C" {
 
 #include <gint/mpu/scif.h>
 
-// TODO: rework this entirely
-extern void scif_setup_async(uint8_t scbrr, int parity, int stop_bits, int bit_count);
+// Writes the best SCBRR/CKS for the specified baudrate.
+extern bool scif_best_scbrr(uint32_t baudrate, uint8_t *n, uint8_t *scbrr);
 
 #ifdef __cplusplus
 }

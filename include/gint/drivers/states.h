@@ -125,7 +125,7 @@ typedef struct {
     uint16_t SCSCR;
     uint16_t SCSMR;
 
-    uint8_t SCBRR;      // XXX: SCBRR depends on Pphi, so do we really want to save it as-is? probably?..
+    uint8_t SCBRR;
 } scif_state_t;
 
 #ifdef __cplusplus

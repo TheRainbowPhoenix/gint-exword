@@ -1,6 +1,7 @@
 #include <gint/hardware.h>
 #include <gint/drivers.h>
 #include <gint/drivers/scif.h>
+#include <gint/serial.h>
 #include <gint/drivers/states.h>
 #include <gint/mpu/power.h>
 #include <gint/intc.h>
@@ -8,7 +9,7 @@
 #define POWER SH7305_POWER
 #define SCIF0 SH7305_SCIF
 
-// --- TODO: this is only to test! do not push this! ---
+// --- TODO: this is only to test! remove this! ---
 static const char *message = 
     "Copy that. You're loud and clear. "
     "It's just who we excepted here. "
@@ -20,7 +21,8 @@ static GCONSTRUCTOR void setup_pointless_stuff(void)
 {
     bytes = strlen(message);
 }
-// --- TODO: this is only to test! do not push this! ---
+
+// --- TODO: this is only to test! remove this! ---
 
 static bool flag = false;
 static void scif_inth(void)
@@ -104,12 +106,63 @@ static void funbind(void)
 //--- 
 // "Public" SCIF functions
 //---
-void scif_setup_async(uint8_t scbrr, int parity, int stop_bits, int bit_count)
+
+// TODO: function to determine the best SCBRR
+#include <gint/clock.h>
+static int32_t scale_by_n(int32_t x, int n)
 {
-    // SCSMR.CHR = bit_count == 7 (otherwise assumed 8)
-    // SCSMR.STOP = stop_bits == 2 (otherwise assumed 1)
-    // SCSMR.PE = parity present? (doesnt seem to care about which type though...)
-    POWER.MSTPCR0.SCIF = 0;
+    n = 2 * n - 1;
+    if (n == 0) return x;
+    if (n > 0) return x << n;
+    return x >> (-n); // n < 0
+}
+bool scif_best_scbrr(uint32_t baudrate, uint8_t *n, uint8_t *scbrr)
+{
+    const clock_frequency_t *info = clock_freq();
+    // TODO: note that this is async only...
+    // sync uses a different formula
+
+    int32_t best_deviation = INT32_MAX;
+    uint8_t best_scbrr = 0xFF;
+    uint8_t best_n = 0;
+    for (int potential_n = 0; potential_n < 4; potential_n++)
+    {
+        // Figure out the value of SCBRR
+        // The multiplication by 1M is already implied by the fact that Pphi_f is in Hz, not MHz.
+        int32_t potential_scbrr = (info->Pphi_f / scale_by_n(64 * baudrate, potential_n)) - 1;
+        int32_t potential_deviation = (info->Pphi_f % scale_by_n(64 * baudrate, potential_n));
+
+        // This value of SCBRR is completely invalid.
+        if (potential_scbrr < 0 || potential_n >= 255)
+            continue;
+
+        // Check the amount of "error" by looking at the remainder.
+        if (potential_deviation < best_deviation)
+        {
+            best_deviation = potential_deviation;
+            best_scbrr = potential_scbrr;
+            best_n = potential_n;
+        }
+    }
+    if (best_deviation != INT32_MAX && n) *n = best_n;
+    if (best_deviation != INT32_MAX && scbrr) *scbrr = best_scbrr;
+    return best_deviation != INT32_MAX; // TODO: change this!
+}
+
+int serial_open(serial_config_t const *config)
+{
+    // TODO: have a routine to determine this value
+    uint8_t best_n = 0b00, best_scbrr = 95;
+    if (!config) return 0;
+    if (config->parity > SERIAL_PARITY_ODD)
+        return 0;
+    if (config->stop_bits != 1 && config->stop_bits != 2)
+        return 0;
+    if (config->data_width != 7 && config->data_width != 8)
+        return 0;
+
+    if (!scif_best_scbrr(config->baudrate, &best_n, &best_scbrr))
+        return 0;
 
     SCIF0.SCSCR.TE = 0;
     SCIF0.SCSCR.RE = 0;
@@ -117,34 +170,34 @@ void scif_setup_async(uint8_t scbrr, int parity, int stop_bits, int bit_count)
     SCIF0.SCFCR.TFRST = 1;
     SCIF0.SCFCR.RFRST = 1;
 
-    // TODO: allow the user to pick n. We'll assume Pphi/1 (CKE=n=0)
-    SCIF0.SCSCR.CKE = 0b00;
-    SCIF0.SCSMR.CHR = bit_count == 7;
-    SCIF0.SCSMR.STOP = stop_bits == 2;
+    // TODO: custom N/CKE value
+    SCIF0.SCSCR.CKE = best_n;
+    SCIF0.SCSMR.CHR = config->stop_bits == 7;
+    SCIF0.SCSMR.STOP = config->stop_bits == 2;
 
-    // -1 = no parity
-    // otherwise, parity depends on the last bit of it.
-    SCIF0.SCSMR.PE = parity != -1;
-    SCIF0.SCSMR.OE = (parity & 1);
-    SCIF0.SCSMR.CA = 0;             // Async
+    SCIF0.SCSMR.PE = config->parity != SERIAL_PARITY_NONE;
+    SCIF0.SCSMR.OE = !!(config->parity - 1);
+    SCIF0.SCSMR.CA = 0;
+    SCIF0.SCBRR = best_scbrr;
 
-    SCIF0.SCBRR = scbrr;
-    sleep_ms( 10);                  // XXX: we should wait for 1-bit, not some arbitrary value.
-
+    sleep_ms( 10);              // TODO: this isn't quite correct. we should wait for one bit.
+                                // ig you could compute its length on the spot?
+    
     SCIF0.SCFCR.RTRG = 0b11;        // Full at 14 bytes
     SCIF0.SCFCR.TTRG = 0b00;        // Empty at 0 bytes (TODO: this is inadequate)
-    // what does MCE do????
+
     SCIF0.SCFCR.TFRST = 0;
     SCIF0.SCFCR.RFRST = 0;
 
+    // XXX: if you need to test the SCIF but don't have another calculator, set this to 1.
     SCIF0.SCFCR.LOOP = 0;
+
+    // We purposefully disable sending/interrupts. We don't need them right now.
     SCIF0.SCSCR.TE = 1;
     SCIF0.SCSCR.RE = 0;
-
-    SCIF0.SCSCR.TIE = 1;            // TODO: don't enable TIE right away
-    SCIF0.SCSCR.RIE = 0;            // TODO: work on receiving (the LOOP flag sounds useful for testing 
-                                    // without an extra calculator)
-    
+    SCIF0.SCSCR.TIE = 1;
+    SCIF0.SCSCR.RIE = 0;
+    return 1;
 }
 
 // TODO: the driver messes some things up REAL baaaad...

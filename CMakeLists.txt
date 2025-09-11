@@ -253,6 +253,8 @@ set(SOURCES
   src/usb/string.c
   src/usb/usb.c
   src/usb/write4.S
+  # SCIF driver
+  src/scif/scif.c
   # Video driver interface
   src/video/video.c
   # Touch-screen driver
