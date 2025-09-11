@@ -11,7 +11,7 @@
 
 #define BUFFER_SIZE             4096
 // Used to enable loopback testing
-//#define SELF_TESTING
+#define SELF_TESTING
 
 #define POWER SH7305_POWER
 #define SCIF0 SH7305_SCIF
@@ -23,6 +23,11 @@ static gint_call_t tx_callback = GINT_CALL_NULL;
 static uint8_t tx_buffer[BUFFER_SIZE];
 static size_t tx_index = 0, tx_count = 0;
 
+// NOTE: this is a ring buffer.
+uint8_t rx_buffer[BUFFER_SIZE];
+static size_t rx_index = 0;
+
+#include <gint/display.h>
 static void scif_inth(void)
 {
     if (SCIF0.SCFSR.TDFE && tx_count != 0)
@@ -48,7 +53,23 @@ static void scif_inth(void)
         }
     }
 
-    // TODO: we need to manage the receive FIFO...
+    if (SCIF0.SCFSR.RDF)
+    {
+        size_t bytes_max = SCIF0.SCFDR.RFDC;
+        for (size_t i = 0; i < bytes_max; i++)
+        {
+            rx_buffer[rx_index] = SCIF0.SCFRDR;
+            rx_index = (rx_index + 1) % BUFFER_SIZE;
+        }
+
+        // TODO: it looks like we ARE receiving bytes (which is INCREDIBLE!), but 
+        // the current driver seems to NOT want to do anything else after this :(
+        // I'll work on this later, this is basically a success.
+        dclear(C_WHITE);
+        dprint(1,1,C_BLACK,"'%s'", rx_buffer);
+        dupdate();
+        SCIF0.SCFSR.RDF = 0;
+    }
 }
 
 static void configure(void)
@@ -197,13 +218,18 @@ int serial_open(serial_config_t const *config)
     SCIF0.SCFCR.TFRST = 0;
     SCIF0.SCFCR.RFRST = 0;
 
+#ifdef SELF_TESTING
+    SCIF0.SCFCR.LOOP = 1;
+#else
     SCIF0.SCFCR.LOOP = 0;
+#endif
 
     // We purposefully disable sending/interrupts. We don't need them right now.
     SCIF0.SCSCR.TE = 0;
-    SCIF0.SCSCR.RE = 0;
     SCIF0.SCSCR.TIE = 0;
-    SCIF0.SCSCR.RIE = 0;
+
+    SCIF0.SCSCR.RIE = 1;
+    SCIF0.SCSCR.RE = 1;
 
     opened = true;
     return 1;
