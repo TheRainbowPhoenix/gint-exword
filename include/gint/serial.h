@@ -45,9 +45,9 @@ void serial_write_async(void const *data, size_t size, gint_call_t callback);
 
 void serial_write_sync(void const *data, size_t size);
 
-void serial_read_async(void const *data, size_t size, gint_call_t callback);
+void serial_read_async(void *data, size_t size, gint_call_t callback);
 
-void serial_read_sync(void const *data, size_t size);
+void serial_read_sync(void *data, size_t size);
 
 // Waits for communications to finish
 void serial_wait(void);

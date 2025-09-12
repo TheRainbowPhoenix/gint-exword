@@ -6,6 +6,7 @@
 #include <gint/mpu/power.h>
 #include <gint/intc.h>
 #include <gint/exc.h>
+#include <gint/gdb.h>
 
 #include <string.h>
 
@@ -25,12 +26,40 @@ static size_t tx_index = 0, tx_count = 0;
 
 // NOTE: this is a ring buffer.
 uint8_t rx_buffer[BUFFER_SIZE];
-static size_t rx_index = 0;
+static size_t rx_index = 0, rx_readhead = 0;
 
 #include <gint/display.h>
+static bool rx_push(uint8_t recv)
+{
+    size_t next = (rx_index + 1) % BUFFER_SIZE;
+    if (next == rx_readhead)
+    {
+        // We're about to collide with the read head.
+        return false;
+    }
+
+    // Write that byte into our ringbuffer.
+    rx_buffer[rx_index] = recv;
+    rx_index = next;
+    return true;
+}
+static bool rx_pull(uint8_t *to)
+{
+    if (rx_readhead == rx_index)
+    {
+        // We have to wait for data.
+        return false;
+    }
+
+
+    if (to) *to = rx_buffer[rx_readhead];
+    rx_readhead = (rx_readhead + 1) % BUFFER_SIZE;
+    return true;
+}
+
 static void scif_inth(void)
 {
-    if (SCIF0.SCFSR.TDFE && tx_count != 0)
+    if (tx_count != 0 && SCIF0.SCFSR.TDFE)
     {
         // TODO: TXI generated...
         // we should most likely have a buffer around that we read from.
@@ -43,7 +72,8 @@ static void scif_inth(void)
         if (tx_index == tx_count)
         {
             // We're out of data.
-            gint_call(tx_callback);
+            if (tx_callback.function != NULL)
+                gint_call(tx_callback);
             tx_callback = GINT_CALL_NULL;
             tx_index = 0;
             tx_count = 0;
@@ -58,16 +88,12 @@ static void scif_inth(void)
         size_t bytes_max = SCIF0.SCFDR.RFDC;
         for (size_t i = 0; i < bytes_max; i++)
         {
-            rx_buffer[rx_index] = SCIF0.SCFRDR;
-            rx_index = (rx_index + 1) % BUFFER_SIZE;
+            if (!rx_push(SCIF0.SCFRDR))
+            {
+                // TODO: we may want to notify the other party, maybe with an 
+                // XON/XOFF byte if the user so wishes.
+            }
         }
-
-        // TODO: it looks like we ARE receiving bytes (which is INCREDIBLE!), but 
-        // the current driver seems to NOT want to do anything else after this :(
-        // I'll work on this later, this is basically a success.
-        dclear(C_WHITE);
-        dprint(1,1,C_BLACK,"'%s'", rx_buffer);
-        dupdate();
         SCIF0.SCFSR.RDF = 0;
     }
 }
@@ -192,6 +218,7 @@ int serial_open(serial_config_t const *config)
 
     if (!scif_best_scbrr(config->baudrate, &best_n, &best_scbrr))
         return 0;
+    best_scbrr >>= 1;
 
     SCIF0.SCSCR.TE = 0;
     SCIF0.SCSCR.RE = 0;
@@ -209,10 +236,10 @@ int serial_open(serial_config_t const *config)
     SCIF0.SCSMR.CA = 0;
     SCIF0.SCBRR = best_scbrr;
 
-    sleep_ms( 10);              // TODO: this isn't quite correct. we should wait for one bit.
-                                // ig you could compute its length on the spot?
+    sleep_ms( 10);                  // TODO: this isn't quite correct. we should wait for one bit.
+                                    // ig you could compute its length on the spot?
     
-    SCIF0.SCFCR.RTRG = 0b11;        // Full at 14 bytes
+    SCIF0.SCFCR.RTRG = 0b10;        // Full at 8 bytes
     SCIF0.SCFCR.TTRG = 0b00;        // Empty at 8 bytes
 
     SCIF0.SCFCR.TFRST = 0;
@@ -258,6 +285,7 @@ void serial_close(void)
 void serial_write_sync(void const *data, size_t size)
 {
     uint8_t const *bytes = data;
+    //__asm__ volatile ("trapa #42");
 
     if (!bytes || !serial_is_open()) return;
     serial_wait();
@@ -274,9 +302,15 @@ void serial_write_sync(void const *data, size_t size)
         SCIF0.SCFTDR = bytes[i];
         SCIF0.SCFSR.TDFE = SCIF0.SCFSR.TEND = 0;
     }
+
+    // TODO: weird fuckup when messing with non-8-aligned data and ANY interrupts.
+    // They just break everthing. As a temporary stopgap, RIE is disabled while we're 
+    // waiting, but this doesn't sound that great a plan, especially with async...
+    SCIF0.SCSCR.RIE = 0;
     while (SCIF0.SCFSR.TEND != 1);
     SCIF0.SCSCR.TE = 0;
     SCIF0.SCSCR.TIE = 0;
+    SCIF0.SCSCR.RIE = 1;
     // TODO: should we really disable TE?
     writing = false;
 }
@@ -299,6 +333,22 @@ void serial_write_async(void const *data, size_t size, gint_call_t cb)
     writing = true;
     SCIF0.SCSCR.TE = 1;
     SCIF0.SCSCR.TIE = 1;
+}
+
+void serial_read_sync(void *data, size_t size)
+{
+    // Attempt to read from the ring buffer
+    uint8_t *bytes = data;
+    if (!bytes || !serial_is_open()) return;
+
+    while (size != 0)
+    {
+        if (rx_pull(bytes))
+        {
+            bytes++;
+            size--;
+        }
+    }
 }
 
 // TODO: the driver messes some things up REAL baaaad...
