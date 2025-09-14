@@ -98,19 +98,6 @@ static void scif_inth_rx(void)
 // Error handler
 static void scif_inth_err(void)
 {
-    // TODO: remove this! this is mostly here to debug/check flags
-#if 0
-    dclear(C_RED);
-    dprint(1, 1,C_WHITE,"ERROR! SCFSR=0x%04X", SCIF0.SCFSR.word);
-    dprint(1,11,C_WHITE,"PARITY ERRORS=%d", SCIF0.SCFSR.PERC);
-    dprint(1,22,C_WHITE,"FRAMES ERRORS=%d", SCIF0.SCFSR.FERC);
-    dprint(1,33,C_WHITE,"PER=%s FER=%s ER=%s", SCIF0.SCFSR.PER ? "YES" : "NO", SCIF0.SCFSR.FER ? "YES" : "NO", SCIF0.SCFSR.ER ? "YES": "NO");
-    dupdate();
-
-    // TODO: overruns
-
-    sleep_ms(100000);
-#endif
 
     /* TODO: actually manage the error instead of sweeping it under the rug...
      * but we really need to reform the API for this. I should definitely contact 
@@ -142,10 +129,11 @@ static void configure(void)
 	if(isSH3()) return;
     SCIF0.SCSCR.TIE = 0;
     SCIF0.SCSCR.RIE = 0;
+    SCIF0.SCSCR.REIE = 0;
     SCIF0.SCSCR.TE = 0;
     SCIF0.SCSCR.RE = 0;
     intc_handler_function(0xC00, GINT_CALL(scif_inth));
-    intc_priority(INTC_SCIF0, 1);
+    intc_priority(INTC_SCIF0, 0);
 }
 
 static bool check_power(void)
@@ -198,6 +186,13 @@ static void funbind(void)
 	if(isSH3()) return;
     // TODO: wait until the OS has nothing to send (are there even scenarios where 
     // a gint addin runs and yet the OS serial still wants to mingle?), by busy-looping
+    
+    SCIF0.SCSCR.TIE = 0;
+    SCIF0.SCSCR.RIE = 0;
+    SCIF0.SCSCR.REIE = 0;
+    SCIF0.SCSCR.TE = 0;
+    SCIF0.SCSCR.RE = 0;
+    POWER.MSTPCR0.SCIF = 1;
 }
 
 //--- 
@@ -261,7 +256,11 @@ int serial_open(serial_config_t const *config)
 
     if (!scif_best_scbrr(config->baudrate, &best_n, &best_scbrr))
         return 0;
-    best_scbrr >>= 1;
+
+    SCIF0.SCBRR = 0; 
+    SCIF0.SCSCR.word = 0;
+    SCIF0.SCSMR.word = 0;
+
 
     SCIF0.SCSCR.TIE = 0;
     SCIF0.SCSCR.RIE = 0;
@@ -304,8 +303,10 @@ int serial_open(serial_config_t const *config)
     SCIF0.SCSCR.REIE = 1;
     SCIF0.SCSCR.RIE = 1;
     SCIF0.SCSCR.RE = 1;
+    SCIF0.SCLSR.ORER = 0;
 
     opened = true;
+    intc_priority(INTC_SCIF0, 1);
     return 1;
 }
 
@@ -331,6 +332,7 @@ void serial_close(void)
     SCIF0.SCSCR.TIE = 0;
     SCIF0.SCSCR.RIE = 0;
     serial_wait();
+    intc_priority(INTC_SCIF0, 0);
     // TODO: disable TE/RE/TIE/RIE
 }
 
