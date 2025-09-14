@@ -5,8 +5,6 @@
 #include <gint/drivers/states.h>
 #include <gint/mpu/power.h>
 #include <gint/intc.h>
-#include <gint/exc.h>
-#include <gint/gdb.h>
 
 #include <string.h>
 
@@ -19,16 +17,16 @@
 
 static bool opened = false;
 
+// TODO: this should be replaced with a more robust mechanism (and also just checking TE itself...)
 static bool writing = false;
 static gint_call_t tx_callback = GINT_CALL_NULL;
 static uint8_t tx_buffer[BUFFER_SIZE];
 static size_t tx_index = 0, tx_count = 0;
 
 // NOTE: this is a ring buffer.
-uint8_t rx_buffer[BUFFER_SIZE];
+static uint8_t rx_buffer[BUFFER_SIZE];
 static size_t rx_index = 0, rx_readhead = 0;
 
-#include <gint/display.h>
 static bool rx_push(uint8_t recv)
 {
     size_t next = (rx_index + 1) % BUFFER_SIZE;
@@ -51,56 +49,101 @@ static bool rx_pull(uint8_t *to)
         return false;
     }
 
-
     if (to) *to = rx_buffer[rx_readhead];
     rx_readhead = (rx_readhead + 1) % BUFFER_SIZE;
     return true;
 }
 
-static void scif_inth(void)
+// Transmit Interrupt handler
+static void scif_inth_tx(void)
 {
-    if (tx_count != 0 && SCIF0.SCFSR.TDFE)
+    size_t bytes_max;
+    bytes_max = 16 - SCIF0.SCFDR.TFDC;
+    for (size_t i = 0; i < bytes_max && tx_index < tx_count; i++)
+        SCIF0.SCFTDR = tx_buffer[tx_index++];
+    bytes_max = SCIF0.SCFDR.TFDC;
+    SCIF0.SCFSR.TDFE = 0;
+    if (tx_index == tx_count)
     {
-        // TODO: TXI generated...
-        // we should most likely have a buffer around that we read from.
-        // if it is too empty, then we request the remaining bytes from a 
-        // user callback.
-        size_t bytes_max = 16 - SCIF0.SCFDR.TFDC;
-        for (size_t i = 0; i < bytes_max && tx_index < tx_count; i++)
-            SCIF0.SCFTDR = tx_buffer[tx_index++];
-        SCIF0.SCFSR.TDFE = 0;
-        if (tx_index == tx_count)
+        // We're out of data.
+        if (tx_callback.function != NULL)
+            gint_call(tx_callback);
+        tx_callback = GINT_CALL_NULL;
+        tx_index = 0;
+
+        tx_count = 0;
+        writing = false;
+        SCIF0.SCSCR.TE = 0;
+        SCIF0.SCSCR.TIE = 0;
+        SCIF0.SCSCR.RIE = 1;
+    }
+}
+// Receive Interrupt handler
+static void scif_inth_rx(void)
+{
+    size_t bytes_max = SCIF0.SCFDR.RFDC;
+    for (size_t i = 0; i < bytes_max; i++)
+    {
+        if (!rx_push(SCIF0.SCFRDR))
         {
-            // We're out of data.
-            if (tx_callback.function != NULL)
-                gint_call(tx_callback);
-            tx_callback = GINT_CALL_NULL;
-            tx_index = 0;
-            tx_count = 0;
-            writing = false;
-            SCIF0.SCSCR.TE = 0;
-            SCIF0.SCSCR.TIE = 0;
+            // TODO: we may want to notify the other party, maybe with an 
+            // XON/XOFF byte if the user so wishes.
         }
     }
 
-    if (SCIF0.SCFSR.RDF)
-    {
-        size_t bytes_max = SCIF0.SCFDR.RFDC;
-        for (size_t i = 0; i < bytes_max; i++)
-        {
-            if (!rx_push(SCIF0.SCFRDR))
-            {
-                // TODO: we may want to notify the other party, maybe with an 
-                // XON/XOFF byte if the user so wishes.
-            }
-        }
-        SCIF0.SCFSR.RDF = 0;
-    }
+    SCIF0.SCFSR.DR = 0;
+    SCIF0.SCFSR.RDF = 0;
+}
+
+// Error handler
+static void scif_inth_err(void)
+{
+    // TODO: remove this! this is mostly here to debug/check flags
+#if 0
+    dclear(C_RED);
+    dprint(1, 1,C_WHITE,"ERROR! SCFSR=0x%04X", SCIF0.SCFSR.word);
+    dprint(1,11,C_WHITE,"PARITY ERRORS=%d", SCIF0.SCFSR.PERC);
+    dprint(1,22,C_WHITE,"FRAMES ERRORS=%d", SCIF0.SCFSR.FERC);
+    dprint(1,33,C_WHITE,"PER=%s FER=%s ER=%s", SCIF0.SCFSR.PER ? "YES" : "NO", SCIF0.SCFSR.FER ? "YES" : "NO", SCIF0.SCFSR.ER ? "YES": "NO");
+    dupdate();
+
+    // TODO: overruns
+
+    sleep_ms(100000);
+#endif
+
+    /* TODO: actually manage the error instead of sweeping it under the rug...
+     * but we really need to reform the API for this. I should definitely contact 
+     * Lephé' about actually designing this well but my access to the actual Internet 
+     * is pretty intermittent at the moment :3 */
+    SCIF0.SCFSR.DR = 0;
+    SCIF0.SCFSR.ER = 0;
+    SCIF0.SCFSR.BRK = 0;
+    SCIF0.SCLSR.ORER = 0;
+}
+
+//---
+// scif_inth: Manages all interrupts for the SCIF0.
+//---
+static void scif_inth(void)
+{
+    /* Manage parity errors here */
+    if (SCIF0.SCFSR.ER || SCIF0.SCFSR.DR || SCIF0.SCFSR.BRK)
+        scif_inth_err();
+    
+    // TODO: check TDFE
+    scif_inth_tx();
+    // TODO: check RDF
+    scif_inth_rx();
 }
 
 static void configure(void)
 {
 	if(isSH3()) return;
+    SCIF0.SCSCR.TIE = 0;
+    SCIF0.SCSCR.RIE = 0;
+    SCIF0.SCSCR.TE = 0;
+    SCIF0.SCSCR.RE = 0;
     intc_handler_function(0xC00, GINT_CALL(scif_inth));
     intc_priority(INTC_SCIF0, 1);
 }
@@ -220,14 +263,17 @@ int serial_open(serial_config_t const *config)
         return 0;
     best_scbrr >>= 1;
 
+    SCIF0.SCSCR.TIE = 0;
+    SCIF0.SCSCR.RIE = 0;
     SCIF0.SCSCR.TE = 0;
     SCIF0.SCSCR.RE = 0;
+    SCIF0.SCSCR.CKE = 0b00;
 
     SCIF0.SCFCR.TFRST = 1;
     SCIF0.SCFCR.RFRST = 1;
 
     // TODO: custom N/CKE value
-    SCIF0.SCSCR.CKE = best_n;
+    SCIF0.SCSMR.CKS = best_n;
     SCIF0.SCSMR.CHR = config->stop_bits == 7;
     SCIF0.SCSMR.STOP = config->stop_bits == 2;
 
@@ -255,6 +301,7 @@ int serial_open(serial_config_t const *config)
     SCIF0.SCSCR.TE = 0;
     SCIF0.SCSCR.TIE = 0;
 
+    SCIF0.SCSCR.REIE = 1;
     SCIF0.SCSCR.RIE = 1;
     SCIF0.SCSCR.RE = 1;
 
@@ -279,40 +326,25 @@ void serial_close(void)
 {
     if (!serial_is_open()) return;
     opened = false;
+    SCIF0.SCSCR.TE = 0;
+    SCIF0.SCSCR.RE = 0;
+    SCIF0.SCSCR.TIE = 0;
+    SCIF0.SCSCR.RIE = 0;
     serial_wait();
     // TODO: disable TE/RE/TIE/RIE
 }
+
+static void set_flag(volatile bool *flag)
+{
+    *flag = true;
+}
 void serial_write_sync(void const *data, size_t size)
 {
-    uint8_t const *bytes = data;
-    //__asm__ volatile ("trapa #42");
-
-    if (!bytes || !serial_is_open()) return;
-    serial_wait();
-
-    // TODO: maybe this warrants atomic execution
-    // (maybe a timer might just race condition its way into starting an async 
-    // transfer right as we're doing a sync one?)
-    writing = true;
-    SCIF0.SCSCR.TE = 1;
-    SCIF0.SCSCR.TIE = 0;                        // TX interrupts are not needed!
-    for (size_t i = 0; i < size; i++)
-    {
-        while (SCIF0.SCFSR.TDFE != 1);
-        SCIF0.SCFTDR = bytes[i];
-        SCIF0.SCFSR.TDFE = SCIF0.SCFSR.TEND = 0;
-    }
-
-    // TODO: weird fuckup when messing with non-8-aligned data and ANY interrupts.
-    // They just break everthing. As a temporary stopgap, RIE is disabled while we're 
-    // waiting, but this doesn't sound that great a plan, especially with async...
-    SCIF0.SCSCR.RIE = 0;
-    while (SCIF0.SCFSR.TEND != 1);
-    SCIF0.SCSCR.TE = 0;
-    SCIF0.SCSCR.TIE = 0;
-    SCIF0.SCSCR.RIE = 1;
-    // TODO: should we really disable TE?
-    writing = false;
+    volatile bool flag = false;
+    if (!serial_is_open() || !data || size == 0)
+        return;
+    serial_write_async(data, size, GINT_CALL(set_flag, &flag));
+    while (!flag);
 }
 void serial_write_async(void const *data, size_t size, gint_call_t cb)
 {
