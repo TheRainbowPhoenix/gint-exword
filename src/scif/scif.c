@@ -54,10 +54,34 @@ static bool rx_pull(uint8_t *to)
     return true;
 }
 
-// Transmit Interrupt handler
+#include <gint/exc.h>
+#include <gint/gdb.h>
+//---
+// Transmit handler
+//---
 static void scif_inth_tx(void)
 {
     size_t bytes_max;
+    if (tx_count == 0 && SCIF0.SCFSR.TEND)
+    {
+        if (SCIF0.SCFDR.TFDC != 0)
+            return;
+
+        if (tx_callback.function != NULL)
+            gint_call(tx_callback);
+        tx_callback = GINT_CALL_NULL;
+
+        // STOP EVERYTHING
+        /* XXX: Sleeping for a while does help everything catch up (and fixes the 
+         * missing-byte problem, but isn't there a better way to do everything?) */
+        sleep_us_spin(1000);
+        SCIF0.SCSCR.TIE = 0;
+        SCIF0.SCFSR.TEND = 0;
+        SCIF0.SCSCR.TE = 0;
+        return;
+    }
+    if (tx_count == 0) return;
+
     bytes_max = 16 - SCIF0.SCFDR.TFDC;
     for (size_t i = 0; i < bytes_max && tx_index < tx_count; i++)
         SCIF0.SCFTDR = tx_buffer[tx_index++];
@@ -65,20 +89,14 @@ static void scif_inth_tx(void)
     SCIF0.SCFSR.TDFE = 0;
     if (tx_index == tx_count)
     {
-        // We're out of data.
-        if (tx_callback.function != NULL)
-            gint_call(tx_callback);
-        tx_callback = GINT_CALL_NULL;
         tx_index = 0;
-
         tx_count = 0;
         writing = false;
-        SCIF0.SCSCR.TE = 0;
-        SCIF0.SCSCR.TIE = 0;
-        SCIF0.SCSCR.RIE = 1;
     }
 }
-// Receive Interrupt handler
+//---
+// Receive handler
+//---
 static void scif_inth_rx(void)
 {
     size_t bytes_max = SCIF0.SCFDR.RFDC;
@@ -95,10 +113,27 @@ static void scif_inth_rx(void)
     SCIF0.SCFSR.RDF = 0;
 }
 
+//---
 // Error handler
+//---
+#include <gint/display.h>
 static void scif_inth_err(void)
 {
+#if 1
+    /* TODO: do literally ANYTHING else... */
+    static int count = 0;
+    dclear(C_RED);
+    dprint(1, 1,C_WHITE,"ERROR n°%d! SCFSR=0x%04X", ++count, SCIF0.SCFSR.word);
+    dprint(1,11,C_WHITE,"PARITY ERRORS=%d", SCIF0.SCFSR.PERC);
+    dprint(1,22,C_WHITE,"FRAMES ERRORS=%d", SCIF0.SCFSR.FERC);
+    dprint(1,33,C_WHITE,"PER=%s FER=%s ER=%s DR=%s BRK=%s", SCIF0.SCFSR.PER ? "YES" : "NO", SCIF0.SCFSR.FER ? "YES" : "NO", SCIF0.SCFSR.ER ? "YES": "NO", SCIF0.SCFSR.DR ? "YES": "NO", SCIF0.SCFSR.BRK ? "YES": "NO");
+    dprint(1,55,C_WHITE,"rx_index=%d", rx_index);
+    dupdate();
 
+    // TODO: overruns
+
+    //sleep_ms(100000);
+#endif
     /* TODO: actually manage the error instead of sweeping it under the rug...
      * but we really need to reform the API for this. I should definitely contact 
      * Lephé' about actually designing this well but my access to the actual Internet 
@@ -115,13 +150,15 @@ static void scif_inth_err(void)
 static void scif_inth(void)
 {
     /* Manage parity errors here */
-    if (SCIF0.SCFSR.ER || SCIF0.SCFSR.DR || SCIF0.SCFSR.BRK)
+    // TODO: DR seems to mean that there's not been any data lately?
+    SCIF0.SCFSR.DR = 0;
+    if (SCIF0.SCFSR.ER /*|| SCIF0.SCFSR.DR*/ || SCIF0.SCFSR.BRK)
         scif_inth_err();
     
-    // TODO: check TDFE
-    scif_inth_tx();
-    // TODO: check RDF
-    scif_inth_rx();
+    if (SCIF0.SCFSR.TDFE)
+        scif_inth_tx();
+    if (SCIF0.SCFSR.RDF || SCIF0.SCFSR.DR)
+        scif_inth_rx();
 }
 
 static void configure(void)
@@ -273,7 +310,7 @@ int serial_open(serial_config_t const *config)
 
     // TODO: custom N/CKE value
     SCIF0.SCSMR.CKS = best_n;
-    SCIF0.SCSMR.CHR = config->stop_bits == 7;
+    SCIF0.SCSMR.CHR = config->data_width == 7;
     SCIF0.SCSMR.STOP = config->stop_bits == 2;
 
     SCIF0.SCSMR.PE = config->parity != SERIAL_PARITY_NONE;
