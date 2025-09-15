@@ -23,9 +23,12 @@ static gint_call_t tx_callback = GINT_CALL_NULL;
 static uint8_t tx_buffer[BUFFER_SIZE];
 static size_t tx_index = 0, tx_count = 0;
 
-// NOTE: this is a ring buffer.
+// TODO: make this its own structure
 static uint8_t rx_buffer[BUFFER_SIZE];
 static size_t rx_index = 0, rx_readhead = 0;
+static gint_call_t rx_callback = GINT_CALL_NULL;
+static size_t rx_needed = 0;
+static void *rx_dest = NULL;
 
 static bool rx_push(uint8_t recv)
 {
@@ -53,9 +56,14 @@ static bool rx_pull(uint8_t *to)
     rx_readhead = (rx_readhead + 1) % BUFFER_SIZE;
     return true;
 }
+static size_t rx_available(void)
+{
+    if (rx_readhead <= rx_index)
+        return rx_index - rx_readhead;
+    return BUFFER_SIZE - rx_readhead + rx_index;
+}
 
 #include <gint/exc.h>
-#include <gint/gdb.h>
 //---
 // Transmit handler
 //---
@@ -107,6 +115,18 @@ static void scif_inth_rx(void)
             // TODO: we may want to notify the other party, maybe with an 
             // XON/XOFF byte if the user so wishes.
         }
+    }
+    if (rx_needed != 0 && rx_available() >= rx_needed)
+    {
+        uint8_t *rx_bytes = rx_dest;
+        for (size_t i = 0; i < rx_needed; i++)
+            rx_pull(&rx_bytes[i]);
+        if (rx_callback.function != NULL)
+            gint_call(rx_callback);
+
+        rx_callback = GINT_CALL_NULL;
+        rx_needed = 0;
+        rx_dest = NULL;
     }
 
     SCIF0.SCFSR.DR = 0;
@@ -427,23 +447,34 @@ void serial_read_sync(void *data, size_t size)
     }
 }
 
-// TODO: the driver messes some things up REAL baaaad...
+void serial_read_async(void *data, size_t size, gint_call_t callback)
+{
+    uint8_t *bytes = data;
+    if (!bytes || !serial_is_open()) return;
+    if (rx_available() >= size)
+    {
+        /* Attempt to check the ring buffer early */
+        serial_read_sync(data, size);
+        if (callback.function != NULL)
+            gint_call(callback);
+        return;
+    }
+
+    rx_callback = callback;
+    rx_dest = data;
+    rx_needed = size;
+}
+
 gint_driver_t drv_scif = {
     .name           = "SCIF",
     .configure      = configure,
-
-    // Used when working in gint-world
     .bind           = bind,
     .unbind         = unbind,
-
-    // Used when dealing with "foreign" code (the OS)
     .funbind        = funbind,
 
     .hpowered       = check_power,
     .hpoweroff      = poweroff,
     .hpoweron       = poweron,
-
-    // TODO: hsave + hrestore
     .hsave          = (void *)save_ctx,
     .hrestore       = (void *)restore_ctx,
     .state_size     = sizeof(scif_state_t)
