@@ -10,57 +10,66 @@
 
 #define BUFFER_SIZE             4096
 // Used to enable loopback testing
-//#define SELF_TESTING
+#define SELF_TESTING
 
 #define POWER SH7305_POWER
 #define SCIF0 SH7305_SCIF
 
 static bool opened = false;
 
+typedef struct 
+{
+    uint8_t buffer[BUFFER_SIZE];
+    size_t writehead, readhead;
+} ringbuffer_t;
+
 // TODO: this should be replaced with a more robust mechanism (and also just checking TE itself...)
 static bool writing = false;
+
+// TODO: setup a transmit ringbuffer...
 static gint_call_t tx_callback = GINT_CALL_NULL;
 static uint8_t tx_buffer[BUFFER_SIZE];
 static size_t tx_index = 0, tx_count = 0;
 
-// TODO: make this its own structure
-static uint8_t rx_buffer[BUFFER_SIZE];
-static size_t rx_index = 0, rx_readhead = 0;
+static ringbuffer_t rx_ring = { .readhead = 0, .writehead = 0 };
 static gint_call_t rx_callback = GINT_CALL_NULL;
 static size_t rx_needed = 0;
 static void *rx_dest = NULL;
 
-static bool rx_push(uint8_t recv)
+//---
+// Ring buffer implementation
+//---
+static bool ring_push(ringbuffer_t *ring, uint8_t recv)
 {
-    size_t next = (rx_index + 1) % BUFFER_SIZE;
-    if (next == rx_readhead)
+    size_t next = (ring->writehead + 1) % BUFFER_SIZE;
+    if (next == ring->readhead)
     {
         // We're about to collide with the read head.
         return false;
     }
 
     // Write that byte into our ringbuffer.
-    rx_buffer[rx_index] = recv;
-    rx_index = next;
+    ring->buffer[ring->writehead] = recv;
+    ring->writehead = next;
     return true;
 }
-static bool rx_pull(uint8_t *to)
+static bool ring_pull(ringbuffer_t *ring, uint8_t *to)
 {
-    if (rx_readhead == rx_index)
+    if (ring->writehead == ring->readhead)
     {
         // We have to wait for data.
         return false;
     }
 
-    if (to) *to = rx_buffer[rx_readhead];
-    rx_readhead = (rx_readhead + 1) % BUFFER_SIZE;
+    if (to) *to = ring->buffer[ring->readhead];
+    ring->readhead = (ring->readhead + 1) % BUFFER_SIZE;
     return true;
 }
-static size_t rx_available(void)
+static size_t ring_available(ringbuffer_t *ring)
 {
-    if (rx_readhead <= rx_index)
-        return rx_index - rx_readhead;
-    return BUFFER_SIZE - rx_readhead + rx_index;
+    if (ring->readhead <= ring->writehead)
+        return ring->writehead - ring->readhead;
+    return BUFFER_SIZE - ring->readhead + ring->writehead;
 }
 
 #include <gint/exc.h>
@@ -110,17 +119,17 @@ static void scif_inth_rx(void)
     size_t bytes_max = SCIF0.SCFDR.RFDC;
     for (size_t i = 0; i < bytes_max; i++)
     {
-        if (!rx_push(SCIF0.SCFRDR))
+        if (!ring_push(&rx_ring, SCIF0.SCFRDR))
         {
             // TODO: we may want to notify the other party, maybe with an 
             // XON/XOFF byte if the user so wishes.
         }
     }
-    if (rx_needed != 0 && rx_available() >= rx_needed)
+    if (rx_needed != 0 && ring_available(&rx_ring) >= rx_needed)
     {
         uint8_t *rx_bytes = rx_dest;
         for (size_t i = 0; i < rx_needed; i++)
-            rx_pull(&rx_bytes[i]);
+            ring_pull(&rx_ring, &rx_bytes[i]);
         if (rx_callback.function != NULL)
             gint_call(rx_callback);
 
@@ -158,7 +167,7 @@ static void scif_inth_err(void)
         YESNO(SCIF0.SCFSR.DR), 
         YESNO(SCIF0.SCFSR.BRK)
     );
-    dprint(1,55,C_WHITE,"rx_index=%d", rx_index);
+    dprint(1,55,C_WHITE,"rx_index=%d", rx_ring.writehead);
     dupdate();
 
 #undef YESNO
@@ -367,6 +376,13 @@ int serial_open(serial_config_t const *config)
     SCIF0.SCSCR.RE = 1;
     SCIF0.SCLSR.ORER = 0;
 
+    // Setup ringbuffers
+    rx_ring.readhead = 0;
+    rx_ring.writehead = 0;
+    rx_dest = NULL;
+    rx_needed = 0;
+    rx_callback = GINT_CALL_NULL;
+
     opened = true;
     intc_priority(INTC_SCIF0, 1);
     return 1;
@@ -439,7 +455,7 @@ void serial_read_sync(void *data, size_t size)
 
     while (size != 0)
     {
-        if (rx_pull(bytes))
+        if (ring_pull(&rx_ring, bytes))
         {
             bytes++;
             size--;
@@ -451,7 +467,7 @@ void serial_read_async(void *data, size_t size, gint_call_t callback)
 {
     uint8_t *bytes = data;
     if (!bytes || !serial_is_open()) return;
-    if (rx_available() >= size)
+    if (ring_available(&rx_ring) >= size)
     {
         /* Attempt to check the ring buffer early */
         serial_read_sync(data, size);
