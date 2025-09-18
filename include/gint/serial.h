@@ -2,9 +2,6 @@
 // gint:serial - Serial communication
 //---
 
-// TODO: This is a template for a future implementation.
-// TODO: make the most boring and least interesting SCIF driver out there
-
 #ifndef GINT_SERIAL
 #define GINT_SERIAL
 
@@ -37,10 +34,49 @@ typedef struct {
 
 // TODO: Error management...
 
+/* Error codes for serial functions */
+enum {
+    /* Inexistant/Impossible parameters (e.g: data_width not being 7 or 8 bits) */
+    SERIAL_ERROR_INVALID_PARAMS             = -1,
+    /* Transfer size too large */
+    SERIAL_ERROR_DATA_SIZE                  = -2,
+
+    /* Incorrect parity detected */
+    SERIAL_ERROR_PARITY                     = -3,
+    /* Incorrect start/stop-bits found */
+    SERIAL_ERROR_FRAMING                    = -4,
+    /* Overrun error */
+    SERIAL_ERROR_OVERRUN                    = -5,
+};
+
+/* serial_open(): Initialise the serial driver
+
+   Opens the serial communication with the given parameters. This function 
+   will fail with a zero if the parameters given aren't valid values.
+
+   No transmittions actually start once this function returns, but it will 
+   listen to receptions.
+
+   @baudrate        The bitrate at which communication should be happening.
+   @parity          Parity configuration
+   @data_width      Size taken by each 'character'. If 7, then the MSB will 
+                    be ignored.
+   @stop_bits       Number of stop bits at the end of a frame.
+   -> Returns 1 on success. */
 int serial_open(serial_config_t const *config);
 
+/* serial_is_open(): Checks if the serial channel is active */
 bool serial_is_open(void);
 
+/* serial_write_async(): Send data asynchronously
+   
+   This function sends data and returns immediately, with the FIFO being 
+   filled in the background when needed. Once finished, the caller is notified
+   through a given callback with GINT_CALL, or just ignored with GINT_CALL_NULL.
+
+   @data            Source data
+   @size            Source size
+   @callback        Callback called when the transfer ends. */
 void serial_write_async(void const *data, size_t size, gint_call_t callback);
 
 void serial_write_sync(void const *data, size_t size);

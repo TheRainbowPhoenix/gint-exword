@@ -8,7 +8,7 @@
 
 #include <string.h>
 
-#define BUFFER_SIZE             4096
+#define BUFFER_SIZE             1024
 // Used to enable loopback testing
 #define SELF_TESTING
 
@@ -26,10 +26,8 @@ typedef struct
 // TODO: this should be replaced with a more robust mechanism (and also just checking TE itself...)
 static bool writing = false;
 
-// TODO: setup a transmit ringbuffer...
+static ringbuffer_t tx_ring = { .readhead = 0, .writehead = 0 };
 static gint_call_t tx_callback = GINT_CALL_NULL;
-static uint8_t tx_buffer[BUFFER_SIZE];
-static size_t tx_index = 0, tx_count = 0;
 
 static ringbuffer_t rx_ring = { .readhead = 0, .writehead = 0 };
 static gint_call_t rx_callback = GINT_CALL_NULL;
@@ -65,11 +63,15 @@ static bool ring_pull(ringbuffer_t *ring, uint8_t *to)
     ring->readhead = (ring->readhead + 1) % BUFFER_SIZE;
     return true;
 }
-static size_t ring_available(ringbuffer_t *ring)
+static size_t ring_readable(ringbuffer_t *ring)
 {
     if (ring->readhead <= ring->writehead)
         return ring->writehead - ring->readhead;
     return BUFFER_SIZE - ring->readhead + ring->writehead;
+}
+static size_t ring_writable(ringbuffer_t *ring)
+{
+    return BUFFER_SIZE - ring_readable(ring);
 }
 
 #include <gint/exc.h>
@@ -79,7 +81,7 @@ static size_t ring_available(ringbuffer_t *ring)
 static void scif_inth_tx(void)
 {
     size_t bytes_max;
-    if (tx_count == 0 && SCIF0.SCFSR.TEND)
+    if (ring_readable(&tx_ring) == 0 && SCIF0.SCFSR.TEND)
     {
         if (SCIF0.SCFDR.TFDC != 0)
             return;
@@ -88,28 +90,24 @@ static void scif_inth_tx(void)
             gint_call(tx_callback);
         tx_callback = GINT_CALL_NULL;
 
-        // STOP EVERYTHING
-        /* XXX: Sleeping for a while does help everything catch up (and fixes the 
-         * missing-byte problem, but isn't there a better way to do everything?) */
-        sleep_us_spin(1000);
+        /* TODO: This is the part where you're _supposed_ to disable TE, since there is no 
+         * data to be read anymore. However, I have found that data still _somehow_ keeps 
+         * being transmitted even after TEND and TDFC seem to indicate otherwise. Previously, 
+         * a short pause was added at the end, before disabling TE, but as it turns out, this 
+         * tends to cause issues. */
         SCIF0.SCSCR.TIE = 0;
         SCIF0.SCFSR.TEND = 0;
-        SCIF0.SCSCR.TE = 0;
         return;
     }
-    if (tx_count == 0) return;
+    if (ring_readable(&tx_ring) == 0) return;
+    if (!writing) return;
 
     bytes_max = 16 - SCIF0.SCFDR.TFDC;
-    for (size_t i = 0; i < bytes_max && tx_index < tx_count; i++)
-        SCIF0.SCFTDR = tx_buffer[tx_index++];
-    bytes_max = SCIF0.SCFDR.TFDC;
+    for (size_t i = 0; i < bytes_max && ring_readable(&tx_ring) != 0; i++)
+        ring_pull(&tx_ring, (void *) &SCIF0.SCFTDR);
     SCIF0.SCFSR.TDFE = 0;
-    if (tx_index == tx_count)
-    {
-        tx_index = 0;
-        tx_count = 0;
+    if (ring_readable(&tx_ring) == 0)
         writing = false;
-    }
 }
 //---
 // Receive handler
@@ -125,7 +123,7 @@ static void scif_inth_rx(void)
             // XON/XOFF byte if the user so wishes.
         }
     }
-    if (rx_needed != 0 && ring_available(&rx_ring) >= rx_needed)
+    if (rx_needed != 0 && ring_readable(&rx_ring) >= rx_needed)
     {
         uint8_t *rx_bytes = rx_dest;
         for (size_t i = 0; i < rx_needed; i++)
@@ -297,7 +295,7 @@ bool scif_best_scbrr(uint32_t baudrate, uint8_t *n, uint8_t *scbrr)
         int32_t potential_deviation = (info->Pphi_f % scale_by_n(64 * baudrate, potential_n));
 
         // This value of SCBRR is completely invalid.
-        if (potential_scbrr < 0 || potential_n >= 255)
+        if (potential_scbrr < 0 || potential_scbrr >= 255)
             continue;
 
         // Check the amount of "error" by looking at the remainder.
@@ -316,7 +314,7 @@ bool scif_best_scbrr(uint32_t baudrate, uint8_t *n, uint8_t *scbrr)
 int serial_open(serial_config_t const *config)
 {
     // TODO: have a routine to determine this value
-    uint8_t best_n = 0b00, best_scbrr = 95;
+    uint8_t best_n = 0b00, best_scbrr = 0x00;
     if (!config || serial_is_open()) return 0;
     if (config->parity > SERIAL_PARITY_ODD)
         return 0;
@@ -411,7 +409,6 @@ void serial_close(void)
     SCIF0.SCSCR.RIE = 0;
     serial_wait();
     intc_priority(INTC_SCIF0, 0);
-    // TODO: disable TE/RE/TIE/RIE
 }
 
 static void set_flag(volatile bool *flag)
@@ -430,16 +427,16 @@ void serial_write_async(void const *data, size_t size, gint_call_t cb)
 {
     uint8_t const *bytes = data;
 
+    // TODO: error statuses
     if (!bytes || !serial_is_open()) return;
-    if (size >= BUFFER_SIZE) return;            // TODO: return an error...
+    if (size >= ring_writable(&tx_ring)) return;
     serial_wait();
 
     // TODO: should we have a cap? i feel like we need to copy data elsewhere, 
     // since it could be modified...
-    memcpy(tx_buffer, data, size);
-    tx_count = 0;
-    tx_count = size;
     tx_callback = cb;
+    while (size--)
+        ring_push(&tx_ring, *bytes++);
 
     // Go!
     writing = true;
@@ -467,7 +464,7 @@ void serial_read_async(void *data, size_t size, gint_call_t callback)
 {
     uint8_t *bytes = data;
     if (!bytes || !serial_is_open()) return;
-    if (ring_available(&rx_ring) >= size)
+    if (ring_readable(&rx_ring) >= size)
     {
         /* Attempt to check the ring buffer early */
         serial_read_sync(data, size);
