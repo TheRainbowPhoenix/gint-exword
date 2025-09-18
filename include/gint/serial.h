@@ -76,9 +76,19 @@ bool serial_is_open(void);
 
    @data            Source data
    @size            Source size
-   @callback        Callback called when the transfer ends. */
+   @callback        Callback used to notify the caller */
 void serial_write_async(void const *data, size_t size, gint_call_t callback);
 
+/* serial_write_sync(): Send data synchronously
+   
+   This function behaves like serial_write_async(), except that it shall block 
+   until the requested amount of bytes are received. Keep in mind that this 
+   function shall freeze if the other device cannot send anything, and that you 
+   may rather want to just use serial_write_async() instead.
+
+   @data            Source data
+   @size            Source size
+   @callback        Callback used to notify the caller */
 void serial_write_sync(void const *data, size_t size);
 
 void serial_read_async(void *data, size_t size, gint_call_t callback);

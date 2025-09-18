@@ -40,8 +40,7 @@ static void *rx_dest = NULL;
 static bool ring_push(ringbuffer_t *ring, uint8_t recv)
 {
     size_t next = (ring->writehead + 1) % BUFFER_SIZE;
-    if (next == ring->readhead)
-    {
+    if (next == ring->readhead) {
         // We're about to collide with the read head.
         return false;
     }
@@ -53,8 +52,7 @@ static bool ring_push(ringbuffer_t *ring, uint8_t recv)
 }
 static bool ring_pull(ringbuffer_t *ring, uint8_t *to)
 {
-    if (ring->writehead == ring->readhead)
-    {
+    if (ring->writehead == ring->readhead) {
         // We have to wait for data.
         return false;
     }
@@ -81,8 +79,7 @@ static size_t ring_writable(ringbuffer_t *ring)
 static void scif_inth_tx(void)
 {
     size_t bytes_max;
-    if (ring_readable(&tx_ring) == 0 && SCIF0.SCFSR.TEND)
-    {
+    if (ring_readable(&tx_ring) == 0 && SCIF0.SCFSR.TEND) {
         if (SCIF0.SCFDR.TFDC != 0)
             return;
 
@@ -115,16 +112,13 @@ static void scif_inth_tx(void)
 static void scif_inth_rx(void)
 {
     size_t bytes_max = SCIF0.SCFDR.RFDC;
-    for (size_t i = 0; i < bytes_max; i++)
-    {
-        if (!ring_push(&rx_ring, SCIF0.SCFRDR))
-        {
+    for (size_t i = 0; i < bytes_max; i++) {
+        if (!ring_push(&rx_ring, SCIF0.SCFRDR)) {
             // TODO: we may want to notify the other party, maybe with an 
             // XON/XOFF byte if the user so wishes.
         }
     }
-    if (rx_needed != 0 && ring_readable(&rx_ring) >= rx_needed)
-    {
+    if (rx_needed != 0 && ring_readable(&rx_ring) >= rx_needed) {
         uint8_t *rx_bytes = rx_dest;
         for (size_t i = 0; i < rx_needed; i++)
             ring_pull(&rx_ring, &rx_bytes[i]);
@@ -287,8 +281,7 @@ bool scif_best_scbrr(uint32_t baudrate, uint8_t *n, uint8_t *scbrr)
     int32_t best_deviation = INT32_MAX;
     uint8_t best_scbrr = 0xFF;
     uint8_t best_n = 0;
-    for (int potential_n = 0; potential_n < 4; potential_n++)
-    {
+    for (int potential_n = 0; potential_n < 4; potential_n++) {
         // Figure out the value of SCBRR
         // The multiplication by 1M is already implied by the fact that Pphi_f is in Hz, not MHz.
         int32_t potential_scbrr = (info->Pphi_f / scale_by_n(64 * baudrate, potential_n)) - 1;
@@ -299,8 +292,7 @@ bool scif_best_scbrr(uint32_t baudrate, uint8_t *n, uint8_t *scbrr)
             continue;
 
         // Check the amount of "error" by looking at the remainder.
-        if (potential_deviation < best_deviation)
-        {
+        if (potential_deviation < best_deviation) {
             best_deviation = potential_deviation;
             best_scbrr = potential_scbrr;
             best_n = potential_n;
@@ -450,10 +442,8 @@ void serial_read_sync(void *data, size_t size)
     uint8_t *bytes = data;
     if (!bytes || !serial_is_open()) return;
 
-    while (size != 0)
-    {
-        if (ring_pull(&rx_ring, bytes))
-        {
+    while (size != 0) {
+        if (ring_pull(&rx_ring, bytes)) {
             bytes++;
             size--;
         }
@@ -464,8 +454,7 @@ void serial_read_async(void *data, size_t size, gint_call_t callback)
 {
     uint8_t *bytes = data;
     if (!bytes || !serial_is_open()) return;
-    if (ring_readable(&rx_ring) >= size)
-    {
+    if (ring_readable(&rx_ring) >= size) {
         /* Attempt to check the ring buffer early */
         serial_read_sync(data, size);
         if (callback.function != NULL)
