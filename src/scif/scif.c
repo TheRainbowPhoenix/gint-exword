@@ -10,7 +10,7 @@
 
 #define BUFFER_SIZE             1024
 // Used to enable loopback testing
-#define SELF_TESTING
+//#define SELF_TESTING
 
 #define POWER SH7305_POWER
 #define SCIF0 SH7305_SCIF
