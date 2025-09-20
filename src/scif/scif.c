@@ -142,37 +142,12 @@ static void scif_inth_rx(void)
 //---
 // Error handler
 //---
-#include <gint/display.h>
 static void scif_inth_err(void)
 {
     /* TODO: actually manage the error instead of sweeping it under the rug...
      * but we really need to reform the API for this. I should definitely contact 
      * Lephé' about actually designing this well but my access to the actual Internet 
      * is pretty intermittent at the moment :3 */
-#if 1
-#define YESNO(flag) ((flag) ? "YES" : "NO")
-    /* TODO: if we choose to _display_ the error, there better be another way... */
-    static int count = 0;
-#ifdef FXCG50
-    dclear(C_RED);
-#else
-    dclear(C_BLACK);
-#endif
-    dprint(1, 1,C_WHITE,"ERROR n°%d! SCFSR=0x%04X", ++count, SCIF0.SCFSR.word);
-    dprint(1,11,C_WHITE,"PARITY ERRORS=%d", SCIF0.SCFSR.PERC);
-    dprint(1,22,C_WHITE,"FRAMES ERRORS=%d", SCIF0.SCFSR.FERC);
-    dprint(1,33,C_WHITE,"PER=%s FER=%s ER=%s DR=%s BRK=%s", 
-        YESNO(SCIF0.SCFSR.PER), 
-        YESNO(SCIF0.SCFSR.FER), 
-        YESNO(SCIF0.SCFSR.ER), 
-        YESNO(SCIF0.SCFSR.DR), 
-        YESNO(SCIF0.SCFSR.BRK)
-    );
-    dprint(1,55,C_WHITE,"rx_index=%d", rx_ring.writehead);
-    dupdate();
-
-#undef YESNO
-#endif
     SCIF0.SCFSR.DR = 0;
     SCIF0.SCFSR.ER = 0;
     SCIF0.SCFSR.BRK = 0;
