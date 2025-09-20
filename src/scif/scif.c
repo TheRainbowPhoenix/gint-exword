@@ -153,7 +153,11 @@ static void scif_inth_err(void)
 #define YESNO(flag) ((flag) ? "YES" : "NO")
     /* TODO: if we choose to _display_ the error, there better be another way... */
     static int count = 0;
+#ifdef FXCG50
     dclear(C_RED);
+#else
+    dclear(C_BLACK);
+#endif
     dprint(1, 1,C_WHITE,"ERROR n°%d! SCFSR=0x%04X", ++count, SCIF0.SCFSR.word);
     dprint(1,11,C_WHITE,"PARITY ERRORS=%d", SCIF0.SCFSR.PERC);
     dprint(1,22,C_WHITE,"FRAMES ERRORS=%d", SCIF0.SCFSR.FERC);
@@ -181,9 +185,8 @@ static void scif_inth_err(void)
 static void scif_inth(void)
 {
     /* Manage parity errors here */
-    // TODO: DR seems to mean that there's not been any data lately?
     SCIF0.SCFSR.DR = 0;
-    if (SCIF0.SCFSR.ER /*|| SCIF0.SCFSR.DR*/ || SCIF0.SCFSR.BRK)
+    if (SCIF0.SCFSR.ER || SCIF0.SCFSR.BRK)
         scif_inth_err();
     
     if (SCIF0.SCFSR.TDFE)
@@ -379,7 +382,7 @@ int serial_open(serial_config_t const *config)
 
     opened = true;
     intc_priority(INTC_SCIF0, 1);
-    return 1;
+    return 0;
 }
 
 #include <gint/display.h>
