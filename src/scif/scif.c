@@ -23,7 +23,7 @@ typedef struct
     size_t writehead, readhead;
 } ringbuffer_t;
 
-// TODO: this should be replaced with a more robust mechanism (and also just checking TE itself...)
+// TODO: this should be replaced with a more robust mechanism
 static bool writing = false;
 
 static ringbuffer_t tx_ring = { .readhead = 0, .writehead = 0 };
@@ -37,6 +37,11 @@ static void *rx_dest = NULL;
 //---
 // Ring buffer implementation
 //---
+static void ring_reset(ringbuffer_t *ring)
+{
+    ring->readhead = 0;
+    ring->writehead = 0;
+}
 static bool ring_push(ringbuffer_t *ring, uint8_t recv)
 {
     size_t next = (ring->writehead + 1) % BUFFER_SIZE;
@@ -305,18 +310,18 @@ bool scif_best_scbrr(uint32_t baudrate, uint8_t *n, uint8_t *scbrr)
 
 int serial_open(serial_config_t const *config)
 {
-    // TODO: have a routine to determine this value
     uint8_t best_n = 0b00, best_scbrr = 0x00;
     if (!config || serial_is_open()) return 0;
     if (config->parity > SERIAL_PARITY_ODD)
-        return 0;
+        return SERIAL_ERROR_INVALID_PARAMS;
     if (config->stop_bits != 1 && config->stop_bits != 2)
-        return 0;
+        return SERIAL_ERROR_INVALID_PARAMS;
     if (config->data_width != 7 && config->data_width != 8)
-        return 0;
+        return SERIAL_ERROR_INVALID_PARAMS;
 
+    /* TODO: should this warrant another error code? */
     if (!scif_best_scbrr(config->baudrate, &best_n, &best_scbrr))
-        return 0;
+        return SERIAL_ERROR_INVALID_PARAMS;
 
     SCIF0.SCBRR = 0; 
     SCIF0.SCSCR.word = 0;
@@ -332,7 +337,6 @@ int serial_open(serial_config_t const *config)
     SCIF0.SCFCR.TFRST = 1;
     SCIF0.SCFCR.RFRST = 1;
 
-    // TODO: custom N/CKE value
     SCIF0.SCSMR.CKS = best_n;
     SCIF0.SCSMR.CHR = config->data_width == 7;
     SCIF0.SCSMR.STOP = config->stop_bits == 2;
@@ -367,8 +371,8 @@ int serial_open(serial_config_t const *config)
     SCIF0.SCLSR.ORER = 0;
 
     // Setup ringbuffers
-    rx_ring.readhead = 0;
-    rx_ring.writehead = 0;
+    ring_reset(&rx_ring);
+    ring_reset(&tx_ring);
     rx_dest = NULL;
     rx_needed = 0;
     rx_callback = GINT_CALL_NULL;
@@ -415,13 +419,13 @@ void serial_write_sync(void const *data, size_t size)
     serial_write_async(data, size, GINT_CALL(set_flag, &flag));
     while (!flag);
 }
-void serial_write_async(void const *data, size_t size, gint_call_t cb)
+int serial_write_async(void const *data, size_t size, gint_call_t cb)
 {
     uint8_t const *bytes = data;
 
     // TODO: error statuses
-    if (!bytes || !serial_is_open()) return;
-    if (size >= ring_writable(&tx_ring)) return;
+    if (!bytes || !serial_is_open()) return SERIAL_ERROR_NOT_OPENED;
+    if (size >= ring_writable(&tx_ring)) return SERIAL_ERROR_DATA_SIZE;
     serial_wait();
 
     // TODO: should we have a cap? i feel like we need to copy data elsewhere, 
@@ -434,20 +438,28 @@ void serial_write_async(void const *data, size_t size, gint_call_t cb)
     writing = true;
     SCIF0.SCSCR.TE = 1;
     SCIF0.SCSCR.TIE = 1;
+    return 0;
 }
 
-void serial_read_sync(void *data, size_t size)
+int serial_read_sync_timeout(void *data, size_t size, timeout_t const* timeout)
 {
     // Attempt to read from the ring buffer
     uint8_t *bytes = data;
-    if (!bytes || !serial_is_open()) return;
+    if (!bytes || !serial_is_open()) return SERIAL_ERROR_INVALID_PARAMS;
 
     while (size != 0) {
+        if (timeout_elapsed(timeout))
+            return SERIAL_ERROR_TIMEOUT;
         if (ring_pull(&rx_ring, bytes)) {
             bytes++;
             size--;
         }
     }
+    return 0;
+}
+int serial_read_sync(void *data, size_t size)
+{
+    return serial_read_sync_timeout(data, size, NULL);
 }
 
 void serial_read_async(void *data, size_t size, gint_call_t callback)

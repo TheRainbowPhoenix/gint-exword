@@ -11,6 +11,7 @@ extern "C" {
 
 #include <gint/defs/types.h>
 #include <gint/defs/call.h>
+#include <gint/defs/timeout.h>
 
 typedef enum {
 	SERIAL_PARITY_NONE,
@@ -38,15 +39,19 @@ typedef struct {
 enum {
     /* Inexistant/Impossible parameters (e.g: data_width not being 7 or 8 bits) */
     SERIAL_ERROR_INVALID_PARAMS             = -1,
+    /* Serial port isn't opened */
+    SERIAL_ERROR_NOT_OPENED                 = -2,
     /* Transfer size too large */
-    SERIAL_ERROR_DATA_SIZE                  = -2,
+    SERIAL_ERROR_DATA_SIZE                  = -3,
 
     /* Incorrect parity detected */
-    SERIAL_ERROR_PARITY                     = -3,
+    SERIAL_ERROR_PARITY                     = -4,
     /* Incorrect start/stop-bits found */
-    SERIAL_ERROR_FRAMING                    = -4,
+    SERIAL_ERROR_FRAMING                    = -5,
     /* Overrun error */
-    SERIAL_ERROR_OVERRUN                    = -5,
+    SERIAL_ERROR_OVERRUN                    = -6,
+    /* Read attempt timed out */
+    SERIAL_ERROR_TIMEOUT                    = -7
 };
 
 /* serial_open(): Initialise the serial driver
@@ -62,7 +67,7 @@ enum {
    @data_width      Size taken by each 'character'. If 7, then the MSB will 
                     be ignored.
    @stop_bits       Number of stop bits at the end of a frame.
-   -> Returns 1 on success. */
+   -> Returns 0 on success, or a negative error code otherwise. */
 int serial_open(serial_config_t const *config);
 
 /* serial_is_open(): Checks if the serial channel is active */
@@ -76,8 +81,9 @@ bool serial_is_open(void);
 
    @data            Source data
    @size            Source size
-   @callback        Callback used to notify the caller */
-void serial_write_async(void const *data, size_t size, gint_call_t callback);
+   @callback        Callback used to notify the caller 
+   -> Returns 0 on success or a negative error code otherwise. */
+int serial_write_async(void const *data, size_t size, gint_call_t callback);
 
 /* serial_write_sync(): Send data synchronously
    
@@ -91,9 +97,43 @@ void serial_write_async(void const *data, size_t size, gint_call_t callback);
    @callback        Callback used to notify the caller */
 void serial_write_sync(void const *data, size_t size);
 
+/* serial_read_async(): Receive data asynchronously without any timeout
+ *
+ * This function reads a specified amount of data from the receive buffer,
+ * and returns immediately, reading the rest of the data in the background.
+ * When the specified amount of data has been read, the caller shall be 
+ * notified through a specified callback function, which may be GINT_CALL_NULL.
+ *
+ * @data            Destination data
+ * @size            Destination size
+ * @callback        Callback used to notify the caller 
+ * TODO: make this look more like usb_read_async (with an rc parameter) */
 void serial_read_async(void *data, size_t size, gint_call_t callback);
 
-void serial_read_sync(void *data, size_t size);
+/* serial_read_sync_timeout(): Receive data synchronously
+   
+   This functions reads a specified amount data from the receive buffer, waiting 
+   if no data is available. If a timeout is specified, then this function will 
+   exit early with an error if said timeout expires during the receive.
+   If timeout is NULL, then this function behaves like serial_read_sync().
+
+   @data            Destination data
+   @size            Destination size
+   @timeout         Timeout, can be NULL. 
+   -> Returns 0 on success, or a negative error code on failure. */
+int serial_read_sync_timeout(void *data, size_t size, timeout_t const *timeout);
+
+/* serial_read_sync(): Receive data synchronously without any timeout
+   
+   This function behaves like serial_read_sync_timeout(), except that timeouts 
+   cannot occur. If no data is available and there is no other party to send 
+   data, then this function will freeze. In that case, serial_read_sync_timeout() 
+   and serial_read_async() should be used.
+
+   @data            Destination data
+   @size            Destination size 
+   -> Returns 0 on success, or a negative error code on failure. */
+int serial_read_sync(void *data, size_t size);
 
 // Waits for communications to finish
 void serial_wait(void);
