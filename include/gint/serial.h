@@ -108,7 +108,7 @@ void serial_write_sync(void const *data, size_t size);
  * @size            Destination size
  * @callback        Callback used to notify the caller 
  * TODO: make this look more like usb_read_async (with an rc parameter) */
-void serial_read_async(void *data, size_t size, gint_call_t callback);
+int serial_read_async(void *data, size_t size, int *rc, gint_call_t callback);
 
 /* serial_read_sync_timeout(): Receive data synchronously
    

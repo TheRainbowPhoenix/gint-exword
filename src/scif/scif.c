@@ -1,10 +1,12 @@
+#include <gint/drivers/states.h>
+#include <gint/drivers/scif.h>
+#include <gint/mpu/power.h>
 #include <gint/hardware.h>
 #include <gint/drivers.h>
-#include <gint/drivers/scif.h>
 #include <gint/serial.h>
-#include <gint/drivers/states.h>
-#include <gint/mpu/power.h>
+#include <gint/clock.h>
 #include <gint/intc.h>
+#include <gint/exc.h>
 
 #include <string.h>
 
@@ -33,6 +35,9 @@ static ringbuffer_t rx_ring = { .readhead = 0, .writehead = 0 };
 static gint_call_t rx_callback = GINT_CALL_NULL;
 static size_t rx_needed = 0;
 static void *rx_dest = NULL;
+static int *rx_rc = NULL;
+
+static size_t rx_parity_errs = 0, rx_framing_errs = 0;
 
 //---
 // Ring buffer implementation
@@ -77,7 +82,6 @@ static size_t ring_writable(ringbuffer_t *ring)
     return BUFFER_SIZE - ring_readable(ring);
 }
 
-#include <gint/exc.h>
 //---
 // Transmit handler
 //---
@@ -117,17 +121,19 @@ static void scif_inth_tx(void)
 static void scif_inth_rx(void)
 {
     size_t bytes_max = SCIF0.SCFDR.RFDC;
-    for (size_t i = 0; i < bytes_max; i++) {
-        if (!ring_push(&rx_ring, SCIF0.SCFRDR)) {
+    for(size_t i = 0; i < bytes_max; i++) {
+        if(!ring_push(&rx_ring, SCIF0.SCFRDR)) {
             // TODO: we may want to notify the other party, maybe with an 
             // XON/XOFF byte if the user so wishes.
         }
     }
-    if (rx_needed != 0 && ring_readable(&rx_ring) >= rx_needed) {
+    if(rx_needed != 0 && ring_readable(&rx_ring) >= rx_needed) {
         uint8_t *rx_bytes = rx_dest;
-        for (size_t i = 0; i < rx_needed; i++)
+        for(size_t i = 0; i < rx_needed; i++)
             ring_pull(&rx_ring, &rx_bytes[i]);
-        if (rx_callback.function != NULL)
+        if(rx_rc)
+            *rx_rc = 0;
+        if(rx_callback.function != NULL)
             gint_call(rx_callback);
 
         rx_callback = GINT_CALL_NULL;
@@ -148,6 +154,30 @@ static void scif_inth_err(void)
      * but we really need to reform the API for this. I should definitely contact 
      * Lephé' about actually designing this well but my access to the actual Internet 
      * is pretty intermittent at the moment :3 */
+    if(SCIF0.SCFSR.FER) {
+        /* TODO: A framing error occured */
+        if(rx_needed != 0) {
+            if(rx_rc) *rx_rc = SERIAL_ERROR_FRAMING;
+            if(rx_callback.function != NULL) gint_call(rx_callback);
+
+            rx_dest = NULL;
+            rx_callback = GINT_CALL_NULL;
+            rx_needed = 0;
+        }
+        rx_framing_errs++;
+    }
+    if(SCIF0.SCFSR.PER) {
+        /* TODO: A parity error occured */
+        if(rx_needed != 0) {
+            if(rx_rc) *rx_rc = SERIAL_ERROR_FRAMING;
+            if(rx_callback.function != NULL) gint_call(rx_callback);
+
+            rx_dest = NULL;
+            rx_callback = GINT_CALL_NULL;
+            rx_needed = 0;
+        }
+        rx_parity_errs++;
+    }
     SCIF0.SCFSR.DR = 0;
     SCIF0.SCFSR.ER = 0;
     SCIF0.SCFSR.BRK = 0;
@@ -173,6 +203,8 @@ static void scif_inth(void)
 static void configure(void)
 {
 	if(isSH3()) return;
+
+    /* TODO: configure the PFC's U port */
     SCIF0.SCSCR.TIE = 0;
     SCIF0.SCSCR.RIE = 0;
     SCIF0.SCSCR.REIE = 0;
@@ -245,7 +277,6 @@ static void funbind(void)
 // "Public" SCIF functions
 //---
 
-#include <gint/clock.h>
 // scale_by_n: Applies some scaling to x depending on the value of n(clock divider)
 static int32_t scale_by_n(int32_t x, int n)
 {
@@ -324,8 +355,7 @@ int serial_open(serial_config_t const *config)
     SCIF0.SCSMR.CA = 0;
     SCIF0.SCBRR = best_scbrr;
 
-    sleep_ms( 10);                  // TODO: this isn't quite correct. we should wait for one bit.
-                                    // ig you could compute its length on the spot?
+    sleep_ms( 10);                  /* TODO: this isn't quite correct. we should wait for one bit. */
     
     SCIF0.SCFCR.RTRG = 0b10;        // Full at 8 bytes
     SCIF0.SCFCR.TTRG = 0b00;        // Empty at 8 bytes
@@ -351,6 +381,8 @@ int serial_open(serial_config_t const *config)
     // Setup ringbuffers
     ring_reset(&rx_ring);
     ring_reset(&tx_ring);
+    rx_parity_errs = 0; 
+    rx_framing_errs = 0;
     rx_dest = NULL;
     rx_needed = 0;
     rx_callback = GINT_CALL_NULL;
@@ -360,13 +392,10 @@ int serial_open(serial_config_t const *config)
     return 0;
 }
 
-#include <gint/display.h>
-#include <gint/keyboard.h>
 void serial_wait(void)
 {
-    // TODO: manage comms happening in async
     // Right now, I'm only going to busy-loop until TDFC is empty...
-    while (writing) sleep();        // If we're writing here, it must be an async transfer!
+    while (writing) sleep();
     while (SCIF0.SCFDR.TFDC != 0);  // TODO: we should probably sleep
 }
 bool serial_is_open(void)
@@ -409,7 +438,7 @@ int serial_write_async(void const *data, size_t size, gint_call_t cb)
     // TODO: should we have a cap? i feel like we need to copy data elsewhere, 
     // since it could be modified...
     tx_callback = cb;
-    while (size--)
+    while(size--)
         ring_push(&tx_ring, *bytes++);
 
     // Go!
@@ -419,15 +448,22 @@ int serial_write_async(void const *data, size_t size, gint_call_t cb)
     return 0;
 }
 
+/* TODO: replace every version of serial_read_sync to a new serial_read_async_timeout() */
 int serial_read_sync_timeout(void *data, size_t size, timeout_t const* timeout)
 {
     // Attempt to read from the ring buffer
     uint8_t *bytes = data;
+    size_t parity, framing;
     if (!bytes || !serial_is_open()) return SERIAL_ERROR_INVALID_PARAMS;
 
+    parity = rx_parity_errs;
+    framing = rx_parity_errs;
     while (size != 0) {
-        if (timeout_elapsed(timeout))
-            return SERIAL_ERROR_TIMEOUT;
+        if (timeout_elapsed(timeout))   return SERIAL_ERROR_TIMEOUT;
+        /* TODO: should there be scenarios where we're allowed _not_ to care? */
+        if (rx_parity_errs != parity)   return SERIAL_ERROR_PARITY;
+        if (rx_framing_errs != framing) return SERIAL_ERROR_FRAMING;
+
         if (ring_pull(&rx_ring, bytes)) {
             bytes++;
             size--;
@@ -440,21 +476,25 @@ int serial_read_sync(void *data, size_t size)
     return serial_read_sync_timeout(data, size, NULL);
 }
 
-void serial_read_async(void *data, size_t size, gint_call_t callback)
+int serial_read_async(void *data, size_t size, int *rc, gint_call_t callback)
 {
     uint8_t *bytes = data;
-    if (!bytes || !serial_is_open()) return;
+    if (!bytes || !serial_is_open()) return SERIAL_ERROR_INVALID_PARAMS;
     if (ring_readable(&rx_ring) >= size) {
         /* Attempt to check the ring buffer early */
-        serial_read_sync(data, size);
+        int ret = serial_read_sync(data, size);
         if (callback.function != NULL)
             gint_call(callback);
-        return;
+        return ret;
     }
 
     rx_callback = callback;
     rx_dest = data;
     rx_needed = size;
+    rx_rc = rc;
+
+    /* Preliminary error code */
+    return 0;
 }
 
 gint_driver_t drv_scif = {
