@@ -2,6 +2,7 @@
 #include <gint/drivers/scif.h>
 #include <gint/mpu/power.h>
 #include <gint/hardware.h>
+#include <gint/mpu/pfc.h>
 #include <gint/drivers.h>
 #include <gint/serial.h>
 #include <gint/clock.h>
@@ -12,10 +13,11 @@
 
 #define BUFFER_SIZE             1024
 // Used to enable loopback testing
-//#define SELF_TESTING
+#define SELF_TESTING
 
 #define POWER SH7305_POWER
 #define SCIF0 SH7305_SCIF
+#define PFC SH7305_PFC
 
 static bool opened = false;
 
@@ -205,6 +207,12 @@ static void configure(void)
 	if(isSH3()) return;
 
     /* TODO: configure the PFC's U port */
+    PFC.PUCR.P3MD = 0b01;                       // Tie PU3MD as an output
+                                                // The other pins serve as inputs, 
+                                                // as default.
+    PFC.PUDR.P3DT = 1;
+    PFC.PUDR.P2DT = 1;
+
     SCIF0.SCSCR.TIE = 0;
     SCIF0.SCSCR.RIE = 0;
     SCIF0.SCSCR.REIE = 0;
