@@ -13,7 +13,6 @@
 
 #define BUFFER_SIZE             1024
 // Used to enable loopback testing
-#define SELF_TESTING
 
 #define POWER SH7305_POWER
 #define SCIF0 SH7305_SCIF
@@ -206,7 +205,6 @@ static void configure(void)
 {
 	if(isSH3()) return;
 
-    /* TODO: configure the PFC's U port */
     PFC.PUCR.P3MD = 0b01;                       // Tie PU3MD as an output
                                                 // The other pins serve as inputs, 
                                                 // as default.
@@ -371,11 +369,8 @@ int serial_open(serial_config_t const *config)
     SCIF0.SCFCR.TFRST = 0;
     SCIF0.SCFCR.RFRST = 0;
 
-#ifdef SELF_TESTING
-    SCIF0.SCFCR.LOOP = 1;
-#else
+    // Add-ins which want to "test" the SCIF can simply enable it themselves
     SCIF0.SCFCR.LOOP = 0;
-#endif
 
     // We purposefully disable sending/interrupts. We don't need them right now.
     SCIF0.SCSCR.TE = 0;
