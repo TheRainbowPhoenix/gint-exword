@@ -326,7 +326,7 @@ bool scif_best_scbrr(uint32_t baudrate, uint8_t *n, uint8_t *scbrr)
 int serial_open(serial_config_t const *config)
 {
     uint8_t best_n = 0b00, best_scbrr = 0x00;
-    if (!config || serial_is_open()) return 0;
+    if (!config || serial_is_open()) return SERIAL_ERROR_INVALID_PARAMS;
     if (config->parity > SERIAL_PARITY_ODD)
         return SERIAL_ERROR_INVALID_PARAMS;
     if (config->stop_bits != 1 && config->stop_bits != 2)
