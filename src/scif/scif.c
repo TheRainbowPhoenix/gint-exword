@@ -11,8 +11,13 @@
 
 #include <string.h>
 
+/* Ringbuffer sizes */
 #define BUFFER_SIZE             1024
-// Used to enable loopback testing
+/* Amount of data in the RX ringbuffer to trigger a XON/XOFF softlimit */
+#define RX_SOFTLIMIT            768
+
+#define ASCII_XOFF              '\x13'
+#define ASCII_XON               '\x11'
 
 #define POWER SH7305_POWER
 #define SCIF0 SH7305_SCIF
@@ -24,6 +29,9 @@ typedef struct
 {
     uint8_t buffer[BUFFER_SIZE];
     size_t writehead, readhead;
+
+    /* Whenever the buffer was 'blocked'. Only used for flowcontrol */
+    bool blocked;
 } ringbuffer_t;
 
 // TODO: this should be replaced with a more robust mechanism
@@ -47,12 +55,12 @@ static void ring_reset(ringbuffer_t *ring)
 {
     ring->readhead = 0;
     ring->writehead = 0;
+    ring->blocked = false;
 }
 static bool ring_push(ringbuffer_t *ring, uint8_t recv)
 {
     size_t next = (ring->writehead + 1) % BUFFER_SIZE;
-    if (next == ring->readhead) {
-        // We're about to collide with the read head.
+    if(next == ring->readhead) {
         return false;
     }
 
@@ -86,6 +94,13 @@ static size_t ring_writable(ringbuffer_t *ring)
 //---
 // Transmit handler
 //---
+
+/* scif_forcewrite(): Forces through a byte to the SCIF transmit FIFO */
+static void scif_forcewrite(uint8_t c)
+{
+    while (SCIF0.SCFDR.TFDC == 0x10);
+    SCIF0.SCFTDR = c;
+}
 static void scif_inth_tx(void)
 {
     size_t bytes_max;
@@ -123,6 +138,15 @@ static void scif_inth_rx(void)
 {
     size_t bytes_max = SCIF0.SCFDR.RFDC;
     for(size_t i = 0; i < bytes_max; i++) {
+        if(!rx_ring.blocked && ring_writable(&rx_ring) <= RX_SOFTLIMIT) {
+            /* XOFF the RX ringbuffer. We have to intentionally wait for our FIFO to have data */
+            rx_ring.blocked = true;
+            scif_forcewrite(ASCII_XOFF);
+        } else if(rx_ring.blocked && ring_writable(&rx_ring) > RX_SOFTLIMIT) {
+            /* Clear our way, we can receive data. */
+            rx_ring.blocked = false;
+            scif_forcewrite(ASCII_XON);
+        }
         if(!ring_push(&rx_ring, SCIF0.SCFRDR)) {
             // TODO: we may want to notify the other party, maybe with an 
             // XON/XOFF byte if the user so wishes.
