@@ -23,9 +23,6 @@
 #define SCIF0 SH7305_SCIF
 #define PFC SH7305_PFC
 
-#define ASCII_XON               '\x11'
-#define ASCII_XOFF              '\x13'
-
 static bool opened = false;
 
 typedef struct 
@@ -210,6 +207,10 @@ static void scif_inth_err(void)
             rx_needed = 0;
         }
         rx_parity_errs++;
+    }
+    if(SCIF0.SCLSR.ORER) {
+        /* TODO: Overrun! If flowcontrol is on, it probably wasn't respected.
+         * How should this be managed? */
     }
     SCIF0.SCFSR.DR = 0;
     SCIF0.SCFSR.ER = 0;
