@@ -20,6 +20,17 @@ typedef enum {
 
 } GPACKEDENUM serial_parity_t;
 
+typedef enum {
+    /* No flow control */
+    SERIAL_FLOWCONTROL_NONE     = 0x00,
+
+    /* Hardware flow control */
+    SERIAL_FLOWCONTROL_HARDWARE = 0x01,
+
+    /* XON/XOFF-based flow control. This _will_ rudely insert data into your stream! */
+    SERIAL_FLOWCONTROL_SOFTWARE = 0x02,
+} GPACKEDENUM serial_flow_control_t;
+
 typedef struct {
 	/* Baud rate (valid options are 300, 600, 1200, 2400, 4800, 9600,
 	   19200, 38400, 57600 and 115200) */
@@ -30,7 +41,9 @@ typedef struct {
 	uint8_t data_width;
 	/* Stop bits (valid options are 1 and 2) */
 	uint8_t stop_bits;
-
+    
+    /* Flow-control */ 
+    serial_flow_control_t flow_control;
 } serial_config_t;
 
 // TODO: Error management...

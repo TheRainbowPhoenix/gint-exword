@@ -23,6 +23,9 @@
 #define SCIF0 SH7305_SCIF
 #define PFC SH7305_PFC
 
+#define ASCII_XON               '\x11'
+#define ASCII_XOFF              '\x13'
+
 static bool opened = false;
 
 typedef struct 
@@ -39,6 +42,7 @@ static bool writing = false;
 
 static ringbuffer_t tx_ring = { .readhead = 0, .writehead = 0 };
 static gint_call_t tx_callback = GINT_CALL_NULL;
+static serial_flow_control_t flow_control_flags = SERIAL_FLOWCONTROL_NONE;
 
 static ringbuffer_t rx_ring = { .readhead = 0, .writehead = 0 };
 static gint_call_t rx_callback = GINT_CALL_NULL;
@@ -138,18 +142,22 @@ static void scif_inth_rx(void)
 {
     size_t bytes_max = SCIF0.SCFDR.RFDC;
     for(size_t i = 0; i < bytes_max; i++) {
-        if(!rx_ring.blocked && ring_writable(&rx_ring) <= RX_SOFTLIMIT) {
-            /* XOFF the RX ringbuffer. We have to intentionally wait for our FIFO to have data */
-            rx_ring.blocked = true;
-            scif_forcewrite(ASCII_XOFF);
-        } else if(rx_ring.blocked && ring_writable(&rx_ring) > RX_SOFTLIMIT) {
-            /* Clear our way, we can receive data. */
-            rx_ring.blocked = false;
-            scif_forcewrite(ASCII_XON);
+        if(flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE) {
+            if(!rx_ring.blocked && ring_writable(&rx_ring) <= RX_SOFTLIMIT) {
+                /* XOFF the RX ringbuffer. We have to intentionally wait for our FIFO to have data */
+                rx_ring.blocked = true;
+                scif_forcewrite(ASCII_XOFF);
+            } else if(rx_ring.blocked && ring_writable(&rx_ring) > RX_SOFTLIMIT) {
+                /* Clear our way, we can receive data. */
+                rx_ring.blocked = false;
+                scif_forcewrite(ASCII_XON);
+            }
         }
-        if(!ring_push(&rx_ring, SCIF0.SCFRDR)) {
+        if(!ring_writable(&rx_ring)) {
             // TODO: we may want to notify the other party, maybe with an 
             // XON/XOFF byte if the user so wishes.
+            ring_push(&rx_ring, SCIF0.SCFRDR);
+            continue;
         }
     }
     if(rx_needed != 0 && ring_readable(&rx_ring) >= rx_needed) {
@@ -395,6 +403,18 @@ int serial_open(serial_config_t const *config)
 
     // Add-ins which want to "test" the SCIF can simply enable it themselves
     SCIF0.SCFCR.LOOP = 0;
+
+    SCIF0.SCFCR.MCE = 0;
+    flow_control_flags = config->flow_control;
+    if (config->flow_control & SERIAL_FLOWCONTROL_HARDWARE)
+    {
+        /* Hardware flow control. The SH7305 does seem to respond to flags like 
+         * MCS, but they are completely useless on the mainline calculator line, 
+         * as there's only TX/RX/GND connected.
+         * Maybe some SH4 models have a fancy port and do care... */
+        SCIF0.SCFCR.MCE = 1;                /* Enable flow-control */
+        SCIF0.SCFCR.RSTRG = 0b110;          /* 12 bytes in buffer for ~RTS. */
+    }
 
     // We purposefully disable sending/interrupts. We don't need them right now.
     SCIF0.SCSCR.TE = 0;
