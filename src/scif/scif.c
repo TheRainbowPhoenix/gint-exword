@@ -14,7 +14,7 @@
 /* Ringbuffer sizes */
 #define BUFFER_SIZE             1024
 /* Amount of data in the RX ringbuffer to trigger a XON/XOFF softlimit */
-#define RX_SOFTLIMIT            768
+#define RX_SOFTLIMIT            1020
 
 #define ASCII_XOFF              '\x13'
 #define ASCII_XON               '\x11'
@@ -138,28 +138,39 @@ static void scif_inth_tx(void)
 //---
 // Receive handler
 //---
+static void scif_check_flowcontrol(void)
+{
+    /* TODO: Deadlock! I have no idea why it happens but it does whenever you try to do flow control
+     * (with some pretty weird values TBF but still) */
+    if(!(flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE)) return;
+    bool blocked = rx_ring.blocked;
+    bool threshold = ring_writable(&rx_ring) <= RX_SOFTLIMIT;
+
+    if(!blocked && threshold) {
+        /* XOFF the RX ringbuffer. We have to intentionally wait for our FIFO to have data */
+
+        rx_ring.blocked = true;
+        scif_forcewrite(ASCII_XOFF);
+    } else if(blocked && !threshold) {
+        /* Clear our way, we can receive data. */
+
+        rx_ring.blocked = false;
+        scif_forcewrite(ASCII_XON);
+    }
+}
 static void scif_inth_rx(void)
 {
     size_t bytes_max = SCIF0.SCFDR.RFDC;
     for(size_t i = 0; i < bytes_max; i++) {
-        if(flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE) {
-            if(!rx_ring.blocked && ring_writable(&rx_ring) <= RX_SOFTLIMIT) {
-                /* XOFF the RX ringbuffer. We have to intentionally wait for our FIFO to have data */
-                rx_ring.blocked = true;
-                scif_forcewrite(ASCII_XOFF);
-            } else if(rx_ring.blocked && ring_writable(&rx_ring) > RX_SOFTLIMIT) {
-                /* Clear our way, we can receive data. */
-                rx_ring.blocked = false;
-                scif_forcewrite(ASCII_XON);
-            }
-        }
-        if(!ring_writable(&rx_ring)) {
+        scif_check_flowcontrol();
+        if(ring_writable(&rx_ring)) {
             uint8_t c = SCIF0.SCFRDR;
-            if ((flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE) && c == ASCII_XOFF) {
-                /* Block the TX line, do not add XOFF */
+            if ((flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE) && (c == ASCII_XOFF)) {
+                /* Block the TX line, do not add XOFF 
+                 * TODO: the TX line ends up being blocked for way too long */
                 tx_ring.blocked = true;
                 continue;
-            } else if ((flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE) && c == ASCII_XON) {
+            } else if ((flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE) && (c == ASCII_XON)) {
                 /* Free the TX line, do not add XON */
                 tx_ring.blocked = false;
                 continue;
@@ -242,6 +253,9 @@ static void scif_inth(void)
         scif_inth_tx();
     if (SCIF0.SCFSR.RDF || SCIF0.SCFSR.DR)
         scif_inth_rx();
+
+
+    scif_check_flowcontrol();
 }
 
 static void configure(void)
@@ -521,6 +535,8 @@ int serial_read_sync_timeout(void *data, size_t size, timeout_t const* timeout)
         /* TODO: should there be scenarios where we're allowed _not_ to care? */
         if (rx_parity_errs != parity)   return SERIAL_ERROR_PARITY;
         if (rx_framing_errs != framing) return SERIAL_ERROR_FRAMING;
+
+        scif_check_flowcontrol();
 
         if (ring_pull(&rx_ring, bytes)) {
             bytes++;
