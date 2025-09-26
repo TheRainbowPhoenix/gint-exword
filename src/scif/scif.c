@@ -96,9 +96,11 @@ static size_t ring_writable(ringbuffer_t *ring)
 // Transmit handler
 //---
 
-/* scif_forcewrite(): Forces through a byte to the SCIF transmit FIFO */
+/* scif_forcewrite(): Forces through a byte to the SCIF, ignoring buffers */
 static void scif_forcewrite(uint8_t c)
 {
+    // TODO: we should probably manage things like TE/TIE being off when 
+    // there's no initial transfers
     while (SCIF0.SCFDR.TFDC == 0x10);
     SCIF0.SCFTDR = c;
 }
@@ -113,7 +115,7 @@ static void scif_inth_tx(void)
             gint_call(tx_callback);
         tx_callback = GINT_CALL_NULL;
 
-        /* TODO: This is the part where you're _supposed_ to disable TE, since there is no 
+        /* XXX: This is the part where you're _supposed_ to disable TE, since there is no 
          * data to be read anymore. However, I have found that data still _somehow_ keeps 
          * being transmitted even after TEND and TDFC seem to indicate otherwise. Previously, 
          * a short pause was added at the end, before disabling TE, but as it turns out, this 
@@ -123,6 +125,7 @@ static void scif_inth_tx(void)
         return;
     }
     if (ring_readable(&tx_ring) == 0) return;
+    if (tx_ring.blocked) return;
     if (!writing) return;
 
     bytes_max = 16 - SCIF0.SCFDR.TFDC;
@@ -151,10 +154,17 @@ static void scif_inth_rx(void)
             }
         }
         if(!ring_writable(&rx_ring)) {
-            // TODO: we may want to notify the other party, maybe with an 
-            // XON/XOFF byte if the user so wishes.
-            ring_push(&rx_ring, SCIF0.SCFRDR);
-            continue;
+            uint8_t c = SCIF0.SCFRDR;
+            if ((flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE) && c == ASCII_XOFF) {
+                /* Block the TX line, do not add XOFF */
+                tx_ring.blocked = true;
+                continue;
+            } else if ((flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE) && c == ASCII_XON) {
+                /* Free the TX line, do not add XON */
+                tx_ring.blocked = false;
+                continue;
+            }
+            ring_push(&rx_ring, c);
         }
     }
     if(rx_needed != 0 && ring_readable(&rx_ring) >= rx_needed) {
