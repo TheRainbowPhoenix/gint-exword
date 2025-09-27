@@ -13,8 +13,9 @@
 
 /* Ringbuffer sizes */
 #define BUFFER_SIZE             1024
-/* Amount of data in the RX ringbuffer to trigger a XON/XOFF softlimit */
-#define RX_SOFTLIMIT            1020
+/* Amount of data in the RX ringbuffer to trigger a XON/XOFF softlimit 
+ * TODO: make the limit more generous (we have a rather large buffer!) */
+#define RX_SOFTLIMIT            (BUFFER_SIZE-24)
 
 #define ASCII_XOFF              '\x13'
 #define ASCII_XON               '\x11'
@@ -29,6 +30,8 @@ typedef struct
 {
     uint8_t buffer[BUFFER_SIZE];
     size_t writehead, readhead;
+
+    size_t written, read;
 
     /* Whenever the buffer was 'blocked'. Only used for flowcontrol */
     bool blocked;
@@ -57,6 +60,7 @@ static void ring_reset(ringbuffer_t *ring)
     ring->readhead = 0;
     ring->writehead = 0;
     ring->blocked = false;
+    ring->written = ring->read = 0;
 }
 static bool ring_push(ringbuffer_t *ring, uint8_t recv)
 {
@@ -68,6 +72,7 @@ static bool ring_push(ringbuffer_t *ring, uint8_t recv)
     // Write that byte into our ringbuffer.
     ring->buffer[ring->writehead] = recv;
     ring->writehead = next;
+    ring->written ++;
     return true;
 }
 static bool ring_pull(ringbuffer_t *ring, uint8_t *to)
@@ -78,6 +83,7 @@ static bool ring_pull(ringbuffer_t *ring, uint8_t *to)
     }
 
     if (to) *to = ring->buffer[ring->readhead];
+    ring->read++;
     ring->readhead = (ring->readhead + 1) % BUFFER_SIZE;
     return true;
 }
@@ -107,6 +113,7 @@ static void scif_forcewrite(uint8_t c)
 static void scif_inth_tx(void)
 {
     size_t bytes_max;
+
     if (ring_readable(&tx_ring) == 0 && SCIF0.SCFSR.TEND) {
         if (SCIF0.SCFDR.TFDC != 0)
             return;
@@ -125,7 +132,6 @@ static void scif_inth_tx(void)
         return;
     }
     if (ring_readable(&tx_ring) == 0) return;
-    if (tx_ring.blocked) return;
     if (!writing) return;
 
     bytes_max = 16 - SCIF0.SCFDR.TFDC;
@@ -138,46 +144,47 @@ static void scif_inth_tx(void)
 //---
 // Receive handler
 //---
-static void scif_check_flowcontrol(void)
+static bool scif_check_flowcontrol(void)
 {
     /* TODO: Deadlock! I have no idea why it happens but it does whenever you try to do flow control
      * (with some pretty weird values TBF but still) */
-    if(!(flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE)) return;
+    if(!(flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE)) return false;
     bool blocked = rx_ring.blocked;
     bool threshold = ring_writable(&rx_ring) <= RX_SOFTLIMIT;
 
     if(!blocked && threshold) {
         /* XOFF the RX ringbuffer. We have to intentionally wait for our FIFO to have data */
-
         rx_ring.blocked = true;
-        scif_forcewrite(ASCII_XOFF);
+        scif_forcewrite(ASCII_XOFF);                    // TX gets blocked
+        return true;
     } else if(blocked && !threshold) {
         /* Clear our way, we can receive data. */
-
         rx_ring.blocked = false;
         scif_forcewrite(ASCII_XON);
+        return true;
     }
+    return false;
 }
+
 static void scif_inth_rx(void)
 {
-    size_t bytes_max = SCIF0.SCFDR.RFDC;
+    size_t bytes_max;
+
+    scif_check_flowcontrol();
+
+    bytes_max = SCIF0.SCFDR.RFDC;
     for(size_t i = 0; i < bytes_max; i++) {
-        scif_check_flowcontrol();
-        if(ring_writable(&rx_ring)) {
-            uint8_t c = SCIF0.SCFRDR;
-            if ((flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE) && (c == ASCII_XOFF)) {
-                /* Block the TX line, do not add XOFF 
-                 * TODO: the TX line ends up being blocked for way too long */
-                tx_ring.blocked = true;
-                continue;
-            } else if ((flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE) && (c == ASCII_XON)) {
-                /* Free the TX line, do not add XON */
-                tx_ring.blocked = false;
-                continue;
-            }
-            ring_push(&rx_ring, c);
+        uint8_t c = SCIF0.SCFRDR;
+        if(flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE) {
+            if (c == ASCII_XOFF) { tx_ring.blocked = true; continue; }
+            else if (c == ASCII_XON) { tx_ring.blocked = false; continue; }
         }
+        ring_push(&rx_ring, c);
     }
+
+    /* troll emoji */
+    SCIF0.SCSCR.TIE = !tx_ring.blocked;
+
     if(rx_needed != 0 && ring_readable(&rx_ring) >= rx_needed) {
         uint8_t *rx_bytes = rx_dest;
         for(size_t i = 0; i < rx_needed; i++)
@@ -191,6 +198,8 @@ static void scif_inth_rx(void)
         rx_needed = 0;
         rx_dest = NULL;
     }
+
+    scif_check_flowcontrol();
 
     SCIF0.SCFSR.DR = 0;
     SCIF0.SCFSR.RDF = 0;
@@ -232,6 +241,7 @@ static void scif_inth_err(void)
     if(SCIF0.SCLSR.ORER) {
         /* TODO: Overrun! If flowcontrol is on, it probably wasn't respected.
          * How should this be managed? */
+        gint_panic(1234);
     }
     SCIF0.SCFSR.DR = 0;
     SCIF0.SCFSR.ER = 0;
@@ -246,16 +256,16 @@ static void scif_inth(void)
 {
     /* Manage parity errors here */
     SCIF0.SCFSR.DR = 0;
-    if (SCIF0.SCFSR.ER || SCIF0.SCFSR.BRK)
+
+    if (SCIF0.SCFSR.ER || SCIF0.SCFSR.BRK || SCIF0.SCLSR.ORER)
         scif_inth_err();
-    
-    if (SCIF0.SCFSR.TDFE)
-        scif_inth_tx();
+
     if (SCIF0.SCFSR.RDF || SCIF0.SCFSR.DR)
         scif_inth_rx();
+    if (SCIF0.SCFSR.TDFE && !tx_ring.blocked)
+        scif_inth_tx();
 
 
-    scif_check_flowcontrol();
 }
 
 static void configure(void)
@@ -543,7 +553,7 @@ int serial_read_sync_timeout(void *data, size_t size, timeout_t const* timeout)
             size--;
         }
     }
-    return 0;
+    return (int) (bytes - (uint8_t *) data);
 }
 int serial_read_sync(void *data, size_t size)
 {
