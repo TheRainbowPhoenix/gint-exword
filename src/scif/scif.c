@@ -13,9 +13,8 @@
 
 /* Ringbuffer sizes */
 #define BUFFER_SIZE             1024
-/* Amount of data in the RX ringbuffer to trigger a XON/XOFF softlimit 
- * TODO: make the limit more generous (we have a rather large buffer!) */
-#define RX_SOFTLIMIT            (BUFFER_SIZE-24)
+/* Amount of data in the RX ringbuffer to trigger a XON/XOFF softlimit  */
+#define RX_SOFTLIMIT            128
 
 #define ASCII_XOFF              '\x13'
 #define ASCII_XON               '\x11'
@@ -175,14 +174,18 @@ static void scif_inth_rx(void)
     bytes_max = SCIF0.SCFDR.RFDC;
     for(size_t i = 0; i < bytes_max; i++) {
         uint8_t c = SCIF0.SCFRDR;
-        if(flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE) {
-            if (c == ASCII_XOFF) { tx_ring.blocked = true; continue; }
-            else if (c == ASCII_XON) { tx_ring.blocked = false; continue; }
+        bool software_fc = !!(flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE);
+        if(software_fc) {
+            if(c == ASCII_XOFF)         { tx_ring.blocked = true; continue; }
+            else if(c == ASCII_XON)     { tx_ring.blocked = false; continue; }
         }
-        ring_push(&rx_ring, c);
+        if(!ring_push(&rx_ring, c) && software_fc) {
+            /* TODO: Our XOFF/XON signaling was not respected! What should we do? */
+        }
     }
 
-    /* troll emoji */
+    /* Disabling TIE still keeps some communication going, but doesn't make the SCIF complain 
+     * and crash the entire calculator */
     SCIF0.SCSCR.TIE = !tx_ring.blocked;
 
     if(rx_needed != 0 && ring_readable(&rx_ring) >= rx_needed) {
