@@ -361,35 +361,39 @@ static int32_t scale_by_n(int32_t x, int n)
     if (n > 0) return x << n;
     return x >> (-n); // n < 0
 }
-// scif_best_scbrr: Finds the best value for SCBRR and n
+
+// scif_best_scbrr: Finds the best value for SCBRR and n (that minimize the error rate)
 bool scif_best_scbrr(uint32_t baudrate, uint8_t *n, uint8_t *scbrr)
 {
     const clock_frequency_t *info = clock_freq();
-    // TODO: note that this is async only...
-    // sync uses a different formula
+    // Used for the error range [0;scalefactor[
+    const int scalefactor = 1024;
 
     int32_t best_deviation = INT32_MAX;
     uint8_t best_scbrr = 0xFF;
     uint8_t best_n = 0;
-    for (int potential_n = 0; potential_n < 4; potential_n++) {
+    for(int potential_n = 0; potential_n < 4; potential_n++) {
         // Figure out the value of SCBRR
         // The multiplication by 1M is already implied by the fact that Pphi_f is in Hz, not MHz.
         int32_t potential_scbrr = (info->Pphi_f / scale_by_n(64 * baudrate, potential_n)) - 1;
-        int32_t potential_deviation = (info->Pphi_f % scale_by_n(64 * baudrate, potential_n));
+        int32_t div = scale_by_n((potential_scbrr+1) * 64 * baudrate, potential_n);
+        int32_t potential_deviation = (int32_t) (((scalefactor * (int64_t)info->Pphi_f) / div) - scalefactor);
+        if(potential_deviation < 0) potential_deviation = -potential_deviation;
 
         // This value of SCBRR is completely invalid.
-        if (potential_scbrr < 0 || potential_scbrr >= 255)
+        if(potential_scbrr < 0 || potential_scbrr >= 255)
             continue;
 
+
         // Check the amount of "error" by looking at the remainder.
-        if (potential_deviation < best_deviation) {
+        if(potential_deviation < best_deviation) {
             best_deviation = potential_deviation;
             best_scbrr = potential_scbrr;
             best_n = potential_n;
         }
     }
-    if (best_deviation != INT32_MAX && n) *n = best_n;
-    if (best_deviation != INT32_MAX && scbrr) *scbrr = best_scbrr;
+    if(best_deviation != INT32_MAX && n) *n = best_n;
+    if(best_deviation != INT32_MAX && scbrr) *scbrr = best_scbrr;
     return best_deviation != INT32_MAX; // TODO: change this!
 }
 
@@ -454,8 +458,9 @@ int serial_open(serial_config_t const *config)
         SCIF0.SCFCR.RSTRG = 0b110;          /* 12 bytes in buffer for ~RTS. */
     }
 
-    // We purposefully disable sending/interrupts. We don't need them right now.
-    SCIF0.SCSCR.TE = 0;
+    // We purposefully disable interrupts. We don't need them right now.
+    // Sending on the other hand _is_ useful for forcewrites.
+    SCIF0.SCSCR.TE = 1;
     SCIF0.SCSCR.TIE = 0;
 
     SCIF0.SCSCR.REIE = 1;
