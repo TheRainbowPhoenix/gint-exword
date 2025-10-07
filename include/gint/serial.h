@@ -46,9 +46,8 @@ typedef struct {
     serial_flow_control_t flow_control;
 } serial_config_t;
 
-// TODO: Error management...
-
-/* Error codes for serial functions */
+/* Error codes for serial functions 
+ * TODO: _more_ error management */
 enum {
     /* Inexistant/Impossible parameters (e.g: data_width not being 7 or 8 bits) */
     SERIAL_ERROR_INVALID_PARAMS             = -1,

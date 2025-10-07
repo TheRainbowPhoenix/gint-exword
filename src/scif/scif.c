@@ -104,8 +104,6 @@ static size_t ring_writable(ringbuffer_t *ring)
 /* scif_forcewrite(): Forces through a byte to the SCIF, ignoring buffers */
 static void scif_forcewrite(uint8_t c)
 {
-    // TODO: we should probably manage things like TE/TIE being off when 
-    // there's no initial transfers
     while (SCIF0.SCFDR.TFDC == 0x10);
     SCIF0.SCFTDR = c;
 }
@@ -145,8 +143,6 @@ static void scif_inth_tx(void)
 //---
 static bool scif_check_flowcontrol(void)
 {
-    /* TODO: Deadlock! I have no idea why it happens but it does whenever you try to do flow control
-     * (with some pretty weird values TBF but still) */
     if(!(flow_control_flags & SERIAL_FLOWCONTROL_SOFTWARE)) return false;
     bool blocked = rx_ring.blocked;
     bool threshold = ring_writable(&rx_ring) <= RX_SOFTLIMIT;
@@ -213,12 +209,7 @@ static void scif_inth_rx(void)
 //---
 static void scif_inth_err(void)
 {
-    /* TODO: actually manage the error instead of sweeping it under the rug...
-     * but we really need to reform the API for this. I should definitely contact 
-     * Lephé' about actually designing this well but my access to the actual Internet 
-     * is pretty intermittent at the moment :3 */
     if(SCIF0.SCFSR.FER) {
-        /* TODO: A framing error occured */
         if(rx_needed != 0) {
             if(rx_rc) *rx_rc = SERIAL_ERROR_FRAMING;
             if(rx_callback.function != NULL) gint_call(rx_callback);
@@ -230,7 +221,6 @@ static void scif_inth_err(void)
         rx_framing_errs++;
     }
     if(SCIF0.SCFSR.PER) {
-        /* TODO: A parity error occured */
         if(rx_needed != 0) {
             if(rx_rc) *rx_rc = SERIAL_ERROR_FRAMING;
             if(rx_callback.function != NULL) gint_call(rx_callback);
@@ -242,9 +232,7 @@ static void scif_inth_err(void)
         rx_parity_errs++;
     }
     if(SCIF0.SCLSR.ORER) {
-        /* TODO: Overrun! If flowcontrol is on, it probably wasn't respected.
-         * How should this be managed? */
-        gint_panic(1234);
+        gint_panic(0xFFFF);
     }
     SCIF0.SCFSR.DR = 0;
     SCIF0.SCFSR.ER = 0;
@@ -485,8 +473,10 @@ int serial_open(serial_config_t const *config)
 void serial_wait(void)
 {
     // Right now, I'm only going to busy-loop until TDFC is empty...
-    while (writing) sleep();
-    while (SCIF0.SCFDR.TFDC != 0);  // TODO: we should probably sleep
+    
+    // TODO: use ICS instead of busywaiting?
+    while (writing) sleep();        
+    while (SCIF0.SCFDR.TFDC != 0);
 }
 bool serial_is_open(void)
 {
