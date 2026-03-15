@@ -58,6 +58,13 @@ GINLINE uint16_t r61524_get(int ID)
 	return *DISPLAY;
 }
 
+uint16_t r61524_get_version(void)
+{
+	select(0x00da);
+	*DISPLAY;
+	return *DISPLAY;
+}
+
 GINLINE void r61524_set(int ID, uint16_t value)
 {
 	select(ID);
@@ -128,13 +135,44 @@ void r61525_brightness_set(int level)
 
 void r61524_start_frame(int xmin, int xmax, int ymin, int ymax)
 {
-	/* Move the window to the desired region, then select address 0 */
-	r61524_win_set(395-xmax, 395-xmin, ymin, ymax);
-	r61524_set(REG_HADDR, 0);
-	r61524_set(REG_VADDR, 0);
+	uint16_t version = r61524_get_version();
 
-	/* Bind address 0xb4000000 to the data write command */
-	select(REG_DATA);
+	/* New 2025-2026 displays */
+	if(version == 50 || version == 82) {
+		/* Move the window to the desired region */
+		select(0x002a);
+		*DISPLAY = (xmin >> 8) & 3;
+		synco();
+		*DISPLAY = (xmin & 0xff);
+		synco();
+		*DISPLAY = (xmax >> 8) & 3;
+		synco();
+		*DISPLAY = (xmax & 0xff);
+		synco();
+
+		select(0x002b);
+		*DISPLAY = (ymin >> 8) & 3;
+		synco();
+		*DISPLAY = (ymin & 0xff);
+		synco();
+		*DISPLAY = (ymax >> 8) & 3;
+		synco();
+		*DISPLAY = (ymax & 0xff);
+		synco();
+
+		/* Bind address 0xb4000000 to the data write command */
+		select(0x002c);
+	}
+	/* Traditional R61524 */
+	else {
+		/* Move the window to the desired region, then select address 0 */
+		r61524_win_set(395-xmax, 395-xmin, ymin, ymax);
+		r61524_set(REG_HADDR, 0);
+		r61524_set(REG_VADDR, 0);
+
+		/* Bind address 0xb4000000 to the data write command */
+		select(REG_DATA);
+	}
 }
 
 void r61524_display(uint16_t *vram, int start, int height, int method)

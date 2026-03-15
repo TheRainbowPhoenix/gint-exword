@@ -125,6 +125,17 @@ GNORETURN static void gint_default_panic(GUNUSED uint32_t code)
 	if(code == 0x10c0) name = "Missing syscall for this OS version";
 	if(code == 0x10e0) name = "I2C (touch-screen) error";
 
+	#if GINT_OS_CP
+	/* Custom HH3 startup errors */
+	if(code == 0x2020) name = "HHK_SYMBOL_TABLE not found";
+	if(code == 0x2040) name = "HHK_SYMBOL_TABLE_LEN not found";
+	if(code == 0x2060) name = "HHK_SYMBOL_TABLE conversion failure";
+	if(code == 0x2080) name = "HHK_SYMBOL_TABLE_LEN conversion failure";
+	if(code == 0x20a0) name = "mappings safe-guard too long";
+	if(code == 0x20c0) name = "safe-guards not matching";
+	if(code == 0x20e0) name = "not enought data in mapping";
+	#endif
+
 	dprint(6, 25, "%03x %s", code, name);
 
 	dtext(6, 45, "PC");

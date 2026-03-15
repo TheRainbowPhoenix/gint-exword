@@ -4,25 +4,22 @@
 
 OUTPUT_ARCH(sh4)
 OUTPUT_FORMAT(elf32-sh)
-ENTRY(_start_header)
+ENTRY(_hhk3_entry)
 
 MEMORY
 {
 	/* VRAM backup - our main fixed area to load code, size 320x528x2 */
 	ram (rwx): o = 0x8c052800, l = 337920
-	/* End-of-RAM area, 104 kB are safe to use according to experience. What
-	   happens is HollyHock itself is loaded at 0x8cfe0000 (128 kB before the
-	   end) so we have to fit after it. CPBoy uses 0x8cfe6000, follow that. */
-	eram (rwx): o = 0x8cfe6000, l = 102144 /* 104k - 0x1100 */
+	/* End-of-RAM area, 64 kB are safe to use according to experience. What
+	   happens is HollyHock itself is loaded at 0x8cfd0000 (128 kB before the
+	   application) so we have to fit after it. Might be possible to cut into the loader. */
+	eram (rwx): o = 0x8cff0000, l = 0xef00 /* 64k - 0x1100 */
 	/* Space for the vbr */
 	vbr (rwx): o = 0x8cffef00, l = 0x1100
 	/* On-chip IL memory */
 	ilram (rwx):  o = 0xe5200000, l = 4k
 	/* On-chip X and Y memory */
 	xyram (rwx):  o = 0xe500e000, l = 16k
-	/* Flat binary space, used to have everything in the correct order in the
-	   binary. This is just for the bin file layout. */
-	bin (rwx): o = 0x00000000, l = 1M
 }
 
 SECTIONS
@@ -41,18 +38,15 @@ SECTIONS
 	   - Entry function (.text.entry)
 	   - Compiler-provided constructors (.ctors) and destructors (.dtors)
 	   - All text from .text and .text.* (including user code) */
-	.hh2 : {
-		KEEP(*(.hh2.header))
-		KEEP(*(.hh2.info.name))
-		KEEP(*(.hh2.info.description))
-		KEEP(*(.hh2.info.author))
-		KEEP(*(.hh2.info.version))
-		KEEP(*(.hh2.stage2))
-		. = ALIGN(16);
-	} > eram AT> bin
+	.hh3 : {
+		*(.hh3*)
+		*(.eram*)
+	} > eram
 
-	_gint_hh2_stage2_offset = SIZEOF(.hh2);
-	_gint_hh2_stage2_load = ORIGIN(ram);
+	.note.hollyhock : {
+	    *(.note.hollyhock)
+	} > ram
+
 
 	.text : {
 		*(.text.entry)
@@ -76,14 +70,14 @@ SECTIONS
 		_gint_tlbh_end = . ;
 
 		*(.text .text.*)
-	} > ram AT> bin
+	} > ram
 
 	/* gint's interrupt handler blocks (.gint.blocks)
 	   Although gint's blocks end up in VBR space, they are relocated at
 	   startup by the library/drivers, so we store them here for now */
 	.gint.blocks ALIGN(4) : ALIGN(4) {
 		KEEP(*(.gint.blocks));
-	} > ram AT> bin
+	} > ram
 
 	/* Exposed driver interfaces (.gint.drivers)
 	   The driver information is required to start and configure the
@@ -92,7 +86,7 @@ SECTIONS
 		_gint_drivers = . ;
 		KEEP(*(SORT_BY_NAME(.gint.drivers.*)));
 		_gint_drivers_end = . ;
-	} > ram AT> bin
+	} > ram
 
 	/* Read-only data going to ROM:
 	   - Resources or assets from fxconv or similar converters
@@ -102,7 +96,7 @@ SECTIONS
 		*(.rodata.4)
 
 		*(.rodata .rodata.*)
-	} > ram AT> bin
+	} > ram
 
 
 
@@ -116,19 +110,19 @@ SECTIONS
 		_rdata = . ;
 
 		*(.data .data.*)
-		/* Code that must remain mapped; no MMU on HH2, so fine */
+		/* Code that must remain mapped; no MMU on HIOS/CP, so fine */
 		*(.gint.mapped)
 		/* References to mapped code - no relocation needed */
 		*(.gint.mappedrel)
 
 		. = ALIGN(16);
-	} > ram AT> bin
+	} > ram
 
 	/* Read-write data sub-aligned to 4 bytes (mainly from fxconv) */
 	.data.4 ALIGN(4) : ALIGN(4) SUBALIGN(4) {
 		*(.data.4)
 		. = ALIGN(16);
-	} > ram AT> bin
+	} > ram
 
 	_sdata = SIZEOF(.data) + SIZEOF(.data.4);
 
@@ -142,7 +136,7 @@ SECTIONS
 		*(.ilram)
 
 		. = ALIGN(16);
-	} > ilram AT> bin
+	} > ilram
 
 	. = ORIGIN(xyram);
 	.xyram ALIGN(4) : ALIGN(4) {
@@ -153,10 +147,7 @@ SECTIONS
 
 		. = ALIGN(16);
 
-	} > xyram AT> bin
-
-	/* .text and .xyram are the first and last section in the stage-2 load. */
-	_gint_hh2_stage2_size = LOADADDR(.xyram) + SIZEOF(.xyram) - LOADADDR(.text);
+	} > xyram
 
 	_silram = SIZEOF(.ilram);
 	_sxyram = SIZEOF(.xyram);
@@ -168,26 +159,26 @@ SECTIONS
 	_gint_region_vbr = ORIGIN(vbr);
 
 	/* BSS data going to RAM. The BSS section is to be stripped from the
-	   ELF file later, and wiped at startup */
-	.bss (NOLOAD) : {
+	   ELF file later, and wiped by the loader */
+	.bss : {
 		_rbss = . ;
 
 		*(.bss .bss.* COMMON)
 
 		. = ALIGN(16);
-	} > ram :NONE
+	} > ram
 
 	_sbss = SIZEOF(.bss);
 
 	/* gint's uninitialized BSS section, going to static RAM. All the large
 	   data arrays will be located here */
-	.gint.bss (NOLOAD) : {
+	.gint.bss : {
 		*(.gint.bss)
 		. = ALIGN(16);
 
 		/* End of user RAM */
 		_euram = . ;
-	} > ram :NONE
+	} > ram
 
 	_sgbss = SIZEOF(.gint.bss);
 

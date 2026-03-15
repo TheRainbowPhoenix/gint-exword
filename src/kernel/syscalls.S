@@ -12,11 +12,11 @@
 #include <gint/config.h>
 
 .text
+.balign 2
 
 /* Dynamic allocation */
 .global ___malloc
 .global ___free
-.global ___calloc
 .global ___realloc
 
 /* Bfile driver */
@@ -33,8 +33,11 @@
 .global	_BFile_FindFirst
 .global	_BFile_FindNext
 .global	_BFile_FindClose
-.global	_BFile_FStat // fx-CP
-.global	_BFile_Mkdir // fx-CP
+/* fx-CP400 */
+.global	_BFile_FStat
+.global	_BFile_Mkdir
+.global _BFile_Stat
+.global _BFile_Flush
 
 /* Return to menu */
 .global ___Timer_Install
@@ -47,9 +50,6 @@
 .global ___GetVRAMAddress
 .global ___ConfigureStatusArea
 .global ___SetQuitHandler
-/* VRAM backup on fx-CP */
-.global ___VRAMBackup
-.global ___VRAMRestore
 
 /* Reset */
 .global ___PowerOff
@@ -65,12 +65,14 @@
 
 #define syscall(id) syscall_(id, syscall_table)
 
-#define fixed(address)			\
-	mov.l	1f, r0			;\
+// crashing but distinguisable default
+#define from_env(mapping)			\
+	mov.l	___hhk_address_##mapping, r0	;\
 	jmp	@r0			;\
 	nop				;\
 .balign 4				;\
-1:	.long	address
+.global ___hhk_address_##mapping	;\
+___hhk_address_##mapping:	.long	0xC0FFE001 + __LINE__ * 2
 
 #if GINT_OS_FX
 
@@ -273,59 +275,59 @@ ___Reset:                casiowin_call(#26)
 #if GINT_OS_CP
 
 ___malloc:
-	fixed(0x800cfb00)
+	from_env(Mem_Malloc)
 ___realloc:
-	// TODO: realloc for fx-CP?
-	rts
-	mov	#0, r0
+	// use C mock
+	mov.l	1f, r0
+	jmp	@r0
+	nop
+	.balign 4
+	1:	.long	___realloc_c
 ___free:
-	fixed(0x800a76fc)
-
-___GetVRAMAddress:
-	fixed(0x8002e154)
-___VRAMBackup:
-	fixed(0x8002d3fa)
-___VRAMRestore:
-	fixed(0x8002d41a)
+	from_env(Mem_Free)
 
 ___Reset:
-	fixed(0xa0000000)
+    mov.l	1f, r0
+    jmp	@r0
+    nop
+    .balign 4
+    1:	.long	0xa0000000
 
 _BFile_FindFirst:
-	fixed(0x8005a2ac)
+	from_env(File_FindFirst)
 _BFile_FindNext:
-	fixed(0x8005a5f0)
+	from_env(File_FindNext)
 _BFile_FindClose:
-	fixed(0x8005a8ba)
+	from_env(File_FindClose)
 _BFile_Remove:
-	fixed(0x80057fc8)
+	from_env(File_Remove)
 _BFile_Open:
-	fixed(0x80057f1c)
+	from_env(File_Open)
 _BFile_Write:
-	fixed(0x80057f74)
+	from_env(File_Write)
 _BFile_Close:
-	fixed(0x80057fa2)
+	from_env(File_Close)
 _BFile_Read:
-	fixed(0x80057f46)
-// _BFile_Flush:
-// 	fixed(0x8005809a)
+	from_env(File_Read)
+_BFile_Flush:
+	from_env(File_Flush)
 _BFile_Mkdir:
-	fixed(0x80057ef6)
+	from_env(File_Mkdir)
 // _BFile_Mount:
-// 	fixed(0x80057e7c)
+// 	from_env(0x80057e7c)
 _BFile_Stat:
-	fixed(0x80057fee)
+	from_env(File_Stat)
 // _BFile_Reclaim:
-// 	fixed(0x80058114)
+// 	from_env(0x80058114)
 // _BFile_FsInfo:
-// 	fixed(0x800580ea)
+// 	from_env(0x800580ea)
 // _BFile_Salvage:
-// 	fixed(0x8005813e)
+// 	from_env(0x8005813e)
 _BFile_Rename:
-	fixed(0x80058042)
+	from_env(File_Rename)
 _BFile_FStat:
-	fixed(0x80057fee)
+	from_env(File_Fstat)
 _BFile_Seek:
-	fixed(0x8005806c)
+	from_env(File_Lseek)
 
 #endif /* GINT_OS_CP */
