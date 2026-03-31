@@ -98,7 +98,8 @@ void gint_load_onchip_sections(void)
 {
 	/* Do not load data to ILRAM, XRAM or YRAM on SH3 - the areas don't
 	   exist. If you use them, you're responsible! */
-	if(!isSH3())
+	/* Do not load data on HH3 either. The loader did so already. */
+	if(!isSH3() && !GINT_OS_CP)
 	{
 		/* Clear the areas so that we have less to save in case of a
 		   return to menu leading to a poweroff. */
@@ -155,8 +156,8 @@ static int start2(int load_type, u32 *load_info)
 	   first for static and global variables to be initialized */
 	#if !GINT_OS_CP
 	regcpy(&ldata, &sdata, &rdata);
-	#endif
 	regclr(&rbss, &sbss);
+	#endif
 
 	gint_load_onchip_sections();
 

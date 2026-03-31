@@ -218,7 +218,9 @@ int gint_get_onchip_save_mode(void **ptr)
 
 void gint_copy_vram(void)
 {
+	#if !GINT_OS_CP
 	void *__GetVRAMAddress(void);
+	#endif
 
 	#if GINT_OS_FX
 	memcpy(__GetVRAMAddress(), gint_vram, 1024);

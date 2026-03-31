@@ -80,26 +80,42 @@
 #define GINT_RENDER_MONO (GINT_HW_FX || GINT_FX9860G_G3A)
 #define GINT_RENDER_RGB ((GINT_HW_CG || GINT_HW_CP) && !GINT_FX9860G_G3A)
 
-/* Macros for specifying HH2 binary metadata fields. Here because this header
+/* Macros for specifying HHK binary metadata fields. Here because this header
    is guaranteed to be included with every gint header. */
 #if GINT_HW_CP
-#define HH2_NAME(STR) \
-	GSECTION(".hh2.info.name") GVISIBLE \
-	char _hh2info_name[] = (STR);
-#define HH2_DESCRIPTION(STR) \
-	GSECTION(".hh2.info.description") GVISIBLE \
-	char _hh2info_description[] = (STR);
-#define HH2_AUTHOR(STR) \
-	GSECTION(".hh2.info.author") GVISIBLE \
-	char _hh2info_author[] = (STR);
-#define HH2_VERSION(STR) \
-	GSECTION(".hh2.info.version") GVISIBLE \
-	char _hh2info_version[] = (STR);
+#define HOLLYHOCK_ELF_NOTE(type, str) \
+    GSECTION(".note.hollyhock") GUSED GALIGNED(4) GVISIBLE \
+        static const struct { \
+            unsigned int namesz; \
+            unsigned int descsz; \
+            unsigned int _type; \
+            char name[sizeof(#type) + (4 - sizeof(#type) % 4) % 4]; \
+            char desc[sizeof(str) + (4 - sizeof(str) % 4) % 4]; \
+        } hollyhock_elf_note##type = { \
+            sizeof(#type), \
+            sizeof(str), \
+            1, \
+            #type, \
+            str, \
+        };
+#define HHK_NAME(STR) \
+	HOLLYHOCK_ELF_NOTE(NAME, STR)
+#define HHK_DESCRIPTION(STR) \
+	HOLLYHOCK_ELF_NOTE(DESCRIPTION, STR)
+#define HHK_AUTHOR(STR) \
+	HOLLYHOCK_ELF_NOTE(AUTHOR, STR)
+#define HHK_VERSION(STR) \
+	HOLLYHOCK_ELF_NOTE(VERSION, STR)
 #else
-#define HH2_NAME(STR)
-#define HH2_DESCRIPTION(STR)
-#define HH2_AUTHOR(STR)
-#define HH2_VERSION(STR)
+#define HHK_NAME(STR)
+#define HHK_DESCRIPTION(STR)
+#define HHK_AUTHOR(STR)
+#define HHK_VERSION(STR)
 #endif
+
+#define HH2_NAME _Pragma("GCC warning \"HH2_NAME is deprecated; use HHK_NAME instead\"") HHK_NAME
+#define HH2_DESCRIPTION _Pragma("GCC warning \"HH2_DESCRIPTION is deprecated; use HHK_DESCRIPTION instead\"") HHK_DESCRIPTION
+#define HH2_AUTHOR _Pragma("GCC warning \"HH2_AUTHOR is deprecated; use HHK_AUTHOR instead\"") HHK_AUTHOR
+#define HH2_VERSION _Pragma("GCC warning \"HH2_VERSION is deprecated; use HHK_Version instead\"") HHK_VERSION
 
 #endif /* GINT_CONFIG */

@@ -55,6 +55,8 @@ int BFile_Seek(int fd, int offset, int whence);
 
 int BFile_Close(int fd);
 
+int BFile_Flush(int fd);
+
 int BFile_Remove(char const *path);
 int BFile_Rename(char const *oldpath, char const *newpath);
 int BFile_Mkdir(char const *path);
