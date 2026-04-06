@@ -43,7 +43,7 @@ static int _fygue_dirent_find(
 	{
 		if (fygue_fat_dir_read(fat, dir, dirent) != 0)
 			return -1;
-		if (strncmp(dirent->name, start, len) != 0)
+		if (strncmp(dirent->name, start, len) != 0 || dirent->name[len] != '\0')
 			continue;
 		return 0;
 	}
