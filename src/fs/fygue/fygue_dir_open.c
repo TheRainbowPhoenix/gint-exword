@@ -50,7 +50,7 @@ static int _fygue_dir_open_convert(
 	if (*dirent == NULL)
 		FYGUE_RET_ERRNO(ENOMEM);
 	(*dirent)->d_ino  = fat_dirent->cluster_id;
-	(*dirent)->d_type = DT_REG;
+	(*dirent)->d_type = (fat_dirent->attribute & FYGUE_FAT_ATTR_DIRECTORY) ? DT_DIR : DT_REG;
 	memcpy((*dirent)->d_name, fat_dirent->name, len + 1);
 	return 0;
 }
