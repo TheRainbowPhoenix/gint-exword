@@ -109,6 +109,7 @@ static int _fygue_fat_readdir_cursor_update(struct _fat_info *finfo)
 		}
 		dir->dirent_cursor = 0;
 		dir->sector_count += 1;
+		dir->sector_id += 1;
 		if (dir->sector_count >= 8)
 		{
 			rc = fygue_fat_cluster_get_next(
