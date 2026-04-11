@@ -31,11 +31,11 @@ int fygue_fat_file_read(
 		if (read + chunk_data_available > size)
 		{
 			chunk_data_offset += size - read;
-			memcpy(buffer, (void*)chunk_data_addr, size - read);
+			memcpy((uint8_t*)buffer + read, (void*)chunk_data_addr, size - read);
 			read += size - read;
 			break;
 		}
-		memcpy(buffer, (void*)chunk_data_addr, chunk_data_available);
+		memcpy((uint8_t*)buffer + read, (void*)chunk_data_addr, chunk_data_available);
 		read += chunk_data_available;
 		file->chunk_rd_index += 1;
 		chunk_data_offset = 0;
