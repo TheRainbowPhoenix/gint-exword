@@ -60,8 +60,8 @@ typedef struct {
 	usb_interface_t const *intf;
 	/* Associated endpoint descriptor. This contains the local address. */
 	usb_dc_endpoint_t const *dc;
-   /* Global address (endpoint number + direction) */
-   uint8_t global_address;
+	/* Global address (endpoint number + direction) */
+	uint8_t global_address;
 	/* Associated pipe, must be a number from 1..9 */
 	uint8_t pipe;
 	/* Allocated pipe buffer area; this is valid for pipes 1..5. The
@@ -74,6 +74,9 @@ typedef struct {
 
 /* usb_configure_interfaces(): List configured interfaces */
 usb_interface_t const * const *usb_configure_interfaces(void);
+
+/* Return a specific configured interface */
+usb_interface_t const *usb_configure_get_interface(int idx);
 
 /* Returns the endpoint information structure for the endpoint identified by a
    global address. Returns NULL if the address is unused. */
@@ -235,15 +238,15 @@ void usb_req_setup(void);
 //---
 
 enum {
-   PID_NAK = 0,
-   PID_BUF = 1,
-   PID_STALL2 = 2,
-   PID_STALL3 = 3,
+	PID_NAK = 0,
+	PID_BUF = 1,
+	PID_STALL2 = 2,
+	PID_STALL3 = 3,
 };
 enum {
-   TYPE_BULK = 1,
-   TYPE_INTERRUPT = 2,
-   TYPE_ISOCHRONOUS = 3,
+	TYPE_BULK = 1,
+	TYPE_INTERRUPT = 2,
+	TYPE_ISOCHRONOUS = 3,
 };
 
 #endif /* GINT_USB_USB_PRIVATE */

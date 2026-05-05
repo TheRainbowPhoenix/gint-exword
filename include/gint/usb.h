@@ -19,6 +19,7 @@ extern "C" {
 /* See "Interfaces to communicate with USB transfers" below for details */
 typedef struct usb_interface usb_interface_t;
 typedef struct usb_interface_endpoint usb_interface_endpoint_t;
+typedef struct usb_setup_request usb_setup_request_t;
 
 //---
 // General functions
@@ -140,8 +141,14 @@ struct usb_interface {
 	/* Array of endpoint parameters, see below */
 	struct usb_interface_endpoint *params;
 
-	/* Answer class-specific SETUP requests */
-	/* TODO */
+	/* A SETUP request has been received. This function (if specified) is
+	   automatically called when a request cannot be resolved by default
+	   (e.g. not a standard request). If not specified, any unsupported SETUP
+	   requests will be ignored.
+
+ 	   Note that you should handle the request immediately, since this
+ 	   function is invoked during a USB interruption */
+ 	int (*handle_setup_request)(usb_setup_request_t *req);
 
 	/* Notification that an endpoint has data to be read. This function is
 	   called frequently when data is being transmitted; the particular
@@ -519,6 +526,34 @@ uint16_t usb_dc_string(uint16_t const *literal, size_t len);
 /* usb_dc_string_get(): Get the descriptor for a STRING id
    This is mostly used by the driver to answer GET_DESCRIPTOR requests. */
 usb_dc_string_t *usb_dc_string_get(uint16_t id);
+
+//---
+// USB setup
+//---
+
+/* SETUP request */
+struct usb_setup_request {
+	int bRequest;
+	int bmRequestType;
+	int wValue;
+	int wIndex;
+	int wLength;
+};
+
+/* usb_setup_dcp_status() : manually set the response status
+
+   This function is useful when you implement a custom
+   `handle_setup_request` callback since you will certainly need to specify
+   the response status.
+
+   As for the argument:
+    -1  NAK     Not-acknowledge
+     0  ACK     Acknowledge
+     1  STALL   Halted or not supported status */
+void usb_setup_dcp_status(int ack);
+
+/* usb_setup_dcp_write(): manually write data to the control pipe */
+int usb_setup_dcp_write(void const *data, size_t size);
 
 //---
 // USB interrupts

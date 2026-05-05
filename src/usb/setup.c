@@ -9,7 +9,6 @@
 
 #define USB SH7305_USB
 
-#define dcp_write(data, size) usb_write_sync(0, data, size, false)
 
 //---
 // SETUP requests
@@ -116,6 +115,7 @@ static struct MOS1_Extended_Properties_Descriptor dc_extprops = {
 	.wCount = htole16(0),
 };
 
+
 GCONSTRUCTOR static void set_strings(void)
 {
 	char const *serial_base =
@@ -151,7 +151,7 @@ static void write_configuration_descriptor(int wLength)
 	/* Write the configuration descriptor */
 	dc_configuration.wTotalLength = htole16(total_length);
     dc_configuration.bNumInterfaces = interface_count;
-	dcp_write(&dc_configuration, dc_configuration.bLength);
+	usb_setup_dcp_write(&dc_configuration, dc_configuration.bLength);
 	/* For the first call, the host usually wants only this */
 	if(wLength <= dc_configuration.bLength) return;
 
@@ -166,7 +166,7 @@ static void write_configuration_descriptor(int wLength)
 		{
 			usb_dc_interface_t idc = *(usb_dc_interface_t *)dc;
 			idc.bInterfaceNumber = i;
-			dcp_write(&idc, idc.bLength);
+			usb_setup_dcp_write(&idc, idc.bLength);
 		}
 		/* Edit endpoint numbers on-the-fly */
 		else if(dc[1] == USB_DC_ENDPOINT)
@@ -175,10 +175,10 @@ static void write_configuration_descriptor(int wLength)
 			endpoint_t *e = usb_get_endpoint_by_local_address(interfaces[i],
 				edc.bEndpointAddress);
 			edc.bEndpointAddress = e->global_address;
-			dcp_write(&edc, edc.bLength);
+			usb_setup_dcp_write(&edc, edc.bLength);
 		}
 		/* Forward other descriptors */
-		else dcp_write(dc, dc[0]);
+		else usb_setup_dcp_write(dc, dc[0]);
 	}
 }
 
@@ -192,13 +192,13 @@ static void req_get_descriptor(int wValue, int wLength)
 	USB_LOG("GET_DESCRIPTOR: %s #%d len:%d\n", strs[type-1], num, wLength);
 
 	if(type == USB_DC_DEVICE && num == 0)
-		dcp_write(&dc_device, dc_device.bLength);
+		usb_setup_dcp_write(&dc_device, dc_device.bLength);
 
 	else if(type == USB_DC_CONFIGURATION && num == 0)
 		write_configuration_descriptor(wLength);
 
 	else if(type == USB_DC_STRING && num == 0)
-		dcp_write(&dc_string0, dc_string0.bLength);
+		usb_setup_dcp_write(&dc_string0, dc_string0.bLength);
 
 	else if(type == USB_DC_STRING)
 	{
@@ -209,26 +209,26 @@ static void req_get_descriptor(int wValue, int wLength)
 		}
 		else
 			dc = usb_dc_string_get(num);
-		if(dc) dcp_write(dc, dc->bLength);
+		if(dc) usb_setup_dcp_write(dc, dc->bLength);
 		else USB.DCPCTR.PID = 2;
 	}
 }
 
 static void req_get_MOS_feature_descriptor(int wValue, int wIndex, int wLength)
 {
-	int intf = (wValue >> 8) & 0xff;
-	int page = (wValue & 0xff);
+	// int intf = (wValue >> 8) & 0xff;
+	// int page = (wValue & 0xff);
 
 	USB_LOG("GET_MS_DESCRIPTOR: i%d p%d #%d len:%d\n", intf, page, wIndex, wLength);
 
 	if(wIndex == 0x0004) {
 		/* Extended Compat ID descriptor */
-		dcp_write(&dc_compatid, wLength);
+		usb_setup_dcp_write(&dc_compatid, wLength);
 		USB_LOG("Compat ID descriptor given\n");
 	}
 	else if(wIndex == 0x0005) {
 		/* Extended Properties descriptor */
-		dcp_write(&dc_extprops, wLength);
+		usb_setup_dcp_write(&dc_extprops, wLength);
 		USB_LOG("Extended properties descriptor given\n");
 	}
 	else {
@@ -239,7 +239,7 @@ static void req_get_MOS_feature_descriptor(int wValue, int wIndex, int wLength)
 static void req_get_configuration(void)
 {
 	USB_LOG("GET_CONFIGURATION -> %d\n", 1);
-	dcp_write("\x01", 1);
+	usb_setup_dcp_write("\x01", 1);
 }
 
 static void req_set_configuration(int wValue)
@@ -252,54 +252,105 @@ static void req_set_configuration(int wValue)
 static void req_get_device_status(void)
 {
 	USB_LOG("GET_STATUS device -> 0x0001\n");
-	dcp_write("\x01\x00", 2);
+	usb_setup_dcp_write("\x01\x00", 2);
 }
 
 void usb_req_setup(void)
 {
 	/* Respond to setup requests */
-	int bRequest = USB.USBREQ.BREQUEST;
-	int bmRequestType = USB.USBREQ.BMREQUEST;
-	int wValue = USB.USBVAL.word;
-	GUNUSED int wIndex = USB.USBINDX.word;
-	int wLength = USB.USBLENG.word;
+	usb_setup_request_t req = {
+	 	.bRequest = USB.USBREQ.BREQUEST,
+		.bmRequestType = USB.USBREQ.BMREQUEST,
+		.wValue = USB.USBVAL.word,
+		.wIndex = USB.USBINDX.word,
+		.wLength = USB.USBLENG.word,
+	};
 
 	USB.INTSTS0.VALID = 0;
 	usb_while(USB.INTSTS0.VALID);
 
-	/* Standard requests */
+	/* Standard requests
+	   @note
+	   - bmRequestType.RECIPIENT == Device
+	   - bmRequestType.TYPE      == Standard */
+    if(
+        ((req.bmRequestType >> 0) & 0x0f) == 0 &&    // recipient
+    	((req.bmRequestType >> 4) & 0x03) == 0       // direction
+	) {
+		switch(req.bRequest) {
+		case GET_STATUS:
+			req_get_device_status();
+			break;
+		case GET_DESCRIPTOR:
+			req_get_descriptor(req.wValue, req.wLength);
+			break;
+		case GET_CONFIGURATION:
+			req_get_configuration();
+			break;
+		case SET_CONFIGURATION:
+			req_set_configuration(req.wValue);
+			break;
+		default:
+			USB_LOG(
+				"SETUP<Device>: bRequest=%02x bmRequestType=%02x "
+				"wValue=%04x\n  wIndex=%04x wLength=%d -> ???\n",
+				bRequest, bmRequestType, wValue, wIndex, wLength
+			);
+		}
+	}
 
-	if(bmRequestType == 0x80 && bRequest == GET_DESCRIPTOR)
-		req_get_descriptor(wValue, wLength);
+	/* Interface-specific requests
+	   @note
+	   - bmRequestType.RECIPIENT == Interface
+	   - the target interface is specified by wIndex */
+	else if(((req.bmRequestType >> 0) & 0x0f) == 1) {
+		usb_interface_t const *interface =
+			usb_configure_get_interface(req.wIndex);
+		if(!interface) {
+			USB_LOG("SETUP<Interface(%d)>: not found\n", req.wIndex);
+		} else if(!interface->handle_setup_request) {
+			USB_LOG("SETUP<Interface(%d)>: no handler found\n", req.wIndex);
+		} else {
+			interface->handle_setup_request(&req);
+		}
+	}
 
-	else if(bmRequestType == 0x80 && bRequest == GET_CONFIGURATION)
-		req_get_configuration();
+	/* Microsoft-specific request */
+	else if(
+		(req.bmRequestType == 0xc0 || req.bmRequestType == 0xc1) &&
+		req.bRequest == 0x7b
+	) {
+		req_get_MOS_feature_descriptor(req.wValue, req.wIndex, req.wLength);
+	}
 
-	else if(bmRequestType == 0x00 && bRequest == SET_CONFIGURATION)
-		req_set_configuration(wValue);
-
-	else if(bmRequestType == 0x80 && bRequest == GET_STATUS)
-		req_get_device_status();
-	// 0x81 / GET_STATUS : get intf status
-	// 0x82 / GET_STATUS : get endpoint status
-
-	// CESG502 initial 0x01 comm
-	// else if(bmRequestType == 0x41 && bRequest == 0x01)
-	// 	USB.DCPCTR.PID = 1;
-
-	else if((bmRequestType == 0xc0 || bmRequestType == 0xc1)
-		&& bRequest == 0x7b)
-		req_get_MOS_feature_descriptor(wValue, wIndex, wLength);
-
-	/* TODO: Other standard SETUP requests */
-	else USB_LOG("SETUP: bRequest=%02x bmRequestType=%02x wValue=%04x\n"
+	/* TODO: Other SETUP requests (endpoint and other) */
+	else {
+		USB_LOG("SETUP: bRequest=%02x bmRequestType=%02x wValue=%04x\n"
 		"  wIndex=%04x wLength=%d -> ???\n",
-		bRequest, bmRequestType, wValue, wIndex, wLength);
+		req.bRequest, req.bmRequestType, req.wValue, req.wIndex, req.wLength);
+	}
 
 	/* Push the buffer when responding to an IN request with a BUF */
-	if((bmRequestType & 0x80) && USB.DCPCTR.PID == 1)
+	if((req.bmRequestType & 0x80) && USB.DCPCTR.PID == 1)
 		usb_commit_sync(0);
 
 	/* Finalize request */
 	USB.DCPCTR.CCPL = 1;
+}
+
+
+void usb_setup_dcp_status(int ack)
+{
+	if(ack == 0) {
+		USB.DCPCTR.PID = 1;
+	} else if(ack < 0) {
+		USB.DCPCTR.PID = 0;
+	} else {
+		USB.DCPCTR.PID = 2;
+	}
+}
+
+int usb_setup_dcp_write(void const *data, size_t size)
+{
+	return usb_write_sync(0, data, size, false);
 }

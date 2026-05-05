@@ -215,6 +215,15 @@ usb_interface_t const * const *usb_configure_interfaces(void)
 	return conf_if;
 }
 
+usb_interface_t const *usb_configure_get_interface(int idx)
+{
+	if(idx >= MAX_INTERFACES)
+		return NULL;
+	if(conf_if[idx] == NULL)
+		return NULL;
+	 return conf_if[idx];
+}
+
 //---
 // API for interfaces
 //---
