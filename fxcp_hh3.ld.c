@@ -1,5 +1,5 @@
 /*
-	Linker script for fxCP add-ins linking with HollyHock2.
+	Linker script for fxCP add-ins linking with HollyHock3.
 */
 
 OUTPUT_ARCH(sh4)
@@ -52,11 +52,11 @@ SECTIONS
 		*(.text.entry)
 
 		_bctors = . ;
-		*(.ctors .ctors.*)
+		KEEP(*(.ctors .ctors.*))
 		_ectors = . ;
 
 		_bdtors = . ;
-		*(.dtors .dtors.*)
+		KEEP(*(.dtors .dtors.*))
 		_edtors = . ;
 
 		. = ALIGN(0x10);
