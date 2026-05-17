@@ -415,6 +415,7 @@ static void configure(void)
 	DMA.OR.AE = 0;
 	DMA.OR.NMIF = 0;
 	DMA.OR.DME = 1;
+	DMA.OR.PR = 0b11;
 }
 
 static void funbind(void)
