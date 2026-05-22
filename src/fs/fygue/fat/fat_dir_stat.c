@@ -6,16 +6,14 @@
 //---
 
 /* _get_mode(): get "pseudo" file mode */
-static mode_t _get_mode(struct fygue_fat_dir *dir)
+static mode_t _get_mode(int attribute)
 {
 	mode_t mode;
 
 	mode = 0777;
-	if (dir->attribute & FYGUE_FAT_ATTR_READ_ONLY)
+	if (attribute & FYGUE_FAT_ATTR_READ_ONLY)
 		mode = 0444;
-	if (dir->attribute & FYGUE_FAT_ATTR_DIRECTORY)
-		return mode | S_IFDIR;
-	return S_IFREG | 0777;
+	return mode | S_IFDIR;
 }
 
 /* _get_block_size(): return one cluster size */
@@ -51,7 +49,7 @@ int fygue_fat_dir_stat(
 	}
 	statbuf->st_dev	 = 0; /* not supported */
 	statbuf->st_ino	 = dir->cluster_entry;
-	statbuf->st_mode	= _get_mode(dir);
+	statbuf->st_mode	= _get_mode(dir->attribute);
 	statbuf->st_nlink   = 0; /* not supported */
 	statbuf->st_uid	 = 0; /* not supported */
 	statbuf->st_gid	 = 0; /* not supported */

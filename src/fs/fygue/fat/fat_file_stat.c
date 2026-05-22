@@ -8,9 +8,12 @@
 /* _get_mode(): get "pseudo" file mode */
 static mode_t _get_mode(int attribute)
 {
+	mode_t mode;
+
+	mode = 0777;
 	if (attribute & FYGUE_FAT_ATTR_READ_ONLY)
-		return S_IFREG | 0444;
-	return S_IFREG | 0777;
+		mode = 0444;
+	return mode | S_IFREG;
 }
 
 /* _get_block_size(): return one cluster size */
