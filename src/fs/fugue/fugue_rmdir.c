@@ -36,21 +36,19 @@ int fugue_rmdir(char const *path)
 	}
 
 #if GINT_OS_CP
-	gint_world_enter(GINT_WORLD_OS);
-	int rc = BFile_Remove(path);
-	gint_world_leave();
+	char *normpath = fs_path_normalize_opt(path, "\\fls0\\", '\\');
 #else
-	uint16_t *fcpath = fs_path_normalize_fc(path);
-	if(!fcpath) {
+	uint16_t *normpath = fs_path_normalize_fc(path);
+#endif
+	if(!normpath) {
 		errno = ENOMEM;
 		return -1;
 	}
 
 	gint_world_enter(GINT_WORLD_OS);
-	int rc = BFile_Remove(fcpath);
+	int rc = BFile_Remove(normpath);
 	gint_world_leave();
-	free(fcpath);
-#endif
+	free(normpath);
 
 	if(rc < 0) {
 		errno = bfile_error_to_errno(rc);
