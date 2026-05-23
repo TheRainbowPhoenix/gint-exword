@@ -40,7 +40,7 @@ struct _fat_bpb
 	uint8_t  BS_VolID[4];
 	uint8_t  BS_VolLab[11];
 	uint8_t  BS_FilSysType[8];
-	uint8_t  _unused[448];
+	uint8_t  BS_X86BootCode[448];
 
 	// Signature
 	uint8_t Signature_word[2];
@@ -98,21 +98,29 @@ static int _fygue_fat_configure(struct fygue_fat *fat)
 {
 	struct _fat_bpb *bpb;
 	int RootDirSectors;
-	int DataSec;
 
 	bpb = (void *)fat->BPB;
 
 	RootDirSectors  = FAT_WORD(bpb->BPB_RootEntCnt) * 32;
 	RootDirSectors += FAT_WORD(bpb->BPB_BytsPerSec) - 1;
 	RootDirSectors /= FAT_WORD(bpb->BPB_BytsPerSec);
-	DataSec  = FAT_WORD(bpb->BPB_RsvdSecCnt);
-	DataSec += FAT_WORD(bpb->BPB_FATSz16) * bpb->BPB_NumFATs;
-	DataSec += RootDirSectors;
-	DataSec  = FAT_WORD(bpb->BPB_TotSec16) - DataSec;
+
+	uint32_t TotSec = FAT_WORD(bpb->BPB_TotSec16);
+	if (TotSec == 0)
+		TotSec = FAT_DWORD(bpb->BPB_TotSec32);
+
+	int FATSize = FAT_WORD(bpb->BPB_FATSz16);
+
+	int DataSec = TotSec - (
+		FAT_WORD(bpb->BPB_RsvdSecCnt) +
+		(FATSize * bpb->BPB_NumFATs) +
+		RootDirSectors
+	);
+
 	fat->ClusterCount = DataSec / bpb->BPB_SecPerClus;
-	if (fat->ClusterCount < 4085) {
+	if (memcmp(bpb->BS_FilSysType, "FAT12   ", 8) == 0) {
 		fat->Type = FYGUE_FAT_TYPE_FAT12;
-	} else if (fat->ClusterCount < 65525) {
+	} else if (memcmp(bpb->BS_FilSysType, "FAT16   ", 8) == 0) {
 		fat->Type = FYGUE_FAT_TYPE_FAT16;
 	} else {
 		// TODO: (FAT32) maybe gint panic ?
@@ -124,14 +132,10 @@ static int _fygue_fat_configure(struct fygue_fat *fat)
 	fat->SectorSize	 = FAT_WORD(bpb->BPB_BytsPerSec);
 	fat->SectorPerClus  = bpb->BPB_SecPerClus;
 
-	fat->FAT0SectorID   = fat->SectorHiddenCount;
-	fat->FAT0SectorID  += FAT_WORD(bpb->BPB_RsvdSecCnt);
-	fat->FAT1SectorID   = fat->FAT0SectorID;
-	fat->FAT1SectorID  += FAT_WORD(bpb->BPB_FATSz16);
-	fat->RootSectorID   = fat->FAT1SectorID;
-	fat->RootSectorID  += FAT_WORD(bpb->BPB_FATSz16);
-	fat->DataSectorID   = fat->RootSectorID;
-	fat->DataSectorID  += RootDirSectors;
+	fat->FAT0SectorID = fat->SectorHiddenCount + FAT_WORD(bpb->BPB_RsvdSecCnt);
+	fat->FAT1SectorID = fat->FAT0SectorID + FATSize;
+	fat->RootSectorID = fat->FAT0SectorID + (FATSize * (int)bpb->BPB_NumFATs);
+	fat->DataSectorID = fat->RootSectorID + RootDirSectors;
 	return 0;
 }
 

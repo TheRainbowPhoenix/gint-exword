@@ -79,7 +79,7 @@ static int _fygue_fat12_cluster_get_next(
 			(((((uint8_t*)fat_data1)[fat_offset1] & 0x0f) >> 0) << 8)
 		);
 	}
-	if (*cluster == 0x0fff)
+	if (*cluster >= 0x0ff8)
 		*cluster = 0xffff;
 	return 0;
 }
@@ -120,8 +120,11 @@ int fygue_fat_cluster_get_next(struct fygue_fat *fat, int *cluster_current)
 		return -2;
 	if (fat->Type == FYGUE_FAT_TYPE_FAT12)
 		rc = _fygue_fat12_cluster_get_next(fat, &cluster);
-	if (fat->Type == FYGUE_FAT_TYPE_FAT16)
+	if (fat->Type == FYGUE_FAT_TYPE_FAT16) {
 		rc = _fygue_fat16_cluster_get_next(fat, &cluster);
+		if (rc == 0 && cluster >= 0xfff8)
+			cluster = 0xffff;
+	}
 	if (rc != 0)
 		return -5;
 	if (cluster == 0xffff)
