@@ -116,7 +116,9 @@ int fygue_fat_cluster_get_next(struct fygue_fat *fat, int *cluster_current)
 		return -4;
 	if (cluster <= 1)
 		return -2;
-	if (cluster >= fat->ClusterCount)
+	/* ClusterCount stores the number of data clusters, while valid cluster
+	 * identifiers run from 2 to ClusterCount + 1 inclusive. */
+	if (cluster > fat->ClusterCount + 1)
 		return -2;
 	if (fat->Type == FYGUE_FAT_TYPE_FAT12)
 		rc = _fygue_fat12_cluster_get_next(fat, &cluster);
@@ -143,7 +145,7 @@ int fygue_fat_cluster_get_sector(
 ) {
 	if (fat == NULL || sector_id == NULL)
 		return -1;
-	if (cluster_id >= fat->ClusterCount)
+	if (cluster_id > fat->ClusterCount + 1)
 		return -1;
 	if (cluster_id <= 1) {
 		*sector_id = fat->RootSectorID;
