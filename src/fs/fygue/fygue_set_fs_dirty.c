@@ -1,8 +1,8 @@
 #include <gint/hardware.h>
 #include "fygue.h"
 
-/* fygue_sync() - request filesystem re-synchronisation */
-int fygue_sync(void)
+/* fygue_set_fs_dirty() - request filesystem re-synchronisation */
+int fygue_set_fs_dirty(void)
 {
 	struct fygue_fsinfo *fsinfo;
 

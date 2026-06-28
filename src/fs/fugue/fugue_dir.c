@@ -83,11 +83,19 @@ int fugue_dir_close(void *data)
 	return 0;
 }
 
+int fugue_dir_fsync(void *data)
+{
+	(void) data;
+	return 0;
+}
+
 const fs_descriptor_type_t fugue_dir_descriptor_type = {
 	.read   = fugue_dir_read,
 	.write  = fugue_dir_write,
 	.lseek  = fugue_dir_lseek,
 	.close  = fugue_dir_close,
+	.syncfs = fugue_syncfs,
+	.fsync  = fugue_dir_fsync,
 };
 
 void *fugue_dir_explore(char const *path)

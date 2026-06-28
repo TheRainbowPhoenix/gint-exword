@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <gint/fs.h>
 #include <errno.h>
+#include "fygue/fygue.h"
 
 int close(int fd)
 {
@@ -18,7 +19,7 @@ int close(int fd)
 	 * Fygue's descriptor to ensure data integrity */
 	rc = d->type->close(d->data);
 	if (fs_descriptor_is_fugue(d))
-		fs_fygue_sync();
+		fygue_set_fs_dirty();
 
 end:
 	fs_free_descriptor(fd);

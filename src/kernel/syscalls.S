@@ -30,11 +30,14 @@
 .global	_BFile_GetPos
 .global	_BFile_Write
 .global	_BFile_Read
+.global	_BFile_Flush
 .global	_BFile_FindFirst
 .global	_BFile_FindNext
 .global	_BFile_FindClose
-.global	_BFile_FStat // fx-CP
-.global	_BFile_Mkdir // fx-CP
+/* fx-CP400 */
+.global	_BFile_FStat
+.global	_BFile_Mkdir
+.global	_BFile_Stat
 
 /* Return to menu */
 .global ___Timer_Install
@@ -105,6 +108,8 @@ _BFile_Write:
 	syscall(0x0435)
 _BFile_Read:
 	syscall(0x0432)
+_BFile_Flush:
+    syscall(0x0437)
 _BFile_FindFirst:
     syscall(0x043b)
 _BFile_FindNext:
@@ -217,8 +222,9 @@ _gint_get_CASIOWIN_API:
 	.long 0x1da6, 0x8023fdc4, 0x80333b04  /* BFile_Size */
 	.long 0x1da9, 0x8023ff2c, 0x80333c6c  /* BFile_Seek */
 	.long 0x1dab, 0x8024003c, 0x80333d7c  /* BFile_GetPos */
-	.long 0x1daf, 0x8024025e, 0x80333f9e  /* BFile_Write */
+	.long 0x1db0, 0x802402ea, 0x8033402a  /* BFile_Write */
 	.long 0x1dac, 0x80240082, 0x80333dc2  /* BFile_Read */
+	.long 0x1db2, 0x8024043c, 0x8033417c  /* Bfile_Flush */
 	.long 0x1db6, 0x80240888, 0x803345c8  /* BFile_FindFirst */
 	.long 0x1db8, 0x80240b06, 0x80334846  /* BFile_FindNext */
 	.long 0x1dba, 0x80240c10, 0x80334950  /* BFile_FindClose */
@@ -249,20 +255,21 @@ _BFile_Seek:             casiowin_call(#9)
 _BFile_GetPos:           casiowin_call(#10)
 _BFile_Write:            casiowin_call(#11)
 _BFile_Read:             casiowin_call(#12)
-_BFile_FindFirst:        casiowin_call(#13)
-_BFile_FindNext:         casiowin_call(#14)
-_BFile_FindClose:        casiowin_call(#15)
-___Timer_Install:        casiowin_call(#16)
-___Timer_Start:          casiowin_call(#17)
-___Timer_Stop:           casiowin_call(#18)
-___Timer_Deinstall:      casiowin_call(#19)
-___PutKeyCode:           casiowin_call(#20)
-___GetKeyWait:           casiowin_call(#21)
-___ClearKeyBuffer:       casiowin_call(#22)
-___GetVRAMAddress:       casiowin_call(#23)
-___SetQuitHandler:       casiowin_call(#24)
-___PowerOff:             casiowin_call(#25)
-___Reset:                casiowin_call(#26)
+_BFile_Flush:            casiowin_call(#13)
+_BFile_FindFirst:        casiowin_call(#14)
+_BFile_FindNext:         casiowin_call(#15)
+_BFile_FindClose:        casiowin_call(#16)
+___Timer_Install:        casiowin_call(#17)
+___Timer_Start:          casiowin_call(#18)
+___Timer_Stop:           casiowin_call(#19)
+___Timer_Deinstall:      casiowin_call(#20)
+___PutKeyCode:           casiowin_call(#21)
+___GetKeyWait:           casiowin_call(#22)
+___ClearKeyBuffer:       casiowin_call(#23)
+___GetVRAMAddress:       casiowin_call(#24)
+___SetQuitHandler:       casiowin_call(#25)
+___PowerOff:             casiowin_call(#26)
+___Reset:                casiowin_call(#27)
 
 .data
 .CASIOWIN_API:

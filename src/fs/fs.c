@@ -64,17 +64,6 @@ bool fs_descriptor_is_fygue(fs_descriptor_t const *desc)
 	);
 }
 
-void fs_fygue_sync(void)
-{
-	fygue_sync();
-	for (int i = 3 ; i < FS_FD_MAX ; i++) {
-		if (fdtable[i].type == NULL)
-			continue;
-		if (fs_descriptor_is_fygue(fdtable[i].data))
-			fygue_syncfs(fdtable[i].data);
-	}
-}
-
 int open_generic(fs_descriptor_type_t const *type, void *data, int fd)
 {
 	if(!fdtable) {

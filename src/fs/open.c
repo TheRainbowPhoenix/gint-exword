@@ -15,7 +15,6 @@ int open(char const *path, int flags, ...)
 	int rc = -1;
 	if ((flags & O_WRONLY) || (flags & O_RDWR)) {
 		rc = fugue_open(path, flags, mode);
-		fs_fygue_sync();
 	} else {
 		rc = fygue_open(path, flags, mode);
 	}

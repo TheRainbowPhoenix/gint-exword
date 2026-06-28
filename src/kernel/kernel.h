@@ -23,4 +23,7 @@ void kquit(void);
 /* Select the CASIOWIN API for syscalls. */
 void gint_set_CASIOWIN_API(int API);
 
+/* Retrieve the CASIOWIN API for syscalls. */
+int gint_get_CASIOWIN_API(void);
+
 #endif /* GINT_CORE_KERNEL */

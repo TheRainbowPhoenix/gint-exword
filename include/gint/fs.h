@@ -28,6 +28,8 @@ typedef struct {
     ssize_t (*write)(void *data, void const *buf, size_t size);
     off_t (*lseek)(void *data, off_t offset, int whence);
     int (*close)(void *data);
+    int (*syncfs)(void *data);
+    int (*fsync)(void *data);
 
 } fs_descriptor_type_t;
 
@@ -109,10 +111,6 @@ bool fs_descriptor_is_fugue(fs_descriptor_t const *data);
 
 /* return True if the provided descriptor is a Fygue one */
 bool fs_descriptor_is_fygue(fs_descriptor_t const *data);
-
-/* workaround to keep Fygue filesystem sync */
-//TODO: (re?)move me
-void fs_fygue_sync(void);
 
 #ifdef __cplusplus
 }

@@ -126,7 +126,9 @@ int BFile_Size(int fd);
             bytes is written with BFile_Write(). Always keep it even!
 
    With CASIOWIN, returns the new file offset after writing (or an error code).
-   With Fugue, returns the amount of data written (or an error code). */
+   With Fugue, returns the amount of data written (or an error code).
+
+   Automaticly flushes on the Graph 35+E II / G-III series */
 int BFile_Write(int fd, void const *data, int even_size);
 
 /* BFile_Read(): Read data from an open file
@@ -138,7 +140,7 @@ int BFile_Write(int fd, void const *data, int even_size);
    * If [whence == -1], BFile_Read() reads from the current position.
 
    With Fugue this function can read past end of file and return the requested
-   amount of bytes even when the file does not have enough data to read that
+    amount of bytes even when the file does not have enough data to read that
    much. It seems that extra bytes read as zeros. Reading past the end does
    *not* extend the file size.
 
@@ -175,6 +177,9 @@ int BFile_Seek(int fd, int offset);
    For the latter models there is no easily reliable way of knowing the current
    position within an open file! */
 int BFile_GetPos(int fd);
+
+/* BFile_Flush(): Writes buffered data of a file to disk */
+int BFile_Flush(int fd);
 
 //---
 // Error codes

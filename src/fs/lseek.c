@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <gint/fs.h>
 #include <errno.h>
+#include "fygue/fygue.h"
 
 off_t lseek(int fd, off_t offset, int whence)
 {
@@ -22,6 +23,6 @@ off_t lseek(int fd, off_t offset, int whence)
 	 * descriptor to avoid data corruption */
 	off_t off = d->type->lseek(d->data, offset, whence);
 	if (fs_descriptor_is_fugue(d))
-		fs_fygue_sync();
+		fygue_set_fs_dirty();
 	return off;
 }

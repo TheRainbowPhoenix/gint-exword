@@ -178,9 +178,30 @@ int fugue_close(void *data0)
 	return rc;
 }
 
+int fugue_fsync(void *data0)
+{
+	fugue_fd_t *data = data0;
+	int fugue_fd = data->fd;
+
+	gint_world_enter(GINT_WORLD_OS);
+	int rc = BFile_Flush(fugue_fd);
+	gint_world_leave();
+
+	if(rc < 0) {
+		errno = bfile_error_to_errno(rc);
+		rc = -1;
+	} else {
+		rc = 0;
+	}
+
+	return rc;
+}
+
 const fs_descriptor_type_t fugue_descriptor_type = {
 	.read   = fugue_read,
 	.write  = fugue_write,
 	.lseek  = fugue_lseek,
 	.close  = fugue_close,
+	.syncfs = fugue_syncfs,
+	.fsync  = fugue_fsync,
 };

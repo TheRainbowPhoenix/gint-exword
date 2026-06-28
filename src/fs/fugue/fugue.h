@@ -36,4 +36,8 @@ int fugue_rmdir(char const *path);
 
 void *fugue_dir_explore(char const *path);
 
+void fugue_flush_all(void);
+
+int fugue_syncfs(void *data0);
+
 #endif /* FS_FUGUE_FUGUE_H */

@@ -152,6 +152,30 @@ int fygue_gfdi_dir_close(struct fygue_descriptor *desc)
 }
 
 //---
+// Gint File Descriptor Interface (gfdi) for file or directory
+//---
+
+/* fygue_gfdi_syncfs(): flush buffers of the fs */
+int fygue_gfdi_syncfs(struct fygue_descriptor *desc)
+{
+	struct fygue_fsinfo *fsinfo;
+
+	if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_DIR) == 0 || FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_FILE) == 0)
+		return fygue_syncfs(fsinfo, desc);
+	return -1;
+}
+
+/* fygue_gfdi_fsync(): flush buffers of the file */
+int fygue_gfdi_fsync(struct fygue_descriptor *desc)
+{
+	struct fygue_fsinfo *fsinfo;
+
+	if (FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_DIR) == 0 || FYGUE_GFDI_CHEK(FYGUE_DESC_TYPE_FILE) == 0)
+		return fygue_fsync(fsinfo, desc);
+	return -1;
+}
+
+//---
 // Descriptor
 //---
 
@@ -161,6 +185,8 @@ const fs_descriptor_type_t fygue_file_descriptor_type = {
 	.write  = (void*)&fygue_gfdi_file_write,
 	.lseek  = (void*)&fygue_gfdi_file_lseek,
 	.close  = (void*)&fygue_gfdi_file_close,
+	.syncfs = (void*)&fygue_gfdi_syncfs,
+	.fsync  = (void*)&fygue_gfdi_fsync,
 };
 
 const fs_descriptor_type_t fygue_dir_descriptor_type = {
@@ -168,4 +194,6 @@ const fs_descriptor_type_t fygue_dir_descriptor_type = {
 	.write  = (void*)&fygue_gfdi_dir_write,
 	.lseek  = (void*)&fygue_gfdi_dir_lseek,
 	.close  = (void*)&fygue_gfdi_dir_close,
+	.syncfs = (void*)&fygue_gfdi_syncfs,
+	.fsync  = (void*)&fygue_gfdi_fsync,
 };

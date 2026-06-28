@@ -44,11 +44,11 @@ extern int fygue_open(char const *path, int flags, mode_t mode);
 /* fygue_stat() - get file or directory information */
 extern int fygue_stat(char const *path, struct stat *statbuf);
 
-/* fygue_sync() - request filesystem re-synchronisation */
-extern int fygue_sync(void);
+/* fygue_set_fs_dirty() - request filesystem re-synchronisation */
+extern int fygue_set_fs_dirty(void);
 
-/* fygue_syncfs() - request filesystem and file re-synchronisation */
-extern int fygue_syncfs(void *data);
+/* fygue_set_desc_dirty() - request file re-synchronisation */
+extern int fygue_set_desc_dirty(void *data);
 
 /* fygue_mount() - mount the filesystem */
 extern int fygue_mount(struct fygue_fsinfo **fsinfo);
@@ -195,6 +195,22 @@ extern int fygue_file_close(
 extern int fygue_file_sync(
 	struct fygue_fsinfo *fsinfo,
 	struct fygue_file *file
+);
+
+//---
+// Generic interface
+//---
+
+/* fygue_syncfs(): flush buffers of the fs */
+extern int fygue_syncfs(
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_descriptor *desc
+);
+
+/* fygue_fsync(): flush buffers of the file */
+extern int fygue_fsync(
+	struct fygue_fsinfo *fsinfo,
+	struct fygue_descriptor *desc
 );
 
 #ifdef __cplusplus

@@ -44,6 +44,7 @@ set(SOURCES
   src/fs/closedir.c
   src/fs/creat.c
   src/fs/fdopendir.c
+  src/fs/fsync.c
   src/fs/fs.c
   src/fs/lseek.c
   src/fs/mkdir.c
@@ -58,6 +59,8 @@ set(SOURCES
   src/fs/rmdir.c
   src/fs/seekdir.c
   src/fs/stat.c
+  src/fs/sync.c
+  src/fs/syncfs.c
   src/fs/telldir.c
   src/fs/unlink.c
   src/fs/write.c
@@ -70,6 +73,7 @@ set(SOURCES
   src/fs/fugue/fugue_stat.c
   src/fs/fugue/fugue_rename.c
   src/fs/fugue/fugue_rmdir.c
+  src/fs/fugue/fugue_sync.c
   src/fs/fugue/fugue_unlink.c
   src/fs/fugue/util.c
   # GDB remote serial protocol
@@ -262,8 +266,8 @@ set(SOURCES
   # Fygue filesystem
   src/fs/fygue/fygue.c
   src/fs/fygue/fygue_open.c
-  src/fs/fygue/fygue_syncfs.c
-  src/fs/fygue/fygue_sync.c
+  src/fs/fygue/fygue_set_desc_dirty.c
+  src/fs/fygue/fygue_set_fs_dirty.c
   src/fs/fygue/fygue_stat.c
   src/fs/fygue/fygue_mount.c
   src/fs/fygue/fygue_dir_open.c
@@ -278,6 +282,8 @@ set(SOURCES
   src/fs/fygue/fygue_file_lseek.c
   src/fs/fygue/fygue_file_close.c
   src/fs/fygue/fygue_file_sync.c
+  src/fs/fygue/fygue_fsync.c
+  src/fs/fygue/fygue_syncfs.c
   src/fs/fygue/fat/fat.c
   src/fs/fygue/fat/cluster.c
   src/fs/fygue/fat/sector.c
