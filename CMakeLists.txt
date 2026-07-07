@@ -130,7 +130,7 @@ set(SOURCES
   src/kernel/kernel.c
   src/kernel/osmenu.c
   src/kernel/start.c
-  src/kernel/start.S
+  src/kernel/hhk3_start.c
   src/kernel/syscall.c
   src/kernel/syscalls.S
   src/kernel/tlbh.S
@@ -152,6 +152,8 @@ set(SOURCES
   src/kmalloc/kmalloc.c
   # MMU driver
   src/mmu/mmu.c
+  # Profiling
+  src/prof/prof.c
   # R61523 display driver
   src/r61523/r61523.c
   # R61524 display driver
@@ -260,7 +262,6 @@ set(SOURCES
   # Touch-screen driver
   src/touch/i2c.c
   src/touch/i2c_inth.c
-  src/touch/adconv.c
   src/touch/touch.c
   src/touch/driver.c
   # Fygue filesystem
@@ -345,7 +346,7 @@ if("${FXSDK_PLATFORM_LONG}" STREQUAL fxCP)
   add_compile_definitions(FXCP)
   set(NAME "gint-cp")
   set(LINKER_SCRIPTS
-    "${CMAKE_CURRENT_BINARY_DIR}/fxcp_hh2.ld")
+    "${CMAKE_CURRENT_BINARY_DIR}/fxcp_hh3.ld")
   add_library(${NAME} STATIC ${SOURCES} ${ASSETS_CP} ${LINKER_SCRIPTS})
 endif()
 
@@ -368,7 +369,7 @@ endmacro()
 generate_linker_script("fx9860g.ld" "fx9860g.ld.c" "")
 generate_linker_script("fxcg50.ld" "fxcg50.ld.c" "")
 generate_linker_script("fxcg50_fastload.ld" "fxcg50.ld.c" "-DFXCG50_FASTLOAD")
-generate_linker_script("fxcp_hh2.ld" "fxcp_hh2.ld.c" "")
+generate_linker_script("fxcp_hh3.ld" "fxcp_hh3.ld.c" "")
 
 # Library file
 install(TARGETS "${NAME}" DESTINATION "${FXSDK_LIB}")

@@ -151,9 +151,9 @@ enum
     KEYEV_UP            = 2, /* Key was released */
     KEYEV_HOLD          = 3, /* A key that was pressed has been held down */
     KEYEV_OSMENU        = 4, /* We went to the main menu and back */
-    KEYEV_TOUCH_PRESSED = 5, /* Touch was detected */
+    KEYEV_TOUCH_DOWN    = 5, /* Touch was detected */
     KEYEV_TOUCH_DRAG    = 6, /* A touch that was detected has been held down */
-    KEYEV_TOUCH_RELEASE = 7, /* Touch was released */
+    KEYEV_TOUCH_UP      = 7, /* Touch was released */
 };
 
 /* Keyboard frequency analysis is a runtime setting since gint 2.4. This macro

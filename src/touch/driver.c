@@ -109,6 +109,6 @@ gint_driver_t drv_touch = {
     .funbind    = _touch_funbind,
     .state_size = sizeof(touch_state_t),
 };
-GINT_DECLARE_DRIVER(24, drv_touch);
+GINT_DECLARE_DRIVER(22, drv_touch);
 
 #endif /* GINT_HW_CP */

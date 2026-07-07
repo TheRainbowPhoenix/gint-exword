@@ -9,9 +9,7 @@
 
 #if GINT_OS_CP
 
-extern void *__GetVRAMAddress(void);
-
-uint16_t *gint_vram = NULL;
+uint16_t *gint_vram = (void *)0x8c000000;
 
 static uint8_t *gint_vrambackup = NULL;
 static int gint_vrambackup_size = -1;
@@ -20,8 +18,8 @@ bool dvram_init(void)
 {
 	/* Backup the VRAM up, but not to the normal backup area--we use that
 	   to load code. Instead, save over VRAM itself then copy to heap. */
-	void *VRAM      = (void *)0x8c000000;
-	void *VRAM_END  = (void *)0x8c052800;
+	void *VRAM      = gint_vram;
+	void *VRAM_END  = gint_vram + DWIDTH * DHEIGHT;
 	void *SCRATCH   = VRAM;
 
 	// prof_enter(*p1);
@@ -35,7 +33,6 @@ bool dvram_init(void)
 		memcpy(gint_vrambackup, SCRATCH, gint_vrambackup_size);
 	// prof_leave(*p2);
 
-	gint_vram = __GetVRAMAddress();
 	return true;
 }
 

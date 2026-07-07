@@ -52,7 +52,47 @@ typedef volatile struct
 		uint TENS	:4;
 		uint ONES	:4;
 	);
-	pad(12);			/* Alarm registers... */
+
+	byte_union(RSECAR,  		/* Second alarm */
+		uint8_t ENB     :1;
+		uint8_t TENS    :3;
+		uint8_t ONES    :4;
+	);
+	pad(1);
+	byte_union(RMINAR,  		/* Minute alarm */
+		uint8_t ENB     :1;
+		uint8_t TENS    :3;
+		uint8_t ONES    :4;
+	);
+	pad(1);
+	byte_union(RHRAR,   		/* Hour alarm */
+		uint8_t ENB     :1;
+		uint8_t         :1;
+		uint8_t TENS    :2;
+		uint8_t ONES    :4;
+	);
+	pad(1);
+	byte_union(RWKAR,   		/* Day of week alarm */
+		uint8_t ENB     :1;
+		uint8_t         :3;
+		uint8_t         :1;
+		uint8_t DAY     :3;
+	);
+	pad(1);
+	byte_union(RDAYAR,  		/* Day alarm */
+		uint8_t ENB     :1;
+		uint8_t         :1;
+		uint8_t TENS    :2;
+		uint8_t ONES    :4;
+	);
+	pad(1);
+	byte_union(RMONAR,  		/* Month alarm */
+		uint8_t ENB     :1;
+		uint8_t         :1;
+		uint8_t TENS    :2;
+		uint8_t ONES    :4;
+	);
+	pad(1);
 
 	byte_union(RCR1,
 		uint8_t CF	:1;	/* Carry flag */
@@ -73,6 +113,20 @@ typedef volatile struct
 		uint8_t START	:1;	/* Start bit */
 	);
 	pad(1);
+
+	word_union(RYRAR,   /* Year alarm */
+		uint16_t THOUSANDS  :4;
+		uint16_t HUNDREDS   :4;
+		uint16_t TENS       :4;
+		uint16_t ONES       :4;
+	);
+	pad(2);
+	byte_union(RCR3,    /* Control register 3 */
+		uint8_t ENB     :1;
+		uint8_t         :3;
+		uint8_t         :4;
+		uint8_t         :4;
+	);
 
 } GPACKED(4) rtc_t;
 

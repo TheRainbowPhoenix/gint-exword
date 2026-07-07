@@ -224,10 +224,10 @@ void i2c_configure(void)
     __i2c_request.status = I2C_REQ_STATUS_FINISHED;
 
     // Enable interrupt
-    intc_priority(INTC_I2C_AL,   1);
-    intc_priority(INTC_I2C_TACK, 1);
-    intc_priority(INTC_I2C_WAIT, 1);
-    intc_priority(INTC_I2C_DTE,  1);
+    intc_priority(INTC_I2C_AL,   15);
+    intc_priority(INTC_I2C_TACK, 15);
+    intc_priority(INTC_I2C_WAIT, 15);
+    intc_priority(INTC_I2C_DTE,  15);
 }
 
 /* i2c_unbind() - unbind from gint to casio */

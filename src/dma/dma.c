@@ -298,6 +298,8 @@ static void configure(void)
 
 static void funbind(void)
 {
+	if(isSH3()) return;
+
 	/* Wait for all OS transfers to finish before taking over */
 	for(int channel = 0; channel < 6; channel++)
 		dma_channel_wait(channel, true);
@@ -305,6 +307,8 @@ static void funbind(void)
 
 static void unbind(void)
 {
+	if(isSH3()) return;
+
 	/* Make sure all DMA transfers are finished before leaving gint */
 	for(int channel = 0; channel < 6; channel++)
 		dma_channel_wait(channel, false);

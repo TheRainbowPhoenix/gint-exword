@@ -254,6 +254,10 @@ void keydev_tick(keydev_t *d, uint us);
 //	Low-level API to read events from the device
 //---
 
+/* keydev_queue_event(): Add an event in a device's buffer
+   Returns false if the event cannot be pushed. */
+bool keydev_queue_event(keydev_t *d, key_event_t ev);
+
 /* keydev_unqueue_event(): Retrieve the next keyboard event in queue
 
    This source provides the queued KEYEV_UP, KEYEV_DOWN and KEYEV_HOLD events

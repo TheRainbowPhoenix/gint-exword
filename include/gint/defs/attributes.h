@@ -20,6 +20,8 @@
 
 /* Unused parameters or variables */
 #define GUNUSED		__attribute__((unused))
+/* Used parameters or variables but invisible to the compiler */
+#define GUSED		__attribute__((used))
 /* Functions that *must* be inlined */
 #define GINLINE		__attribute__((always_inline)) inline
 

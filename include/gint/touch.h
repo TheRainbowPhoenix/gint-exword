@@ -33,12 +33,8 @@ extern int touch_calib_get_os(touch_calibration_t *calib);
 /* touch_calib_set() - set calibration information */
 extern int touch_calib_set(touch_calibration_t *calib);
 
-// low-level API
-
-#include <gint/keyboard.h>
-
-/* touch_next_event() - get the next touchscreen event */
-extern key_event_t touch_next_event(void);
+// TODO: Functions to query the immediate state of the touch display
+// TODO| As per queue? Or real-time?
 
 #endif /* GINT_HW_CP */
 

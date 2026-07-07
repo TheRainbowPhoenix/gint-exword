@@ -108,9 +108,7 @@ static int standard_repeater(GUNUSED int key, GUNUSED int duration, int count)
 // Driver event generation
 //---
 
-/* keydev_queue_push(): Add an event in a device's buffer
-   Returns false if the event cannot be pushed. */
-bool keydev_queue_push(keydev_t *d, key_event_t ev)
+bool keydev_queue_event(keydev_t *d, key_event_t ev)
 {
 	if(d->async_filter && !d->async_filter(ev))
 		return true;
@@ -165,7 +163,7 @@ void keydev_process_state(keydev_t *d, uint8_t scan[12])
 				ev.col = col;
 				ev.key = keymatrix_to_keycode(row, col);
 				/* Update state only if the push succeeds */
-				if((diff & mask) && keydev_queue_push(d, ev))
+				if((diff & mask) && keydev_queue_event(d, ev))
 					d->state_now[row] = mode
 					? d->state_now[row] | mask
 					: d->state_now[row] & ~mask;
@@ -221,7 +219,7 @@ void keydev_tick(keydev_t *d, uint us)
 	/* Generate the next repeat */
 	key_event_t repeat = keydev_repeat_event(d);
 	if(repeat.type != KEYEV_NONE)
-		keydev_queue_push(d, repeat);
+		keydev_queue_event(d, repeat);
 
 	d->time++;
 

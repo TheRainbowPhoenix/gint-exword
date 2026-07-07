@@ -14,6 +14,10 @@
 #include <gint/drivers/iokbd.h>
 #include <gint/hardware.h>
 
+#if GINT_HW_CP
+#include <gint/drivers/touch.h>
+#endif
+
 #include <string.h>
 #include <stdlib.h>
 
@@ -70,6 +74,12 @@ int keysc_tick(void)
 	{
 		abort();
 	}
+
+#if GINT_HW_CP
+	key_event_t ev = touch_scan();
+	if(ev.type != KEYEV_NONE)
+		keydev_queue_event(&keysc_dev, ev);
+#endif
 
 	return TIMER_CONTINUE;
 }
