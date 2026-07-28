@@ -2,9 +2,9 @@
 
 #include <gint/defs/types.h>
 #include <gint/defs/util.h>
-// #include <gint/hardware.h>
+#include <gint/hardware.h>
 #include <gint/drivers.h>
-// #include <gint/dma.h>
+#include <gint/dma.h>
 #include <gint/drivers/r61523.h>
 #include <gint/video.h>
 #include <gint/image.h>
@@ -58,6 +58,18 @@ static void read_Nu16(uint16_t *array, int N)
         array[i] = *DISPLAY;
 }
 
+GINLINE uint16_t r61523_get(int ID)
+{
+    select(ID);
+    return *DISPLAY;
+}
+
+GINLINE void r61523_set(int ID, uint16_t value)
+{
+    select(ID);
+    *DISPLAY = value;
+}
+
 //---
 // Generic functions
 //---
@@ -91,7 +103,7 @@ void r61523_identify(
     if (variant)
     {
         select(REG_DEVICE_CODE_VARIANT);
-        *variant = read();
+        read();
         *variant = read();
     }
 }
@@ -137,37 +149,54 @@ void r61523_win_set(int x1, int x2, int y1, int y2)
     synco();
 }
 
-void r61523_display(uint16_t *vram)
+void r61523_start_frame(int xmin, int xmax, int ymin, int ymax) {
+    r61523_win_set(xmin, xmax, ymin, ymax);
+    select(REG_DATA);
+}
+
+void r61523_display(uint16_t *vram, int start, int height, int method)
 {
-    r61523_win_set(0, 319, 0, 527);
-    select(44);
+    /* Wait for any transfer to finish before using the screen, otherwise
+       the DMA might write data *while* we're sending commands! */
+    dma_transfer_wait(0);
 
-    int row_offset = 0;
-    uint16_t volatile *DISPLAY = (void *)0xb4000000;
+    r61523_start_frame(0, 319, start, start + height - 1);
 
-    for(int y = 0; y < 528; y++) {
-        uint16_t *r5 = (void *)vram + row_offset;
+    if(method == R61523_CPU)
+    {
+        for(int i = 0; i < 320 * height; i++)
+            write(vram[i + 320 * start]);
+        return;
+    }
 
-        for(int x = 0; x < 320; x++)
-            *DISPLAY = *r5++;
+    void *src = (void *)vram + start * 320*2;
+    void *dst = (void *)DISPLAY;
 
-        row_offset += 2 * 320;
+    /* Luckly the row count is a multiple of 32.. */
+    int blocks = height * 20;
+
+    if(method == R61523_DMA) {
+        dma_transfer_async(0, DMA_32B, blocks, src, DMA_INC, dst,
+            DMA_FIXED, GINT_CALL_NULL);
+    }
+    else {
+        /* Transfer atomically */
+        dma_transfer_atomic(0, DMA_32B, blocks, src, DMA_INC, dst,
+            DMA_FIXED);
     }
 }
 
 void r61523_display_rect(
     uint16_t *vram, int xmin, int xmax, int ymin, int ymax)
 {
-    // dma_transfer_wait(0);
-    r61523_win_set(xmin, xmax, ymin, ymax);
-    select(44);
+    dma_transfer_wait(0);
+    r61523_start_frame(xmin, xmax, ymin, ymax);
 
     vram += 320 * ymin + xmin;
-    uint16_t volatile *DISPLAY = (void *)0xb4000000;
 
     for(int y = 0; y < ymax - ymin + 1; y++) {
         for(int x = 0; x < xmax - xmin + 1; x++)
-            *DISPLAY = vram[x];
+            write(vram[x]);
         vram += 320;
     }
 }
@@ -177,33 +206,47 @@ void r61523_set_pixel(int x, int y, int color)
     if((unsigned)x >= 320 || (unsigned)y >= 528)
         return;
 
-    // dma_transfer_wait(0);
-    r61523_win_set(x, x, y, y);
-    select(44);
-    uint16_t volatile *DISPLAY = (void *)0xb4000000;
-    *DISPLAY = color;
+    dma_transfer_wait(0);
+    r61523_start_frame(x, x, y, y);
+    write(color);
 }
 
 static bool r61523_update(int x, int y, image_t const *fb, int flags)
 {
+    // TODO: r61523_update: Handle the mono cases
     if(fb->format != IMAGE_RGB565)
         return false;
 
-    // TODO: r61523_update: DMA support
-    // unless VIDEO_UPDATE_FOREIGN_WORLD is set
-    (void)flags;
     uint w = fb->width;
     uint h = fb->height;
 
-    // TODO: r61523_update: sub-rectangle support
-    if(x != 0 || y != 0 || w != 320 || h != 528)
-        return false;
+    dma_transfer_wait(0);
+    r61523_start_frame(x, x+w-1, y, y+h-1);
 
-    // TODO: r61523_update: stride support!
-    if(fb->stride != 320 * 2)
-        return false;
+    /* DMA if enabled */
+    bool dma_possible = (!x && w == 320 && fb->stride == 320*2);
+    if((flags & VIDEO_UPDATE_ENABLE_DMA) && dma_possible) {
+        void *src = fb->data;
+        void *dst = (void *)DISPLAY;
+        int blocks = h * 20;
 
-    r61523_display(fb->data);
+        if(flags & VIDEO_UPDATE_ATOMIC)
+            dma_transfer_atomic(0, DMA_32B, blocks, src, DMA_INC,
+                dst, DMA_FIXED);
+        else
+            dma_transfer_async(0, DMA_32B, blocks, src, DMA_INC,
+                dst, DMA_FIXED, GINT_CALL_NULL);
+        return true;
+    }
+
+    uint16_t *pixels = fb->data;
+
+    for(int y = 0; y < fb->height; y++) {
+        for(int x = 0; x < fb->width; x++)
+            write(pixels[x]);
+        pixels = (void *)pixels + fb->stride;
+    }
+
     return true;
 }
 

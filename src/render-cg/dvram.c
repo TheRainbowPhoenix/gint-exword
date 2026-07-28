@@ -7,9 +7,17 @@
 #include <stdlib.h>
 #if GINT_RENDER_RGB
 
+#if GINT_OS_CP || GINT_OS_CG
+/* Up to two VRAM pointers can be set, for triple buffering. */
+static uint16_t *vram_1, *vram_2;
+/* Current VRAM pointer, always equal to either vram_1 or vram_2. */
+uint16_t *gint_vram;
+#endif /* OS type */
+
 #if GINT_OS_CP
 
-uint16_t *gint_vram = (void *)0x8c000000;
+uint16_t *gint_vram = (void *)0xac000000;
+static uint16_t *vram_1 = (void *)0xac000000, *vram_2 = (void *)0xac000000;
 
 static uint8_t *gint_vrambackup = NULL;
 static int gint_vrambackup_size = -1;
@@ -45,11 +53,6 @@ void dvram_quit(void)
 	gint_vrambackup = NULL;
 	video_update(0, 0, img, VIDEO_UPDATE_FOREIGN_WORLD);
 	image_free(img);
-}
-
-void dgetvram(uint16_t **ptr_vram_1, uint16_t **ptr_vram_2)
-{
-	*ptr_vram_1 = *ptr_vram_2 = gint_vram;
 }
 
 void gint_vrambackup_show(void)
@@ -120,6 +123,13 @@ bool dvram_init(void)
 	return true;
 }
 
+void dvram_quit(void)
+{
+}
+
+#endif /* OS type */
+
+#if GINT_OS_CP || GINT_OS_CG
 /* dsetvram(): Control video RAM address and triple buffering */
 void dsetvram(uint16_t *new_vram_1, uint16_t *new_vram_2)
 {
@@ -149,10 +159,6 @@ void dvram_switch(void)
 {
 	gint_vram = (gint_vram == vram_1) ? vram_2 : vram_1;
 }
-
-void dvram_quit(void)
-{
-}
-
 #endif /* OS type */
+
 #endif /* GINT_RENDER_RGB */
