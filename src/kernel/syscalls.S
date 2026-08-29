@@ -236,9 +236,9 @@ _gint_get_CASIOWIN_API:
 	.long 0x1e6e, 0,          0           /* SetQuitHandler */
 	.long 0x1839, 0,          0           /* PowerOff */
 	.long 0x1187, 0,          0           /* Reset */
-	/* Syscall number inferred: the table is ordered by address and 0x1da5
-	   is the only free number between BFile_Close and BFile_Size. Untested
-	   on fx-CG50. */
+	/* Syscall number inferred from the table being ordered by address:
+	   0x1da5 is the only free number between BFile_Close and BFile_Size.
+	   Checked on fx-CG50; the API 1 and 2 addresses are untested. */
 	.long 0x1da5, 0x8023fd7a, 0x80333aba  /* BFile_GetMediaFree */
 
 #define casiowin_call(id) bra _CASIOWIN_call; mov id, r0
