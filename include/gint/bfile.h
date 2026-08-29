@@ -81,6 +81,14 @@ int BFile_Remove(uint16_t const *path);
 /* Rename a file (can move folders; Fugue only). */
 int BFile_Rename(uint16_t const *oldpath, uint16_t const *newpath);
 
+/* BFile_GetMediaFree(): Free space on a storage medium, in bytes
+
+   @media      Medium, as a FONTCHARACTER path such as u"\\\\fls0"
+   @freespace  Set to the number of free bytes
+
+   Returns 0 on success, a negative BFile error code otherwise. fx-CG only. */
+int BFile_GetMediaFree(uint16_t const *media, int *freespace);
+
 #define BFile_File    1
 #define BFile_Folder  5
 

@@ -17,6 +17,8 @@ extern const fs_descriptor_type_t fugue_dir_descriptor_type;
 typedef struct {
     int fd;
     int pos;
+    /* O_APPEND, which BFile honours on its own on the fx-CP */
+    int append;
 } fugue_fd_t;
 
 /* Specific implementations of some standard functions */

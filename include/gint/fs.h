@@ -27,6 +27,8 @@ typedef struct {
     ssize_t (*write)(void *data, void const *buf, size_t size);
     off_t (*lseek)(void *data, off_t offset, int whence);
     int (*close)(void *data);
+    /* TODO: fsync is not yet implemented, this is just a placeholder */
+    int (*fsync)(void *data);
 
 } fs_descriptor_type_t;
 

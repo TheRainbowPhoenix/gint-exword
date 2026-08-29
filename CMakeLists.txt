@@ -45,6 +45,7 @@ set(SOURCES
   src/fs/creat.c
   src/fs/fdopendir.c
   src/fs/fs.c
+  src/fs/fsync.c
   src/fs/lseek.c
   src/fs/mkdir.c
   src/fs/open.c

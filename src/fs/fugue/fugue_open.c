@@ -135,11 +135,13 @@ int fugue_open(char const *path, int flags, GUNUSED mode_t mode)
 		goto end;
 	}
 
-	/* If O_APPEND is set, move to the end of the file */
-	// TODO: O_APPEND should move the cursor before *each* write
+	/* O_APPEND: fugue_write() seeks to the end before every write. On the
+	   fx-CP, BFile_AppendFlag already does it. */
 	int pos = 0;
+	int append = 0;
 #if !GINT_OS_CP
 	if((flags & O_APPEND)) {
+		append = 1;
 		pos = BFile_Size(fugue_fd);
 		BFile_Seek(fugue_fd, pos);
 	}
@@ -153,6 +155,7 @@ int fugue_open(char const *path, int flags, GUNUSED mode_t mode)
 	}
 	data->fd = fugue_fd;
 	data->pos = pos;
+	data->append = append;
 
 	fs_descriptor_t fd_data = {
 		.type = &fugue_descriptor_type,

@@ -122,7 +122,27 @@ void *fugue_dir_explore(char const *path)
 #else
 		if(rc == BFile_EntryNotFound)
 #endif
+		{
+			/* Searching "dir/*" comes back empty both when dir is
+			   an empty folder and when it does not exist, so ask
+			   about the path itself to tell them apart. */
+			uint16_t *fc_dir = fs_path_normalize_fc(path);
+			int type, found;
+
+			if(!fc_dir) goto alloc_failure;
+			found = (BFile_Ext_Stat(fc_dir, &type, NULL) == 0);
+			free(fc_dir);
+
+			if(!found) {
+				errno = ENOENT;
+				goto error;
+			}
+			if(type != BFile_Type_Directory) {
+				errno = ENOTDIR;
+				goto error;
+			}
 			goto end;
+		}
 		errno = bfile_error_to_errno(rc);
 		goto error;
 	}

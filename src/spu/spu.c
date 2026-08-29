@@ -20,7 +20,9 @@
 
 static void inth_dsp(int num)
 {
-#if GINT_HW_FX
+/* C_RED comes from <gint/display-cg.h>, which GINT_RENDER_RGB selects; the
+   fx-9860G-in-g3a build has HW_FX=0 but renders in mono. */
+#if GINT_RENDER_MONO
 	int fg = C_BLACK, bg = C_WHITE;
 #else
 	int fg = C_WHITE, bg = C_RED;

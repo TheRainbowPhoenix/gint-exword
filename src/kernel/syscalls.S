@@ -33,6 +33,7 @@
 .global	_BFile_FindFirst
 .global	_BFile_FindNext
 .global	_BFile_FindClose
+.global	_BFile_GetMediaFree
 /* fx-CP400 */
 .global	_BFile_FStat
 .global	_BFile_Mkdir
@@ -235,6 +236,10 @@ _gint_get_CASIOWIN_API:
 	.long 0x1e6e, 0,          0           /* SetQuitHandler */
 	.long 0x1839, 0,          0           /* PowerOff */
 	.long 0x1187, 0,          0           /* Reset */
+	/* Syscall number inferred: the table is ordered by address and 0x1da5
+	   is the only free number between BFile_Close and BFile_Size. Untested
+	   on fx-CG50. */
+	.long 0x1da5, 0x8023fd7a, 0x80333aba  /* BFile_GetMediaFree */
 
 #define casiowin_call(id) bra _CASIOWIN_call; mov id, r0
 
@@ -265,6 +270,7 @@ ___GetVRAMAddress:       casiowin_call(#23)
 ___SetQuitHandler:       casiowin_call(#24)
 ___PowerOff:             casiowin_call(#25)
 ___Reset:                casiowin_call(#26)
+_BFile_GetMediaFree:     casiowin_call(#27)
 
 .data
 .CASIOWIN_API:

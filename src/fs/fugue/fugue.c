@@ -55,6 +55,21 @@ ssize_t fugue_write(void *data0, const void *buf, size_t size)
 	fugue_fd_t *data = data0;
 	int fugue_fd = data->fd;
 
+	/* O_APPEND writes at the end of the file, wherever the cursor was */
+#if !GINT_OS_CP
+	if(data->append) {
+		int end = BFile_Size(fugue_fd);
+		if(end >= 0 && end != data->pos) {
+			int rc = BFile_Seek(fugue_fd, end);
+			if(rc < 0) {
+				errno = bfile_error_to_errno(rc);
+				return -1;
+			}
+			data->pos = end;
+		}
+	}
+#endif
+
 	/* The main concern of this function is that we cannot write from ROM.
 	   If [buf] is in ROM then we have to copy it to RAM, preferably within
 	   the limits of available heap memory. */
