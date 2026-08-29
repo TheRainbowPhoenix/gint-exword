@@ -93,12 +93,14 @@ int hhk3_entry(GUNUSED int argc, GUNUSED char *argv[], char *envp[]) {
 	return start(0, NULL);
 }
 
+/* HollyHock gives us Mem_Malloc and Mem_Free and no realloc; a block's size is
+   the word before it. A block is never shrunk in place: handing the tail back
+   means building a free block inside it, and the layout Mem_Free expects is
+   documented nowhere. Keeping the whole block is a legal realloc, and the
+   ClassPad has twelve megabytes to be relaxed about it with. */
 void *__realloc_c (void *ptr, size_t new_size) {
 	extern void *__malloc(size_t size);
 	extern void __free(void *ptr);
-
-	void *block = NULL;
-	size_t *old_size_ptr = (size_t *)ptr - 1;
 
 	if (new_size == 0)
 	{
@@ -106,31 +108,21 @@ void *__realloc_c (void *ptr, size_t new_size) {
 		return NULL;
 	}
 
-	if (new_size > *old_size_ptr)
-	{
-		block = __malloc(new_size);
+	/* realloc(NULL, n) is malloc(n). This has to come before the size word
+	   is read, since a null pointer has none. */
+	if (!ptr) return __malloc(new_size);
 
-		if (!block || !ptr) return block;
+	size_t *old_size_ptr = (size_t *)ptr - 1;
 
+	if (new_size <= *old_size_ptr) return ptr;
 
-		memcpy(block, ptr, *old_size_ptr);
-		__free(ptr);
+	void *block = __malloc(new_size);
+	if (!block) return NULL;
 
-		return block;
-	}
+	memcpy(block, ptr, *old_size_ptr);
+	__free(ptr);
 
-	new_size = (new_size + (4 - 1)) % 4; // round up to 4 bytes
-
-	size_t diff = *old_size_ptr - new_size;
-
-	if (diff > sizeof(size_t) + sizeof(void *)) return ptr;
-
-	// construct heap block and donate it
-	*old_size_ptr = new_size;
-	*(size_t *)((uintptr_t)ptr + new_size) = diff;
-	__free((void *)((uintptr_t)ptr + new_size));
-
-	return ptr;
+	return block;
 }
 
 #endif
