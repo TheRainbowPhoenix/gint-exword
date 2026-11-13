@@ -103,18 +103,16 @@ void r61523_identify(
 
 void r61523_win_set(int x1, int x2, int y1, int y2)
 {
+#if GINT_HW_EX
+    y1 += 40;
+    y2 += 40;
+#else
     if (r61523_variant != 0x16 && r61523_variant != 0x52)
     {
-        /* R61523 has a 360x640 area; the CP-400 uses the top-right corner
-         * for its 320x528 display, so skip over the first 40 columns */
-        #if GINT_HW_CP
         x1 += 40;
         x2 += 40;
-        #else
-        y1 += 40;
-        y2 += 40;
-        #endif
     }
+#endif
 
     uint16_t volatile *DISPLAY = (void *)0xb4000000;
 
@@ -154,8 +152,12 @@ void r61523_display(uint16_t *vram)
     for(int y = 0; y < DHEIGHT; y++) {
         uint16_t *r5 = (void *)vram + row_offset;
 
-        for(int x = 0; x < DWIDTH; x++)
+        for(int x = 0; x < DWIDTH; x++) {
             *DISPLAY = *r5++;
+#if GINT_HW_EX
+            synco();
+#endif
+        }
 
         row_offset += 2 * DWIDTH;
     }
@@ -172,8 +174,12 @@ void r61523_display_rect(
     uint16_t volatile *DISPLAY = (void *)0xb4000000;
 
     for(int y = 0; y < ymax - ymin + 1; y++) {
-        for(int x = 0; x < xmax - xmin + 1; x++)
+        for(int x = 0; x < xmax - xmin + 1; x++) {
             *DISPLAY = vram[x];
+#if GINT_HW_EX
+            synco();
+#endif
+        }
         vram += DWIDTH;
     }
 }
@@ -188,6 +194,9 @@ void r61523_set_pixel(int x, int y, int color)
     select(44);
     uint16_t volatile *DISPLAY = (void *)0xb4000000;
     *DISPLAY = color;
+#if GINT_HW_EX
+    synco();
+#endif
 }
 
 static bool r61523_update(int x, int y, image_t const *fb, int flags)
