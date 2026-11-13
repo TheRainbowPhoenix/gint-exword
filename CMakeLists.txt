@@ -3,6 +3,13 @@
 cmake_minimum_required(VERSION 3.15)
 project(Gint VERSION 2.11.0 LANGUAGES C ASM)
 
+# EX-word runs as a hosted add-in; do not install the calculator gint kernel.
+# Build a minimal Exword backend first, using libdataplus-ex hardware code.
+if("${FXSDK_PLATFORM_LONG}" STREQUAL "exword")
+  add_subdirectory(src/exword)
+  return()
+endif()
+
 include(GitVersionNumber)
 include(Fxconv)
 
