@@ -9,7 +9,7 @@ add_library(gint-exword STATIC
   "${PROJECT_SOURCE_DIR}/src/keysc/keydev.c"
   "${PROJECT_SOURCE_DIR}/src/keysc/keydown_all.c"
   "${PROJECT_SOURCE_DIR}/src/keysc/keydown_any.c"
-  keysc.c)
+  "${PROJECT_SOURCE_DIR}/src/keysc/keysc.c")
 
 target_compile_definitions(gint-exword PUBLIC FXEXWORD TARGET_EXWORD)
 target_compile_options(gint-exword PRIVATE -mb -m4a-nofpu -Os
