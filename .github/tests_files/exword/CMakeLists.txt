@@ -4,6 +4,12 @@ project(GintEXWORDSmoke C ASM)
 include(GenerateD01)
 include(GenerateEXWORDPackage)
 find_package(Gint 2.11 REQUIRED)
+include(Fxconv)
+set(CMAKE_FXCONV_COMPILE_OBJECT
+  "<CMAKE_FXCONV_COMPILER> --toolchain=sh-elf --cg <SOURCE> -o <OBJECT>")
+set(ASSETS rgb565.png rgb565a.png p4_rgb565.png p4_rgb565a.png
+  p8_rgb565.png p8_rgb565a.png font.png)
+fxconv_declare_assets(${ASSETS} WITH_METADATA)
 
 if(NOT DEFINED EXWORD_FXSDK_TESTS OR NOT DEFINED EXWORD_METADATA_SOURCE)
   message(FATAL_ERROR "EXWORD_FXSDK_TESTS and EXWORD_METADATA_SOURCE required")
@@ -11,6 +17,7 @@ endif()
 
 add_executable(gintt
   "${CMAKE_CURRENT_SOURCE_DIR}/main.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/test.c" ${ASSETS}
   "${EXWORD_FXSDK_TESTS}/crt0.S")
 target_compile_options(gintt PRIVATE
   -mb -m4a-nofpu -Os -ffreestanding -fno-builtin

@@ -8,6 +8,13 @@
 
 static keydev_t exword_keyboard;
 static int exword_keyboard_ready;
+static getkey_feature_t exword_feature;
+
+getkey_feature_t getkey_feature_function(void) { return exword_feature; }
+void getkey_set_feature_function(getkey_feature_t function)
+{
+    exword_feature = function;
+}
 
 keydev_t *keydev_std(void)
 {

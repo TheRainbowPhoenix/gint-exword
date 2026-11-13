@@ -1,3 +1,4 @@
+#include "test.h"
 #include <gint/display.h>
 #include <gint/image.h>
 #include <gint/keyboard.h>
@@ -170,12 +171,15 @@ static void clear_screen(void)
     dcircle(180, 76, 9, C_BLUE, C_BLACK);
     int x[3] = { 216, 233, 248 };
     int y[3] = { 87, 65, 87 };
-    dpoly(x, y, 3, C_GREEN, C_BLACK);
+    for(int i = 0; i < 3; i++)
+        dline(x[i], y[i], x[(i+1)%3], y[(i+1)%3], C_GREEN);
     dimage(270, 69, &image);
     dpixel(300, 76, C_BLACK);
     drect(310, 65, 420, 87, C_LIGHT);
     dtext(325, 72, C_BLACK, "KEY TEST");
 
+    drect(430, 65, DWIDTH-1, 87, C_LIGHT);
+    dtext(450, 72, C_BLACK, "TEST");
     dupdate();
 }
 
@@ -188,7 +192,27 @@ int main(void)
 
     for(;;) {
         key_event_t ev = pollevent();
-        if(keys_mode) {
+        if(keys_mode == 2) {
+            test_clock_update();
+            if((ev.type == KEYEV_DOWN && (ev.key == KEY_EXIT || ev.key == KEY_ACON)) ||
+               (ev.type == KEYEV_TOUCH_DOWN && ev.y < 24 && ev.x >= 400)) {
+                test_clock_stop();
+                touch_exword_quit();
+                return -2;
+            }
+            if(ev.type == KEYEV_DOWN && ev.key == KEY_EXE) {
+                test_clock_stop();
+                test_screen();
+            }
+            if(ev.type == KEYEV_TOUCH_DOWN && ev.y < 24 && ev.x <= 110) {
+                test_clock_stop();
+                keys_mode = 0;
+                clear_screen();
+                old_x = old_y = -1;
+            }
+            continue;
+        }
+        if(keys_mode == 1) {
             if(ev.type == KEYEV_DOWN || ev.type == KEYEV_UP || ev.type == KEYEV_HOLD)
                 key_test_event(ev);
             else if(ev.type == KEYEV_TOUCH_DOWN && ev.y < 24) {
@@ -202,6 +226,12 @@ int main(void)
                     old_x = old_y = -1;
                 }
             }
+            continue;
+        }
+        if(ev.type == KEYEV_TOUCH_DOWN && ev.x >= 430 && ev.y >= 65 && ev.y <= 87) {
+            keys_mode = 2;
+            test_screen();
+            old_x = old_y = -1;
             continue;
         }
         if(ev.type == KEYEV_TOUCH_DOWN && ev.x >= 310 && ev.x <= 420 &&
