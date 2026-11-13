@@ -1,48 +1,81 @@
-#include <gint/drivers/r61523.h>
+#include <gint/display.h>
+#include <gint/image.h>
 #include <gint/keyboard.h>
 #include <gint/keycodes.h>
-#include <gint/display.h>
+#include <gint/drivers/touch.h>
 
-static uint16_t line[DWIDTH];
+static uint16_t const image_pixels[8 * 8] = {
+    C_RED, C_RED, C_RED, C_RED, C_RED, C_RED, C_RED, C_RED,
+    C_RED, C_WHITE, C_WHITE, C_WHITE, C_WHITE, C_WHITE, C_WHITE, C_RED,
+    C_RED, C_WHITE, C_BLUE, C_BLUE, C_BLUE, C_BLUE, C_WHITE, C_RED,
+    C_RED, C_WHITE, C_BLUE, C_GREEN, C_GREEN, C_BLUE, C_WHITE, C_RED,
+    C_RED, C_WHITE, C_BLUE, C_GREEN, C_GREEN, C_BLUE, C_WHITE, C_RED,
+    C_RED, C_WHITE, C_BLUE, C_BLUE, C_BLUE, C_BLUE, C_WHITE, C_RED,
+    C_RED, C_WHITE, C_WHITE, C_WHITE, C_WHITE, C_WHITE, C_WHITE, C_RED,
+    C_RED, C_RED, C_RED, C_RED, C_RED, C_RED, C_RED, C_RED,
+};
 
-static void draw_frame(void)
+static bopti_image_t const image = {
+    .format = IMAGE_RGB565,
+    .width = 8,
+    .height = 8,
+    .stride = 16,
+    .data = (void *)image_pixels,
+};
+
+static void clear_screen(void)
 {
-    for(int y = 0; y < DHEIGHT; y++) {
-        for(int x = 0; x < DWIDTH; x++) {
-            int half = (y - 64) >> 1;
-            int inside = y >= 64 && y <= 256 &&
-                x >= 264 - half && x <= 264 + half;
-            line[x] = inside ? C_BLUE : C_WHITE;
-        }
-        r61523_display_row(line, y);
-    }
-}
+    dclear(C_WHITE);
+    drect(0, 0, DWIDTH-1, 19, C_LIGHT);
+    dtext(8, 6, C_BLACK, "TOUCH DRAW  EXE CLEAR  EXIT QUIT");
 
-static void draw_key_indicator(int key)
-{
-    uint16_t color = key ? C_GREEN : C_WHITE;
-    if(key == KEY_EXIT || key == KEY_ACON)
-        color = C_RED;
-    for(int i = 0; i < 10; i++) {
-        for(int x = 0; x < DWIDTH; x++)
-            line[x] = color;
-        r61523_display_row(line, i);
-    }
+    drect(12, 27, 65, 39, C_RED);
+    dline(85, 27, 150, 39, C_GREEN);
+    dcircle(180, 33, 7, C_BLUE, C_BLACK);
+    int x[3] = { 216, 233, 248 };
+    int y[3] = { 39, 24, 39 };
+    dpoly(x, y, 3, C_GREEN, C_BLACK);
+    dimage(270, 26, &image);
+    dpixel(300, 33, C_BLACK);
+    dtext(325, 28, C_BLACK, "GINTT");
+
+    dupdate();
 }
 
 int main(void)
 {
-    draw_frame();
-    draw_key_indicator(0);
+    clear_screen();
+
+    int old_x = -1, old_y = -1;
 
     for(;;) {
         key_event_t ev = pollevent();
-        if(ev.type == KEYEV_DOWN) {
-            draw_key_indicator(ev.key);
-            if(ev.key == KEY_EXIT || ev.key == KEY_ACON)
-                return -2;
+        while(ev.type != KEYEV_NONE) {
+            if(ev.type == KEYEV_DOWN) {
+                if(ev.key == KEY_EXIT || ev.key == KEY_ACON)
+                    return -2;
+                if(ev.key == KEY_EXE) {
+                    clear_screen();
+                    old_x = old_y = -1;
+                }
+            }
+            else if(ev.type == KEYEV_TOUCH_DOWN) {
+                old_x = ev.x;
+                old_y = ev.y;
+                if(ev.y >= 44)
+                    dcircle(ev.x, ev.y, 2, C_BLUE, C_BLUE);
+            }
+            else if(ev.type == KEYEV_TOUCH_DRAG) {
+                if(old_x >= 0 && old_y >= 44 && ev.y >= 44)
+                    dline(old_x, old_y, ev.x, ev.y, C_BLACK);
+                old_x = ev.x;
+                old_y = ev.y;
+            }
+            else if(ev.type == KEYEV_TOUCH_UP) {
+                old_x = old_y = -1;
+            }
+            ev = pollevent();
         }
-        else if(ev.type == KEYEV_UP)
-            draw_key_indicator(0);
+        dupdate();
     }
 }
