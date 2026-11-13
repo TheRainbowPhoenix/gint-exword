@@ -30,6 +30,31 @@
 
 static struct exword_touch_debug debug_scan;
 
+/* Hosted add-ins retain the OS interrupt handlers. In particular, an OS pen
+   handler must not change the ADC channel while we acquire an X/Y pair.
+   ROM32A WriteCommand/ReadWord also save SR and set BL around their I/O. */
+static uint32_t touch_lock(void)
+{
+    uint32_t saved, blocked;
+    __asm__ volatile("stc sr,%0" : "=r"(saved));
+    blocked = saved | 0x10000000;
+    __asm__ volatile("ldc %0,sr" :: "r"(blocked) : "memory");
+    return saved;
+}
+
+static void touch_unlock(uint32_t saved)
+{
+    __asm__ volatile("ldc %0,sr" :: "r"(saved) : "memory");
+}
+
+static int pen_down(void)
+{
+    /* ROM32A Touch_IsPenDownDebounced(). */
+    for(int i = 0; i < 5; i++)
+        if(PEN_PORT & 1) return 0;
+    return 1;
+}
+
 static struct {
     int xmin, xmax, ymin, ymax;
     int xflip, yflip;
@@ -61,8 +86,12 @@ void touch_exword_calibrate(int xmin, int xmax, int ymin, int ymax,
 
 static int wait_flag(uint8_t flags)
 {
-    for(int timeout = IIC_LIMIT; timeout > 0; timeout--)
-        if(IIC_STAT & flags) return 1;
+    for(int timeout = IIC_LIMIT; timeout > 0; timeout--) {
+        uint8_t status = IIC_STAT;
+        /* Arbitration loss is a failed transaction, never a sample. */
+        if(status & 8) return 0;
+        if(status & flags) return 1;
+    }
     return 0;
 }
 
@@ -154,28 +183,39 @@ failed:
     return 0;
 }
 
-static int touch_axis(uint8_t command, int low, int high, int *value)
+static int filter_samples(uint16_t samples[5], int tolerance,
+    int low, int high, int *value)
 {
-    uint16_t samples[5], discard;
-    if(!touch_command(command) || !touch_read_word(&discard))
-        return 0;
-    for(int i = 0; i < 5; i++) {
-        if(!touch_read_word(&samples[i])) return 0;
-        samples[i] >>= 4;
-    }
     int imin = 0, imax = 0;
     for(int i = 1; i < 5; i++) {
         if(samples[i] < samples[imin]) imin = i;
         if(samples[i] > samples[imax]) imax = i;
     }
-    int avg = -1;
+    int avg = -1, previous = -1;
     for(int i = 0; i < 5; i++) {
         if(i == imin || i == imax) continue;
         if(samples[i] < low || samples[i] > high) return 0;
+        /* ROM compares successive retained samples, not their average. */
+        int delta = samples[i] - previous;
+        if(previous >= 0 && (delta > tolerance || delta < -tolerance))
+            return 0;
         avg = (avg < 0) ? samples[i] : (avg + samples[i]) / 2;
+        previous = samples[i];
     }
     *value = avg;
     return avg >= 0;
+}
+
+static int touch_axis(uint8_t command, int tolerance,
+    int low, int high, int *value)
+{
+    uint16_t samples[5], discard;
+    if(!touch_command(command) || !touch_read_word(&discard)) return 0;
+    for(int i = 0; i < 5; i++) {
+        if(!touch_read_word(&samples[i])) return 0;
+        samples[i] >>= 4;
+    }
+    return filter_samples(samples, tolerance, low, high, value);
 }
 
 static int normalize_raw(int n, int min, int max, int extent, int margin,
@@ -197,16 +237,29 @@ key_event_t touch_scan(void)
     key_event_t ev = { .type = KEYEV_NONE };
     int raw_x = 0, raw_y = 0;
     int down = 0;
-    debug_scan.pen_down = ((PEN_PORT & 1) == 0);
+    debug_scan.pen_down = pen_down();
     debug_scan.valid = 0;
 
     if(debug_scan.pen_down) {
-        int x_ok = touch_axis(0xc4, 0x50, 0xff5, &raw_x);
-        int y_ok = touch_axis(0xd4, 0x70, 0xff1, &raw_y);
-        /* ROM32A TouchI2C_ReadPowerDownX() clocks out the conversion too. */
-        uint16_t discard;
-        int powerdown_ok = touch_command(0xc0) && touch_read_word(&discard);
-        down = x_ok && y_ok && powerdown_ok && ((PEN_PORT & 1) == 0);
+        /* Bound retries, like the ROM's active-stroke sampling path. Keep the
+           pair atomic so OS sampling cannot switch channels between words. */
+        for(int attempt = 0; attempt < 2; attempt++) {
+            uint32_t saved = touch_lock();
+            int x_ok = touch_axis(0xc4, 0x50, 10, 0xff5, &raw_x);
+            int y_ok = touch_axis(0xd4, 0x70, 14, 0xff1, &raw_y);
+            uint16_t discard;
+            int powerdown_ok = touch_command(0xc0) && touch_read_word(&discard);
+            debug_scan.pen_down = pen_down();
+            touch_unlock(saved);
+            down = x_ok && y_ok && powerdown_ok && debug_scan.pen_down;
+            if(down || !debug_scan.pen_down) break;
+        }
+        /* A rejected conversion is not a pen release. Leave the stroke and
+           last point intact; the next successful sample continues the line. */
+        if(!down && debug_scan.pen_down) {
+            debug_scan.rejected_scans++;
+            return ev;
+        }
     }
 
     if(down) {
@@ -222,6 +275,7 @@ key_event_t touch_scan(void)
         debug_scan.screen_x = clamp_screen(x, DWIDTH);
         debug_scan.screen_y = clamp_screen(y, DHEIGHT);
         debug_scan.valid = 1;
+        debug_scan.accepted_scans++;
 
         x = debug_scan.screen_x;
         y = debug_scan.screen_y;

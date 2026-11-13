@@ -40,13 +40,10 @@ int keysc_tick(void)
     keysc_scan(scan);
     keydev_process_state(&exword_keyboard, scan);
     keydev_tick(&exword_keyboard, 7812);
-    static unsigned touch_divider;
-    if(++touch_divider >= 4) {
-        touch_divider = 0;
-        key_event_t ev = touch_scan();
-        if(ev.type != KEYEV_NONE)
-            keydev_queue_event(&exword_keyboard, ev);
-    }
+    /* EX-word has no scan timer, sample on every poll */
+    key_event_t ev = touch_scan();
+    if(ev.type != KEYEV_NONE)
+        keydev_queue_event(&exword_keyboard, ev);
     return 0;
 }
 

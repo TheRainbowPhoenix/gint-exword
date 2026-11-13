@@ -68,6 +68,7 @@ struct exword_touch_debug {
     int mapped_x, mapped_y;
     int screen_x, screen_y;
     int pen_down, valid;
+    unsigned accepted_scans, rejected_scans;
 };
 
 key_event_t touch_scan(void);

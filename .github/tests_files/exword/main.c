@@ -58,6 +58,7 @@ static void show_debug(void)
     debug_line(18, "RAW X:", info.raw_x, info.raw_y);
     debug_line(30, "MAP X:", info.mapped_x, info.mapped_y);
     debug_line(42, "PEN VALID:", info.pen_down, info.valid);
+    debug_line(54, "OK / BAD:", info.accepted_scans, info.rejected_scans);
 }
 
 static void clear_screen(void)
@@ -88,7 +89,7 @@ int main(void)
 
     for(;;) {
         key_event_t ev = pollevent();
-        while(ev.type != KEYEV_NONE) {
+        if(ev.type != KEYEV_NONE) {
             if(ev.type == KEYEV_DOWN) {
                 if(ev.key == KEY_EXIT || ev.key == KEY_ACON)
                     return -2;
@@ -102,22 +103,19 @@ int main(void)
                 old_y = ev.y;
                 if(ev.y >= 105)
                     dcircle(ev.x, ev.y, 2, C_BLUE, C_BLUE);
-                show_debug();
             }
             else if(ev.type == KEYEV_TOUCH_DRAG) {
                 if(old_x >= 0 && old_y >= 105 && ev.y >= 105)
                     dline(old_x, old_y, ev.x, ev.y, C_BLACK);
                 old_x = ev.x;
                 old_y = ev.y;
-                show_debug();
             }
             else if(ev.type == KEYEV_TOUCH_UP) {
                 old_x = old_y = -1;
-                show_debug();
             }
-            ev = pollevent();
         }
-        if(++idle_polls >= 4096) {
+        /* refreshing every point stalls input. refresh every 16 polls, even on continuous stroke. */
+        if(++idle_polls >= 16) {
             idle_polls = 0;
             show_debug();
         }
