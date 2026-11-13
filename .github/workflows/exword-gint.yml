@@ -31,6 +31,9 @@ jobs:
           git clone --depth=1 https://github.com/brijohn/elf2d01.git /tmp/elf2d01
           cc -O2 /tmp/elf2d01/elf2d01.c -o /tmp/fxsdk-exword/bin/elf2d01
 
+      - name: Check converted test assets
+        run: python3 .github/tests_files/exword/check_assets.py /tmp/fxsdk-src
+
       - name: Build and install gint
         shell: bash
         run: |
@@ -55,7 +58,7 @@ jobs:
           export PATH="/tmp/fxsdk-exword/bin:$PATH"
           mkdir -p /tmp/gint-exword-project
           cp .github/tests_files/exword/CMakeLists.txt /tmp/gint-exword-project/CMakeLists.txt
-          cp .github/tests_files/exword/main.c /tmp/gint-exword-project/main.c
+          cp .github/tests_files/exword/*.{c,h,png,txt} /tmp/gint-exword-project/
           cd /tmp/gint-exword-project
           fxsdk build-exword -c -- \
             -DCMAKE_PREFIX_PATH=/tmp/gint-exword \
