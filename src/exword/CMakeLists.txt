@@ -11,7 +11,6 @@ file(GLOB RENDER_SOURCES CONFIGURE_DEPENDS
   "${PROJECT_SOURCE_DIR}/src/render/*.c"
   "${PROJECT_SOURCE_DIR}/src/render-cg/*.c"
   "${PROJECT_SOURCE_DIR}/src/render-cg/image/*.c"
-  "${PROJECT_SOURCE_DIR}/src/render-cg/image/*.S"
   "${PROJECT_SOURCE_DIR}/src/image/*.c")
 list(REMOVE_ITEM RENDER_SOURCES
   "${PROJECT_SOURCE_DIR}/src/render-cg/dvram.c"
@@ -31,14 +30,14 @@ add_library(gint-exword STATIC
   ${RENDER_SOURCES} ${FONT}
   "${PROJECT_SOURCE_DIR}/src/cpu/atomic.c"
   "${PROJECT_SOURCE_DIR}/src/cpu/registers.s"
-  render.c)
+  render.c image.c)
 
 target_compile_definitions(gint-exword PUBLIC FXEXWORD TARGET_EXWORD)
 set(GINT_EXWORD_VRAM_ADDRESS "0xac200000" CACHE STRING
   "OS RGB565 framebuffer address (default: XD-A8500 ROM32A)")
 target_compile_definitions(gint-exword PRIVATE
   GINT_EXWORD_VRAM_ADDRESS=${GINT_EXWORD_VRAM_ADDRESS})
-target_compile_options(gint-exword PRIVATE -mb -m4a-nofpu -Wa,--dsp -Os -fstrict-volatile-bitfields
+target_compile_options(gint-exword PRIVATE -mb -m4a-nofpu -Os -fstrict-volatile-bitfields
   -ffreestanding -fno-builtin -Wall -Wextra)
 target_include_directories(gint-exword PUBLIC
   "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"

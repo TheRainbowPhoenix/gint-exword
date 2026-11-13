@@ -25,7 +25,8 @@ target_compile_options(gintt PRIVATE
 target_link_options(gintt PRIVATE
   -mb -m4a-nofpu -nostdlib -no-pie
   "-Wl,-T,${EXWORD_FXSDK_TESTS}/exword.ld"
-  -Wl,--build-id=none -Wl,--no-warn-rwx-segments)
+  -Wl,--build-id=none -Wl,--no-warn-rwx-segments
+  "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/gintt.map")
 set_property(TARGET gintt APPEND PROPERTY LINK_DEPENDS
   "${EXWORD_FXSDK_TESTS}/exword.ld")
 target_link_libraries(gintt PRIVATE Gint::Gint)

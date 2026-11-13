@@ -79,13 +79,39 @@ jobs:
           symbols = subprocess.check_output(
               ['sh-elf-nm', str(base / 'gintt')], text=True)
           addresses = {}
+          aligned = {}
           for line in symbols.splitlines():
               fields = line.split()
               if len(fields) == 3 and fields[2] in ('_etext', '_sdata', '_edata'):
                   addresses[fields[2]] = int(fields[0], 16)
+              if len(fields) == 3 and (fields[2] in (
+                  '_gint_font8x9', '_test_font', '_test_rgb565', '_test_rgb565a',
+                  '_test_p4_rgb565', '_test_p4_rgb565a', '_test_p8_rgb565',
+                  '_test_p8_rgb565a')):
+                  aligned[fields[2]] = int(fields[0], 16)
           assert len(addresses) == 3, addresses
           assert all(value % 4 == 0 for value in addresses.values()), addresses
+          assert len(aligned) == 8, aligned
+          assert all(value % 4 == 0 for value in aligned.values()), aligned
+          elf = (base / 'gintt').read_bytes()
+          import struct
+          header = struct.unpack_from('>16sHHIIIIIHHHHHH', elf)
+          assert header[0][:6] == b'\x7fELF\x01\x02'
+          sections = [struct.unpack_from('>10I', elf, header[6] + i*header[11])
+                      for i in range(header[12])]
+          names = sections[header[13]]
+          names = elf[names[4]:names[4]+names[5]]
+          data = next(section for section in sections
+                      if names[section[0]:].split(b'\0', 1)[0] == b'.data')
           d01 = (base / 'gintt.d01').read_bytes()
+          offset = addresses['_etext'] - 0x70000000
+          size = addresses['_edata'] - addresses['_sdata']
+          assert d01[offset:offset+size] == elf[data[4]:data[4]+size], \
+              'D01 initialized data disagrees with startup copy source'
+          assembly = subprocess.check_output(['sh-elf-objdump', '-d', str(base/'gintt')], text=True)
+          import re
+          assert not re.search(r'\b(?:ldrs|ldre|ldrc|movs\.[wl])\s', assembly), \
+              'Hosted EX-word renderer requires DSP initialization'
           assert len(d01) > 128
           assert d01[:16] == b'CASIODICPLUGIN10'
           assert d01[16:22] == b'gintt\x00'
@@ -112,4 +138,14 @@ jobs:
           name: gintt-cn
           path: /tmp/gint-exword-project/build-exword/packages/cn/
           if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gintt-debug
+          path: |
+            /tmp/gint-exword-project/build-exword/gintt
+            /tmp/gint-exword-project/build-exword/gintt.map
+          if-no-files-found: warn
           retention-days: 30
