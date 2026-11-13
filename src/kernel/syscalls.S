@@ -55,8 +55,14 @@
 .global ___PowerOff
 .global ___Reset
 
+#if GINT_OS_EX
+#define syscall_target(table) mov.l table, r2; mov.l @r2, r2
+#else
+#define syscall_target(table) mov.l table, r2
+#endif
+
 #define syscall_(id, syscall_table)	\
-	mov.l	syscall_table, r2	;\
+	syscall_target(syscall_table)	;\
 	mov.l	1f, r0			;\
 	jmp	@r2			;\
 	nop				;\
@@ -331,3 +337,46 @@ _BFile_Seek:
 	from_env(File_Lseek)
 
 #endif /* GINT_OS_CP */
+
+#if GINT_OS_EX
+
+.global _exword_sys_sdformat
+_exword_sys_sdformat: syscall(0x31)
+.global _exword_sys_totaldiskspace
+_exword_sys_totaldiskspace: syscall(0x32)
+.global _exword_sys_freediskspace
+_exword_sys_freediskspace: syscall(0x33)
+.global _exword_sys_create
+_exword_sys_create: syscall(0x34)
+.global _exword_sys_delete
+_exword_sys_delete: syscall(0x35)
+.global _exword_sys_rename
+_exword_sys_rename: syscall(0x36)
+.global _exword_sys_open
+_exword_sys_open: syscall(0x37)
+.global _exword_sys_close
+_exword_sys_close: syscall(0x38)
+.global _exword_sys_closeall
+_exword_sys_closeall: syscall(0x39)
+.global _exword_sys_get_filesize
+_exword_sys_get_filesize: syscall(0x3a)
+.global _exword_sys_seek
+_exword_sys_seek: syscall(0x3b)
+.global _exword_sys_read
+_exword_sys_read: syscall(0x3c)
+.global _exword_sys_write
+_exword_sys_write: syscall(0x3d)
+.global _exword_sys_write2
+_exword_sys_write2: syscall(0x3e)
+.global _exword_sys_findfirst
+_exword_sys_findfirst: syscall(0x3f)
+.global _exword_sys_findnext
+_exword_sys_findnext: syscall(0x40)
+.global _exword_sys_findclose
+_exword_sys_findclose: syscall(0x41)
+
+.balign 4
+syscall_table:
+	.long 0x74000000
+
+#endif

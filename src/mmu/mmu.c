@@ -21,7 +21,8 @@ uint32_t mmu_translate(uint32_t page, uint32_t *size)
 void *mmu_uram(void)
 {
 	/* Use P1 access */
-	return (void *)(mmu_translate(0x08100000, NULL) | 0x80000000);
+	return (void *)(mmu_translate(GINT_HW_EX ? 0x74000000 : 0x08100000, NULL)
+		| 0x80000000);
 }
 
 /* mmu_uram_size(): Get size of user RAM area */
@@ -30,7 +31,8 @@ uint32_t mmu_uram_size(void)
 	uint32_t size = 0;
 	uint32_t pagesize;
 
-	while(mmu_translate(0x08100000 + size, &pagesize) != (uint32_t)-1)
+	uint32_t base = GINT_HW_EX ? 0x74000000 : 0x08100000;
+	while(mmu_translate(base + size, &pagesize) != (uint32_t)-1)
 	{
 		size += pagesize;
 	}
@@ -47,8 +49,13 @@ bool mmu_is_rom(void const *ptr)
 		return true;
 	if(a >= 0xa0000000 && a < 0xa8000000)
 		return true;
+	#if GINT_HW_EX
+	if(a >= 0x70000000 && a < 0x70020000)
+		return true;
+	#else
 	if(a >= 0x00300000 && a < 0x00800000)
 		return true;
+	#endif
 
 	return false;
 }
@@ -157,8 +164,13 @@ void utlb_mapped_memory(uint32_t *p_rom, uint32_t *p_ram)
 		int size = 1 << ((0x14100c0a >> sz) & 0xff);
 
 		uint32_t src = addr->VPN << 10;
+		#if GINT_HW_EX
+		if(src >= 0x70000000 && src < 0x70020000) rom += size;
+		if(src >= 0x74000000 && src < 0x74008000) ram += size;
+		#else
 		if(src >= 0x00300000 && src < 0x00700000) rom += size;
 		if(src >= 0x08100000 && src < 0x08180000) ram += size;
+		#endif
 	}
 
 	if(p_rom) *p_rom = rom;

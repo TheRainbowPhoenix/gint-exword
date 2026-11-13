@@ -30,6 +30,7 @@ add_library(gint-exword STATIC
   ${RENDER_SOURCES} ${FONT}
   "${PROJECT_SOURCE_DIR}/src/cpu/atomic.c"
   "${PROJECT_SOURCE_DIR}/src/cpu/registers.s"
+  "${PROJECT_SOURCE_DIR}/src/kernel/syscalls.S"
   render.c image.c)
 
 target_compile_definitions(gint-exword PUBLIC FXEXWORD TARGET_EXWORD)
