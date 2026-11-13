@@ -184,6 +184,24 @@ void r61523_display_rect(
     }
 }
 
+void r61523_fill_rect(int x1, int y1, int x2, int y2, uint16_t color)
+{
+    if(x1 < 0) x1 = 0;
+    if(y1 < 0) y1 = 0;
+    if(x2 >= DWIDTH) x2 = DWIDTH - 1;
+    if(y2 >= DHEIGHT) y2 = DHEIGHT - 1;
+    if(x1 > x2 || y1 > y2) return;
+    r61523_win_set(x1, x2, y1, y2);
+    select(REG_DATA);
+    int count = (x2-x1+1) * (y2-y1+1);
+    while(count--) {
+        *DISPLAY = color;
+#if GINT_HW_EX
+        synco();
+#endif
+    }
+}
+
 void r61523_display_row(uint16_t const *row, int y)
 {
     if(!row || (unsigned)y >= DHEIGHT)
