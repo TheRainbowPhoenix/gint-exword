@@ -48,6 +48,10 @@ jobs:
           test -s /tmp/gint-exword/lib/libgint-exword.a
           sh-elf-nm /tmp/gint-exword/lib/libgint-exword.a | grep -E '_r61523_display_rect$'
           sh-elf-nm /tmp/gint-exword/lib/libgint-exword.a | grep -E '_pollevent$'
+          sh-elf-nm --defined-only /tmp/gint-exword/lib/libgint-exword.a > /tmp/gint-symbols.txt
+          for symbol in mmu_translate mmu_uram mmu_uram_size mmu_is_rom utlb_addr utlb_data itlb_addr itlb_data hw_detect gint; do
+            grep -E " _$symbol$" /tmp/gint-symbols.txt
+          done
 
       - name: Build GINTT
         shell: bash
@@ -67,6 +71,7 @@ jobs:
             -DEXWORD_METADATA_SOURCE=/tmp/exword-metadata
           fxsdk build-exword
           test -s build-exword/gintt.d01
+          test -s build-exword/mmu-link
 
       - name: Validate GINTT packages
         shell: bash
