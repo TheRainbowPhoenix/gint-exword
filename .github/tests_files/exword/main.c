@@ -74,6 +74,10 @@ static void clear_screen(void)
     dclear(C_WHITE);
     drect(0, 0, DWIDTH-1, 54, C_LIGHT);
     dtext(8, 5, C_BLACK, "TOUCH DRAW  EXE CLEAR  EXIT QUIT");
+    struct exword_touch_calibration calib;
+    touch_exword_get_calibration(&calib);
+    dtext(400, 5, C_BLACK, calib.source == EXWORD_TOUCH_CALIB_OS ? "CAL OS" :
+        calib.source == EXWORD_TOUCH_CALIB_CUSTOM ? "CAL CUSTOM" : "CAL DEFAULT");
     show_debug(1);
 
     drect(12, 65, 65, 87, C_RED);

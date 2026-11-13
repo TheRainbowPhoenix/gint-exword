@@ -71,10 +71,23 @@ struct exword_touch_debug {
     unsigned accepted_scans, rejected_scans;
 };
 
+enum {
+    EXWORD_TOUCH_CALIB_FALLBACK,
+    EXWORD_TOUCH_CALIB_OS,
+    EXWORD_TOUCH_CALIB_CUSTOM,
+};
+
+struct exword_touch_calibration {
+    int x_offset, y_offset;
+    int x_scale, y_scale; /* raw units per pixel, multiplied by 256 */
+    int source;
+};
+
 key_event_t touch_scan(void);
 void touch_exword_calibrate(int xmin, int xmax, int ymin, int ymax,
     int xflip, int yflip);
 void touch_exword_get_last_scan(struct exword_touch_debug *out);
+void touch_exword_get_calibration(struct exword_touch_calibration *out);
 /* Restore OS pen/I2C configuration before returning from a hosted add-in. */
 void touch_exword_quit(void);
 

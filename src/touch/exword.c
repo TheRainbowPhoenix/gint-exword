@@ -16,6 +16,7 @@
 #define PEN_PORT  (*(volatile uint8_t *)0xa4050134)
 #define PEN_CTRL  (*(volatile uint16_t *)0xa4050114)
 #define FRQCR     (*(volatile uint32_t *)0xa4150000)
+#define OS_TOUCH_CALIB ((volatile int32_t *)0xac000054)
 
 #define IIC_LIMIT 100000
 
@@ -26,14 +27,17 @@
 #define EX_Y_SCALE  0xb17
 #define EX_X_TARGET 0x1fd
 #define EX_Y_TARGET 0x12f
-#define EX_X_MARGIN ((DWIDTH - EX_X_TARGET) / 2)
-#define EX_Y_MARGIN ((DHEIGHT - EX_Y_TARGET) / 2)
 
 static struct exword_touch_debug debug_scan;
 static int touch_ready;
 static uint16_t saved_pen_ctrl;
 static uint8_t saved_iic_ctrl, saved_iic_int, saved_iic_low, saved_iic_high;
 static int iic_budget;
+static int calibration_ready;
+static struct exword_touch_calibration calibration = {
+    .x_offset = EX_X_OFFSET, .y_offset = EX_Y_OFFSET,
+    .x_scale = EX_X_SCALE, .y_scale = EX_Y_SCALE,
+};
 
 /* Hosted add-ins retain the OS interrupt handlers. In particular, an OS pen
    handler must not change the ADC channel while we acquire an X/Y pair.
@@ -61,17 +65,33 @@ static int pen_down(void)
 }
 
 static struct {
-    int xmin, xmax, ymin, ymax;
     int xflip, yflip;
     int last_x, last_y;
     int down;
     int rejected;
-} touch_state = {
-    .xmin = EX_X_OFFSET,
-    .xmax = EX_X_OFFSET + EX_X_TARGET * EX_X_SCALE / 256,
-    .ymin = EX_Y_OFFSET,
-    .ymax = EX_Y_OFFSET + EX_Y_TARGET * EX_Y_SCALE / 256,
-};
+} touch_state;
+
+static void load_calibration(void)
+{
+    if(calibration_ready) return;
+    struct exword_touch_calibration c = {
+        .x_offset = OS_TOUCH_CALIB[0], .y_offset = OS_TOUCH_CALIB[1],
+        .x_scale = OS_TOUCH_CALIB[2], .y_scale = OS_TOUCH_CALIB[3],
+        .source = EXWORD_TOUCH_CALIB_OS,
+    };
+    if(c.x_offset >= 0 && c.x_offset <= 0xfff &&
+       c.y_offset >= 0 && c.y_offset <= 0xfff &&
+       c.x_scale > 0 && c.y_scale > 0) calibration = c;
+    calibration_ready = 1;
+}
+
+void touch_exword_get_calibration(struct exword_touch_calibration *out)
+{
+    uint32_t saved = touch_lock();
+    load_calibration();
+    if(out) *out = calibration;
+    touch_unlock(saved);
+}
 
 void touch_exword_get_last_scan(struct exword_touch_debug *out)
 {
@@ -82,10 +102,15 @@ void touch_exword_calibrate(int xmin, int xmax, int ymin, int ymax,
     int xflip, int yflip)
 {
     if(xmin >= xmax || ymin >= ymax) return;
-    touch_state.xmin = xmin;
-    touch_state.xmax = xmax;
-    touch_state.ymin = ymin;
-    touch_state.ymax = ymax;
+    int xscale = (xmax - xmin) * 256 / EX_X_TARGET;
+    int yscale = (ymax - ymin) * 256 / EX_Y_TARGET;
+    if(xscale <= 0 || yscale <= 0) return;
+    calibration = (struct exword_touch_calibration) {
+        .x_offset = xmin, .y_offset = ymin,
+        .x_scale = xscale, .y_scale = yscale,
+        .source = EXWORD_TOUCH_CALIB_CUSTOM,
+    };
+    calibration_ready = 1;
     touch_state.xflip = xflip;
     touch_state.yflip = yflip;
 }
@@ -196,6 +221,7 @@ static void touch_prepare(void)
 {
     if(touch_ready) return;
     uint32_t saved = touch_lock();
+    load_calibration();
     saved_pen_ctrl = PEN_CTRL;
     saved_iic_ctrl = IIC_CTRL;
     saved_iic_int = IIC_INT;
@@ -265,11 +291,11 @@ static int touch_axis(uint8_t command, int tolerance,
     return filter_samples(samples, tolerance, low, high, value);
 }
 
-static int normalize_raw(int n, int min, int max, int extent, int margin,
-    int flip)
+static int normalize_raw(int n, int offset, int scale, int extent, int flip)
 {
-    int p = (n - min) * extent / (max - min);
-    return margin + (flip ? extent - p : p);
+    /* calibration already extrapolates to pixel zero. */
+    int p = (n - offset) * 256 / scale;
+    return flip ? extent - p : p;
 }
 
 static int clamp_screen(int p, int size)
@@ -317,10 +343,10 @@ key_event_t touch_scan(void)
 
     if(down) {
         touch_state.rejected = 0;
-        int x = normalize_raw(raw_x, touch_state.xmin, touch_state.xmax,
-            EX_X_TARGET, EX_X_MARGIN, touch_state.xflip);
-        int y = normalize_raw(raw_y, touch_state.ymin, touch_state.ymax,
-            EX_Y_TARGET, EX_Y_MARGIN, touch_state.yflip);
+        int x = normalize_raw(raw_x, calibration.x_offset, calibration.x_scale,
+            EX_X_TARGET, touch_state.xflip);
+        int y = normalize_raw(raw_y, calibration.y_offset, calibration.y_scale,
+            EX_Y_TARGET, touch_state.yflip);
 
         debug_scan.raw_x = raw_x;
         debug_scan.raw_y = raw_y;
