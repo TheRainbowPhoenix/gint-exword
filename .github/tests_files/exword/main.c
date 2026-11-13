@@ -44,6 +44,7 @@ static char const *key_name(int code)
     static struct { int code; char const *name; } const names[] = {
         {KEY_F1,"F1"}, {KEY_F2,"F2"}, {KEY_F3,"F3"},
         {KEY_F4,"F4"}, {KEY_F5,"F5"}, {KEY_F6,"F6"},
+        {KEY_F7,"F7"}, {KEY_F8,"F8"},
         {KEY_SHIFT,"SHIFT"}, {KEY_ALPHA,"ALPHA"}, {KEY_DEL,"DEL"},
         {KEY_EXIT,"EXIT"}, {KEY_EXE,"EXE"}, {KEY_ACON,"ACON"},
         {KEY_UP,"UP"}, {KEY_DOWN,"DOWN"}, {KEY_LEFT,"LEFT"},
@@ -59,6 +60,7 @@ static char const *key_name(int code)
         {KEY_EX_N,"EX N"}, {KEY_EX_M,"EX M"},
         {KEY_EX_HISTORY,"EX HISTORY"}, {KEY_EX_ZOOM,"EX ZOOM"},
         {KEY_EX_JUMP,"EX JUMP"}, {KEY_EX_AUDIO,"EX AUDIO"},
+        {KEY_EX_LAYOUT,"EX LAYOUT"},
     };
     if(code == 0) return "UNMAPPED";
     for(unsigned i = 0; i < sizeof(names)/sizeof(names[0]); i++)

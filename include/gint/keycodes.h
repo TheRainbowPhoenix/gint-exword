@@ -16,6 +16,8 @@ enum {
 	KEY_F4		= 0x94,
 	KEY_F5		= 0x95,
 	KEY_F6		= 0x96,
+	KEY_F7		= 0x97,
+	KEY_F8		= 0x98,
 
 	KEY_SHIFT	= 0x81,
 	KEY_OPTN	= 0x82,
@@ -133,6 +135,7 @@ enum {
   KEY_EX_ZOOM = 0xcb,
   KEY_EX_JUMP = 0xcc,
   KEY_EX_AUDIO = 0xcd,
+  KEY_EX_LAYOUT = 0xce,
 
 	/* Key aliases (deprecated--no more will be added) */
 	KEY_X2		= KEY_SQUARE,
