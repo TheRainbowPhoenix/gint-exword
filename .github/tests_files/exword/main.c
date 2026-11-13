@@ -14,7 +14,7 @@ static void draw_frame(void)
                 x >= 264 - half && x <= 264 + half;
             line[x] = inside ? C_BLUE : C_WHITE;
         }
-        r61523_display_rect(line, 0, DWIDTH - 1, y, y);
+        r61523_display_row(line, y);
     }
 }
 
@@ -26,7 +26,7 @@ static void draw_key_indicator(int key)
     for(int i = 0; i < 10; i++) {
         for(int x = 0; x < DWIDTH; x++)
             line[x] = color;
-        r61523_display_rect(line, 0, DWIDTH - 1, i, i);
+        r61523_display_row(line, i);
     }
 }
 
