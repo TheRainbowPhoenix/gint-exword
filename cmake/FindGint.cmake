@@ -1,3 +1,25 @@
+# EX-word uses a hosted OS backend rather than the calculator gint kernel.
+if("${FXSDK_PLATFORM_LONG}" STREQUAL "exword")
+  find_library(GINT_EXWORD_LIBRARY NAMES gint-exword
+    PATH_SUFFIXES lib)
+  find_path(GINT_EXWORD_INCLUDE_DIR NAMES gint/exword.h
+    PATH_SUFFIXES include)
+  include(FindPackageHandleStandardArgs)
+  set(GINT_VERSION "2.11.0")
+  find_package_handle_standard_args(Gint
+    REQUIRED_VARS GINT_EXWORD_LIBRARY GINT_EXWORD_INCLUDE_DIR
+    VERSION_VAR GINT_VERSION)
+  if(Gint_FOUND AND NOT TARGET Gint::Gint)
+    add_library(Gint::Gint UNKNOWN IMPORTED)
+    set_target_properties(Gint::Gint PROPERTIES
+      IMPORTED_LOCATION "${GINT_EXWORD_LIBRARY}"
+      INTERFACE_INCLUDE_DIRECTORIES "${GINT_EXWORD_INCLUDE_DIR}"
+      INTERFACE_COMPILE_DEFINITIONS "FXEXWORD;TARGET_EXWORD"
+      INTERFACE_LINK_LIBRARIES "gcc")
+  endif()
+  return()
+endif()
+
 macro(get_linker_script_path OUTVAR NAME)
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} -print-file-name=${NAME}
