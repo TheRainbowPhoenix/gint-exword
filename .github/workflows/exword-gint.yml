@@ -22,7 +22,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git clone --depth=1 --branch feature/exword-d01-cmake-ci \
+          git clone --depth=1 --branch dev \
             https://github.com/TheRainbowPhoenix/fxsdk-exword.git /tmp/fxsdk-src
           cmake -S /tmp/fxsdk-src -B /tmp/fxsdk-build \
             -DCMAKE_INSTALL_PREFIX=/tmp/fxsdk-exword \
