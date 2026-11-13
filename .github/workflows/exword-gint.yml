@@ -22,7 +22,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git clone --depth=1 --branch dev https://github.com/TheRainbowPhoenix/fxsdk-exword.git /tmp/fxsdk-src
+          git clone --depth=1 --branch fix/exword-data-load-alignment https://github.com/TheRainbowPhoenix/fxsdk-exword.git /tmp/fxsdk-src
           cmake -S /tmp/fxsdk-src -B /tmp/fxsdk-build \
             -DCMAKE_INSTALL_PREFIX=/tmp/fxsdk-exword \
             -DFXLINK_DISABLE_SDL2=ON -DFXLINK_DISABLE_UDISKS2=ON
@@ -71,7 +71,17 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import subprocess
           base = Path('/tmp/gint-exword-project/build-exword')
+          symbols = subprocess.check_output(
+              ['sh-elf-nm', str(base / 'gintt')], text=True)
+          addresses = {}
+          for line in symbols.splitlines():
+              fields = line.split()
+              if len(fields) == 3 and fields[2] in ('_etext', '_sdata', '_edata'):
+                  addresses[fields[2]] = int(fields[0], 16)
+          assert len(addresses) == 3, addresses
+          assert all(value % 4 == 0 for value in addresses.values()), addresses
           d01 = (base / 'gintt.d01').read_bytes()
           assert len(d01) > 128
           assert d01[:16] == b'CASIODICPLUGIN10'
