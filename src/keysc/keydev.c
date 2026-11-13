@@ -45,6 +45,38 @@ static void keycode_to_keymatrix(int keycode, int *row, int *col)
 	*row = 0;
 	*col = 0;
 }
+#elif GINT_HW_EX
+static uint8_t const EX_translation_table[12][8] = {
+    { KEY_ACON, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, 0, 0 },
+    { 0, KEY_F6, 0, 0, 0, 0, 0, 0 },
+    { 0, KEY_EX_Q, KEY_EX_W, KEY_EX_A, KEY_SHIFT, KEY_EX_Z, KEY_EX_HISTORY, KEY_PAGEUP },
+    { 0, KEY_EX_E, KEY_EX_S, KEY_EX_D, KEY_EX_X, KEY_EX_ZOOM, KEY_EX_JUMP, KEY_PAGEDOWN },
+    { 0, KEY_EX_R, KEY_EX_T, KEY_EX_F, KEY_EX_C, KEY_EX_V, KEY_EXIT, KEY_EX_B },
+    { 0, KEY_EX_U, KEY_EX_I, KEY_EX_J, KEY_EX_N, KEY_EX_H, KEY_EXE, KEY_DOWN },
+    { 0, KEY_EX_O, KEY_EX_K, KEY_EX_M, KEY_EX_Y, KEY_EX_G, KEY_UP, KEY_LEFT },
+    { 0, KEY_EX_P, KEY_EX_L, KEY_ALPHA, KEY_DEL, KEY_EX_AUDIO, 0, KEY_RIGHT },
+    { 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0 },
+};
+static int keymatrix_to_keycode(int row, int col)
+{
+    if((unsigned)row >= 12 || (unsigned)col >= 8) return 0;
+    return EX_translation_table[row][col];
+}
+static void keycode_to_keymatrix(int keycode, int *row, int *col)
+{
+    for(int r = 0; r < 12; r++)
+        for(int c = 0; c < 8; c++)
+            if(EX_translation_table[r][c] == keycode && keycode != 0) {
+                *row = r;
+                *col = c;
+                return;
+            }
+    *row = 11;
+    *col = 7;
+}
 #else
 static uint8_t const CG100_keymap[] = {
   KEY_ON,       KEY_HOME,  KEY_PREVTAB, KEY_UP,    KEY_NEXTTAB, KEY_PAGEUP,
