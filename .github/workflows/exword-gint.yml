@@ -44,7 +44,113 @@ jobs:
           cmake --build /tmp/gint-build -j2
           cmake --install /tmp/gint-build
           test -s /tmp/gint-exword/lib/libgint-exword.a
-          sh-elf-nm /tmp/gint-exword/lib/libgint-exword.a | grep -E ' (r61523_display_rect|keydev_process_state|pollevent|keysc_tick)
+          sh-elf-nm /tmp/gint-exword/lib/libgint-exword.a | grep -Eq ' (r61523_display_rect|keydev_process_state|pollevent|keysc_tick)
+      - name: Build GINTT via Gint::Gint and fxSDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth=1 --branch main \
+            https://github.com/TheRainbowPhoenix/exword-xd-a8500-TEST.git /tmp/exword-metadata
+          export PATH="/tmp/fxsdk-exword/bin:$PATH"
+          mkdir -p /tmp/gint-exword-project
+          cp .github/tests_files/exword/CMakeLists.txt /tmp/gint-exword-project/CMakeLists.txt
+          cp .github/tests_files/exword/main.c /tmp/gint-exword-project/main.c
+          cd /tmp/gint-exword-project
+          fxsdk build-exword -c -- \
+            -DCMAKE_PREFIX_PATH=/tmp/gint-exword \
+            "-DCMAKE_MODULE_PATH=/tmp/gint-exword/lib/cmake/fxsdk;/tmp/fxsdk-exword/lib/cmake/fxsdk" \
+            -DEXWORD_FXSDK_TESTS=/tmp/fxsdk-src/.github/tests_files/a8500 \
+            -DEXWORD_METADATA_SOURCE=/tmp/exword-metadata
+          fxsdk build-exword
+          test -s build-exword/gintt.d01
+
+      - name: Verify D01 and both localized packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/gint-exword-project/build-exword')
+          raw = (p/'gintt.d01').read_bytes()
+          assert raw[:16] == b'CASIODICPLUGIN10'
+          assert raw[16:22] == b'gintt'
+          for locale in ('ja', 'cn'):
+              folder = p/'packages'/locale/'GINTT'
+              assert (folder/'gintt.d01').read_bytes() == raw
+              assert (folder/'fileinfo.cji').exists()
+              assert list(folder.glob('*.htm'))
+              for h in folder.glob('*.htm'):
+                  assert b'@APP' not in h.read_bytes()
+          print('Custom gint backend: GINTT D01', len(raw), 'bytes')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gint-exword-fxtst-ja
+          path: /tmp/gint-exword-project/build-exword/packages/ja/
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gint-exword-fxtst-cn
+          path: /tmp/gint-exword-project/build-exword/packages/cn/
+          if-no-files-found: error
+          retention-days: 30
+
+
+      - name: Build GINTT via Gint::Gint and fxSDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth=1 --branch main \
+            https://github.com/TheRainbowPhoenix/exword-xd-a8500-TEST.git /tmp/exword-metadata
+          export PATH="/tmp/fxsdk-exword/bin:$PATH"
+          mkdir -p /tmp/gint-exword-project
+          cp .github/tests_files/exword/CMakeLists.txt /tmp/gint-exword-project/CMakeLists.txt
+          cd /tmp/gint-exword-project
+          fxsdk build-exword -c -- \
+            -DCMAKE_PREFIX_PATH=/tmp/gint-exword \
+            "-DCMAKE_MODULE_PATH=/tmp/gint-exword/lib/cmake/fxsdk;/tmp/fxsdk-exword/lib/cmake/fxsdk" \
+            -DEXWORD_FXSDK_TESTS=/tmp/fxsdk-src/.github/tests_files/a8500 \
+            -DEXWORD_METADATA_SOURCE=/tmp/exword-metadata
+          fxsdk build-exword
+          test -s build-exword/gintt.d01
+
+      - name: Verify D01 and both localized packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/gint-exword-project/build-exword')
+          raw = (p/'gintt.d01').read_bytes()
+          assert raw[:16] == b'CASIODICPLUGIN10'
+          assert raw[16:22] == b'gintt'
+          for locale in ('ja', 'cn'):
+              folder = p/'packages'/locale/'GINTT'
+              assert (folder/'gintt.d01').read_bytes() == raw
+              assert (folder/'fileinfo.cji').exists()
+              assert list(folder.glob('*.htm'))
+              for h in folder.glob('*.htm'):
+                  assert b'FxSDK bundle test!' in h.read_bytes() or h.name != 'diction.htm'
+          print('Custom gint backend: GINTT D01', len(raw), 'bytes')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gint-exword-fxtst-ja
+          path: /tmp/gint-exword-project/build-exword/packages/ja/
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gint-exword-fxtst-cn
+          path: /tmp/gint-exword-project/build-exword/packages/cn/
+          if-no-files-found: error
+          retention-days: 30
+
 
       - name: Build GINTT via Gint::Gint and fxSDK
         shell: bash
