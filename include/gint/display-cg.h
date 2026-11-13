@@ -31,6 +31,9 @@ extern "C" {
 #elif GINT_HW_CP
 #define DWIDTH 320
 #define DHEIGHT 528
+#elif GINT_HW_EX
+#define DWIDTH 528
+#define DHEIGHT 320
 #endif
 
 /* gint VRAM address. This value must always point to a 32-aligned buffer of
