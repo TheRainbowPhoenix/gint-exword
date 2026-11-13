@@ -2,7 +2,7 @@
 if("${FXSDK_PLATFORM_LONG}" STREQUAL "exword")
   find_library(GINT_EXWORD_LIBRARY NAMES gint-exword
     PATH_SUFFIXES lib)
-  find_path(GINT_EXWORD_INCLUDE_DIR NAMES gint/exword.h
+  find_path(GINT_EXWORD_INCLUDE_DIR NAMES gint/config.h
     PATH_SUFFIXES include)
   include(FindPackageHandleStandardArgs)
   set(GINT_VERSION "2.11.0")
