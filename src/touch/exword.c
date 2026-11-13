@@ -18,15 +18,34 @@
 
 #define IIC_LIMIT 100000
 
+/* ROM32A LCD_ValidateSubDisplayWindow() fallback calibration. */
+#define EX_X_OFFSET 0x7e
+#define EX_Y_OFFSET 0xe9
+#define EX_X_SCALE  0x689
+#define EX_Y_SCALE  0xb17
+#define EX_X_TARGET 0x1fd
+#define EX_Y_TARGET 0x12f
+#define EX_X_MARGIN ((DWIDTH - EX_X_TARGET) / 2)
+#define EX_Y_MARGIN ((DHEIGHT - EX_Y_TARGET) / 2)
+
+static struct exword_touch_debug debug_scan;
+
 static struct {
     int xmin, xmax, ymin, ymax;
     int xflip, yflip;
     int last_x, last_y;
     int down;
 } touch_state = {
-    .xmin = 0x50, .xmax = 0xff5,
-    .ymin = 0x70, .ymax = 0xff1,
+    .xmin = EX_X_OFFSET,
+    .xmax = EX_X_OFFSET + EX_X_TARGET * EX_X_SCALE / 256,
+    .ymin = EX_Y_OFFSET,
+    .ymax = EX_Y_OFFSET + EX_Y_TARGET * EX_Y_SCALE / 256,
 };
+
+void touch_exword_get_last_scan(struct exword_touch_debug *out)
+{
+    if(out) *out = debug_scan;
+}
 
 void touch_exword_calibrate(int xmin, int xmax, int ymin, int ymax,
     int xflip, int yflip)
@@ -151,37 +170,55 @@ static int touch_axis(uint8_t command, int low, int high, int *value)
     return avg >= 0;
 }
 
-static int normalize(int n, int min, int max, int size, int flip)
+static int normalize_raw(int n, int min, int max, int extent, int margin,
+    int flip)
 {
-    int p = (n - min) * (size - 1) / (max - min);
-    if(p < 0) p = 0;
-    if(p >= size) p = size - 1;
-    return flip ? size - 1 - p : p;
+    int p = (n - min) * extent / (max - min);
+    return margin + (flip ? extent - p : p);
+}
+
+static int clamp_screen(int p, int size)
+{
+    if(p < 0) return 0;
+    if(p >= size) return size - 1;
+    return p;
 }
 
 key_event_t touch_scan(void)
 {
     key_event_t ev = { .type = KEYEV_NONE };
-    int x, y;
+    int raw_x = 0, raw_y = 0;
     int down = 0;
-    if((PEN_PORT & 1) == 0) {
-        down = touch_axis(0xc4, 0x50, 0xff5, &x) &&
-               touch_axis(0xd4, 0x70, 0xff1, &y);
+    debug_scan.pen_down = ((PEN_PORT & 1) == 0);
+    debug_scan.valid = 0;
+
+    if(debug_scan.pen_down) {
+        int x_ok = touch_axis(0xc4, 0x50, 0xff5, &raw_x);
+        int y_ok = touch_axis(0xd4, 0x70, 0xff1, &raw_y);
         (void)touch_command(0xc0);
-        if(PEN_PORT & 1) down = 0;
+        down = x_ok && y_ok && ((PEN_PORT & 1) == 0);
     }
 
     if(down) {
-        x = normalize(x, touch_state.xmin, touch_state.xmax,
-                      DWIDTH, touch_state.xflip);
-        y = normalize(y, touch_state.ymin, touch_state.ymax,
-                      DHEIGHT, touch_state.yflip);
-        if(!touch_state.down) {
+        int x = normalize_raw(raw_x, touch_state.xmin, touch_state.xmax,
+            EX_X_TARGET, EX_X_MARGIN, touch_state.xflip);
+        int y = normalize_raw(raw_y, touch_state.ymin, touch_state.ymax,
+            EX_Y_TARGET, EX_Y_MARGIN, touch_state.yflip);
+
+        debug_scan.raw_x = raw_x;
+        debug_scan.raw_y = raw_y;
+        debug_scan.mapped_x = x;
+        debug_scan.mapped_y = y;
+        debug_scan.screen_x = clamp_screen(x, DWIDTH);
+        debug_scan.screen_y = clamp_screen(y, DHEIGHT);
+        debug_scan.valid = 1;
+
+        x = debug_scan.screen_x;
+        y = debug_scan.screen_y;
+        if(!touch_state.down)
             ev.type = KEYEV_TOUCH_DOWN;
-        }
-        else if(x != touch_state.last_x || y != touch_state.last_y) {
+        else if(x != touch_state.last_x || y != touch_state.last_y)
             ev.type = KEYEV_TOUCH_DRAG;
-        }
         touch_state.last_x = x;
         touch_state.last_y = y;
     }
