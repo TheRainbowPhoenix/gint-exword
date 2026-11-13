@@ -66,6 +66,14 @@ static int wait_flag(uint8_t flags)
     return 0;
 }
 
+static int wait_idle(void)
+{
+    /* ROM32A IIC_WaitStop(): ICSR.4 is BUSY, wait for it to clear. */
+    for(int timeout = IIC_LIMIT; timeout > 0; timeout--)
+        if(!(IIC_STAT & 0x10)) return 1;
+    return 0;
+}
+
 static void i2c_begin(void)
 {
     IIC_CTRL |= 0x80;
@@ -96,6 +104,8 @@ static int i2c_send(uint8_t byte, uint8_t control)
     if(control == 0x81) {
         IIC_STAT &= ~2;
         if(!wait_flag(0x0a)) return 0;
+        /* ROM32A IIC_TransferByte(mode=2): enable DTE for RX. */
+        IIC_INT = 3;
     }
     IIC_STAT &= ~2;
     return wait_flag(0x0a);
@@ -118,7 +128,7 @@ static int touch_command(uint8_t command)
         return 0;
     }
     IIC_STAT &= ~2;
-    int ok = wait_flag(0x10);
+    int ok = wait_idle();
     i2c_end();
     return ok;
 }
@@ -130,13 +140,11 @@ static int touch_read_word(uint16_t *out)
     if(!i2c_start() || !i2c_send(0x91, 0x81)) goto failed;
     IIC_STAT &= ~2;
     if(!wait_flag(1)) goto failed;
-    IIC_INT = 2;
     high = IIC_DATA;
     if(!wait_flag(0x0a)) goto failed;
     IIC_CTRL = 0xc0;
     IIC_STAT &= ~2;
     if(!wait_flag(1)) goto failed;
-    IIC_INT = 2;
     low = IIC_DATA;
     i2c_end();
     *out = ((uint16_t)high << 8) | low;
@@ -195,8 +203,10 @@ key_event_t touch_scan(void)
     if(debug_scan.pen_down) {
         int x_ok = touch_axis(0xc4, 0x50, 0xff5, &raw_x);
         int y_ok = touch_axis(0xd4, 0x70, 0xff1, &raw_y);
-        (void)touch_command(0xc0);
-        down = x_ok && y_ok && ((PEN_PORT & 1) == 0);
+        /* ROM32A TouchI2C_ReadPowerDownX() clocks out the conversion too. */
+        uint16_t discard;
+        int powerdown_ok = touch_command(0xc0) && touch_read_word(&discard);
+        down = x_ok && y_ok && powerdown_ok && ((PEN_PORT & 1) == 0);
     }
 
     if(down) {
