@@ -1,0 +1,102 @@
+name: EX-word gint backend integration
+
+on:
+  push:
+    branches: [dev, feature/exword-runtime-bridge]
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exword:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/therainbowphoenix/gint-docker:main
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install fxSDK fork (no GCC rebuild)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth=1 --branch feature/exword-d01-cmake-ci \
+            https://github.com/TheRainbowPhoenix/fxsdk-exword.git /tmp/fxsdk-src
+          cmake -S /tmp/fxsdk-src -B /tmp/fxsdk-build \
+            -DCMAKE_INSTALL_PREFIX=/tmp/fxsdk-exword \
+            -DFXLINK_DISABLE_SDL2=ON -DFXLINK_DISABLE_UDISKS2=ON
+          cmake --build /tmp/fxsdk-build -j2
+          cmake --install /tmp/fxsdk-build
+          git clone --depth=1 https://github.com/brijohn/elf2d01.git /tmp/elf2d01
+          cc -O2 /tmp/elf2d01/elf2d01.c -o /tmp/fxsdk-exword/bin/elf2d01
+
+      - name: Build and install the custom gint EX-word backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth=1 --branch master \
+            https://github.com/TheRainbowPhoenix/libdataplus-ex.git /tmp/libdataplus-ex
+          export PATH="/tmp/fxsdk-exword/bin:$PATH"
+          cmake -S . -B /tmp/gint-build \
+            -DCMAKE_TOOLCHAIN_FILE=/tmp/fxsdk-exword/lib/cmake/fxsdk/EXWORD.cmake \
+            -DLIBDATAPLUS_EX_SOURCE=/tmp/libdataplus-ex \
+            -DCMAKE_INSTALL_PREFIX=/tmp/gint-exword \
+            -DCMAKE_MODULE_PATH=/tmp/fxsdk-exword/lib/cmake/fxsdk
+          cmake --build /tmp/gint-build -j2
+          cmake --install /tmp/gint-build
+          test -s /tmp/gint-exword/lib/libgint-exword.a
+          sh-elf-nm /tmp/gint-exword/lib/libgint-exword.a | grep -E '_(sys_open|sys_close|sys_read|sys_write):?$'
+
+      - name: Build FXTST via Gint::Gint and fxSDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth=1 --branch main \
+            https://github.com/TheRainbowPhoenix/exword-xd-a8500-TEST.git /tmp/exword-metadata
+          export PATH="/tmp/fxsdk-exword/bin:$PATH"
+          mkdir -p /tmp/gint-exword-project
+          cp .github/tests_files/exword/CMakeLists.txt /tmp/gint-exword-project/CMakeLists.txt
+          cd /tmp/gint-exword-project
+          fxsdk build-exword -c -- \
+            -DCMAKE_PREFIX_PATH=/tmp/gint-exword \
+            "-DCMAKE_MODULE_PATH=/tmp/gint-exword/lib/cmake/fxsdk;/tmp/fxsdk-exword/lib/cmake/fxsdk" \
+            -DEXWORD_FXSDK_TESTS=/tmp/fxsdk-src/.github/tests_files/a8500 \
+            -DEXWORD_METADATA_SOURCE=/tmp/exword-metadata
+          fxsdk build-exword
+          test -s build-exword/fxtest.d01
+
+      - name: Verify D01 and both localized packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/gint-exword-project/build-exword')
+          raw = (p/'fxtest.d01').read_bytes()
+          assert raw[:16] == b'CASIODICPLUGIN10'
+          assert raw[16:22] == b'fxtest'
+          for locale in ('ja', 'cn'):
+              folder = p/'packages'/locale/'FXTST'
+              assert (folder/'fxtest.d01').read_bytes() == raw
+              assert (folder/'fileinfo.cji').exists()
+              assert list(folder.glob('*.htm'))
+              for h in folder.glob('*.htm'):
+                  assert b'FxSDK bundle test!' in h.read_bytes() or h.name != 'diction.htm'
+          print('Custom gint backend: FXTST D01', len(raw), 'bytes')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gint-exword-fxtst-ja
+          path: /tmp/gint-exword-project/build-exword/packages/ja/
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gint-exword-fxtst-cn
+          path: /tmp/gint-exword-project/build-exword/packages/cn/
+          if-no-files-found: error
+          retention-days: 30
