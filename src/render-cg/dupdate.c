@@ -5,7 +5,7 @@
 #include <gint/config.h>
 #if GINT_RENDER_RGB
 
-#if GINT_HW_CP
+#if GINT_HW_CP || GINT_HW_EX
 
 void dupdate(void)
 {

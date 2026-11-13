@@ -6,7 +6,7 @@
 void dclear(uint16_t color)
 {
 	// TODO: CP: DMA support for dclear()
-#if GINT_HW_CP
+#if GINT_HW_CP || GINT_HW_EX
 	uint32_t color4 = (color << 16) | color;
 	for(int i = 0; i < DWIDTH * DHEIGHT / 2; i++)
 		((uint32_t *)gint_vram)[i] = color4;
