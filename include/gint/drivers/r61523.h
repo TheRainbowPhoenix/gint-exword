@@ -23,6 +23,8 @@ void r61523_display_rect(
 /* r61523_win_set(): Set the display window */
 void r61523_win_set(int x1, int x2, int y1, int y2);
 
+void r61523_fill_rect(int x1, int y1, int x2, int y2, uint16_t color);
+
 /* r61523_display_row(): Send one row from a DWIDTH-pixel buffer. */
 void r61523_display_row(uint16_t const *row, int y);
 
