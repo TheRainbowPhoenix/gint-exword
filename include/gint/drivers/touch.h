@@ -61,7 +61,13 @@ key_event_t touch_scan(void);
 void touch_get_last_scan(struct _touch_adraw *raw,
     struct _touch_adconv *conv, struct _touch_addots *dots);
 
-#endif /* GINT_HW_CP */
+#elif GINT_HW_EX
+
+key_event_t touch_scan(void);
+void touch_exword_calibrate(int xmin, int xmax, int ymin, int ymax,
+    int xflip, int yflip);
+
+#endif /* GINT_HW_CP || GINT_HW_EX */
 
 #ifdef __cplusplus
 }
