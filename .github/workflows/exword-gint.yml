@@ -73,7 +73,7 @@ jobs:
           p = Path('/tmp/gint-exword-project/build-exword')
           raw = (p/'gintt.d01').read_bytes()
           assert raw[:16] == b'CASIODICPLUGIN10'
-          assert raw[16:22] == b'gintt'
+          assert raw[16:22] == b'gintt\x00'
           for locale in ('ja', 'cn'):
               folder = p/'packages'/locale/'GINTT'
               assert (folder/'gintt.d01').read_bytes() == raw
