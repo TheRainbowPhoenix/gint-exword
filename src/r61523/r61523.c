@@ -184,6 +184,21 @@ void r61523_display_rect(
     }
 }
 
+void r61523_display_row(uint16_t const *row, int y)
+{
+    if(!row || (unsigned)y >= DHEIGHT)
+        return;
+
+    r61523_win_set(0, DWIDTH - 1, y, y);
+    select(REG_DATA);
+    for(int x = 0; x < DWIDTH; x++) {
+        *DISPLAY = row[x];
+#if GINT_HW_EX
+        synco();
+#endif
+    }
+}
+
 void r61523_set_pixel(int x, int y, int color)
 {
     if((unsigned)x >= DWIDTH || (unsigned)y >= DHEIGHT)
