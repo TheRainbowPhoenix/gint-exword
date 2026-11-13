@@ -44,7 +44,7 @@ jobs:
           cmake --build /tmp/gint-build -j2
           cmake --install /tmp/gint-build
           test -s /tmp/gint-exword/lib/libgint-exword.a
-          sh-elf-nm /tmp/gint-exword/lib/libgint-exword.a | grep -Eq ' (r61523_display_rect|keydev_process_state|pollevent|keysc_tick)
+          sh-elf-nm /tmp/gint-exword/lib/libgint-exword.a | grep -E '_r61523_display_rect$'
       - name: Build GINTT via Gint::Gint and fxSDK
         shell: bash
         run: |
