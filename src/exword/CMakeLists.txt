@@ -14,6 +14,10 @@ add_library(gint-exword STATIC
   render.c)
 
 target_compile_definitions(gint-exword PUBLIC FXEXWORD TARGET_EXWORD)
+set(GINT_EXWORD_VRAM_ADDRESS "0xac200000" CACHE STRING
+  "OS RGB565 framebuffer address (default: XD-A8500 ROM32A)")
+target_compile_definitions(gint-exword PRIVATE
+  GINT_EXWORD_VRAM_ADDRESS=${GINT_EXWORD_VRAM_ADDRESS})
 target_compile_options(gint-exword PRIVATE -mb -m4a-nofpu -Os
   -ffreestanding -fno-builtin -Wall -Wextra)
 target_include_directories(gint-exword PUBLIC

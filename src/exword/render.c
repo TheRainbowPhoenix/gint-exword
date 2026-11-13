@@ -3,7 +3,22 @@
 #include <gint/image.h>
 #include <stdint.h>
 
-static uint16_t row_buffer[DWIDTH];
+/* LCD_GetVRAMAddress (80026344): 528x320 RGB565, uncached */
+#ifndef GINT_EXWORD_VRAM_ADDRESS
+#define GINT_EXWORD_VRAM_ADDRESS 0xac200000
+#endif
+uint16_t *gint_vram = (void *)GINT_EXWORD_VRAM_ADDRESS;
+
+void dgetvram(uint16_t **main, uint16_t **secondary)
+{
+    if(main) *main = gint_vram;
+    if(secondary) *secondary = gint_vram;
+}
+
+void dsetvram(uint16_t *main, uint16_t *secondary)
+{
+    if(main || secondary) gint_vram = main ? main : secondary;
+}
 
 struct dwindow dwindow = { 0, 0, DWIDTH, DHEIGHT };
 
@@ -20,21 +35,40 @@ struct dwindow dwindow_set(struct dwindow window)
     return previous;
 }
 
-void dupdate(void) { }
+void dupdate(void)
+{
+    r61523_display(gint_vram);
+}
+
+void dupdate_rect(int x1, int y1, int x2, int y2)
+{
+    if(x1 < 0) x1 = 0;
+    if(y1 < 0) y1 = 0;
+    if(x2 >= DWIDTH) x2 = DWIDTH-1;
+    if(y2 >= DHEIGHT) y2 = DHEIGHT-1;
+    if(x1 > x2 || y1 > y2) return;
+    r61523_display_rect(gint_vram, x1, x2, y1, y2);
+}
 
 void dclear(color_t color)
 {
-    for(int x = 0; x < DWIDTH; x++) row_buffer[x] = color;
-    for(int y = 0; y < DHEIGHT; y++)
-        r61523_display_row(row_buffer, y);
+    for(int i = 0; i < DWIDTH * DHEIGHT; i++) gint_vram[i] = color;
 }
 
 void dpixel(int x, int y, int color)
 {
-    if(color < 0 || x < dwindow.left || x >= dwindow.right ||
+    if((color < 0 && color != C_INVERT) || x < dwindow.left || x >= dwindow.right ||
        y < dwindow.top || y >= dwindow.bottom)
         return;
-    r61523_set_pixel(x, y, color);
+    uint16_t *pixel = &gint_vram[y * DWIDTH + x];
+    if(color == C_INVERT) *pixel ^= 0xffff;
+    else *pixel = color;
+}
+
+int dgetpixel(int x, int y)
+{
+    if((unsigned)x >= DWIDTH || (unsigned)y >= DHEIGHT) return C_NONE;
+    return gint_vram[y * DWIDTH + x];
 }
 
 void drect(int x1, int y1, int x2, int y2, int color)
@@ -47,7 +81,10 @@ void drect(int x1, int y1, int x2, int y2, int color)
     if(x2 >= dwindow.right) x2 = dwindow.right - 1;
     if(y2 >= dwindow.bottom) y2 = dwindow.bottom - 1;
     if(x1 > x2 || y1 > y2) return;
-    r61523_fill_rect(x1, y1, x2, y2, color);
+    for(int y = y1; y <= y2; y++) {
+        uint16_t *row = gint_vram + y * DWIDTH;
+        for(int x = x1; x <= x2; x++) row[x] = color;
+    }
 }
 
 void dline(int x1, int y1, int x2, int y2, int color)

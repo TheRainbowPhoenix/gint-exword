@@ -301,6 +301,9 @@ key_event_t keydev_unqueue_event(keydev_t *d)
 	if(!queue_poll(d, &ev))
 		return ev;
 
+	/* Exclude touch coordinates alias row/col from being mixed as keyboard matrix indices. */
+	if(ev.type >= KEYEV_TOUCH_DOWN) return ev;
+
 	/* Compatibility combinations can transform the .key attribute */
 #if GINT_HW_CG
 	if(gint[HWCALC] == HWCALC_FXCG100) {

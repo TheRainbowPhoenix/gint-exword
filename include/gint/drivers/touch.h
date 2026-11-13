@@ -75,6 +75,8 @@ key_event_t touch_scan(void);
 void touch_exword_calibrate(int xmin, int xmax, int ymin, int ymax,
     int xflip, int yflip);
 void touch_exword_get_last_scan(struct exword_touch_debug *out);
+/* Restore OS pen/I2C configuration before returning from a hosted add-in. */
+void touch_exword_quit(void);
 
 #endif /* GINT_HW_CP || GINT_HW_EX */
 

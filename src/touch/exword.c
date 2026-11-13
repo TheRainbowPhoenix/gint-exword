@@ -14,6 +14,7 @@
 #define IIC_LOW   (*(volatile uint8_t *)0xa4470010)
 #define IIC_HIGH  (*(volatile uint8_t *)0xa4470014)
 #define PEN_PORT  (*(volatile uint8_t *)0xa4050134)
+#define PEN_CTRL  (*(volatile uint16_t *)0xa4050114)
 #define FRQCR     (*(volatile uint32_t *)0xa4150000)
 
 #define IIC_LIMIT 100000
@@ -29,6 +30,10 @@
 #define EX_Y_MARGIN ((DHEIGHT - EX_Y_TARGET) / 2)
 
 static struct exword_touch_debug debug_scan;
+static int touch_ready;
+static uint16_t saved_pen_ctrl;
+static uint8_t saved_iic_ctrl, saved_iic_int, saved_iic_low, saved_iic_high;
+static int iic_budget;
 
 /* Hosted add-ins retain the OS interrupt handlers. In particular, an OS pen
    handler must not change the ADC channel while we acquire an X/Y pair.
@@ -60,6 +65,7 @@ static struct {
     int xflip, yflip;
     int last_x, last_y;
     int down;
+    int rejected;
 } touch_state = {
     .xmin = EX_X_OFFSET,
     .xmax = EX_X_OFFSET + EX_X_TARGET * EX_X_SCALE / 256,
@@ -86,7 +92,8 @@ void touch_exword_calibrate(int xmin, int xmax, int ymin, int ymax,
 
 static int wait_flag(uint8_t flags)
 {
-    for(int timeout = IIC_LIMIT; timeout > 0; timeout--) {
+    while(iic_budget > 0) {
+        iic_budget--;
         uint8_t status = IIC_STAT;
         /* Arbitration loss is a failed transaction, never a sample. */
         if(status & 8) return 0;
@@ -98,8 +105,10 @@ static int wait_flag(uint8_t flags)
 static int wait_idle(void)
 {
     /* ROM32A IIC_WaitStop(): ICSR.4 is BUSY, wait for it to clear. */
-    for(int timeout = IIC_LIMIT; timeout > 0; timeout--)
+    while(iic_budget > 0) {
+        iic_budget--;
         if(!(IIC_STAT & 0x10)) return 1;
+    }
     return 0;
 }
 
@@ -183,6 +192,44 @@ failed:
     return 0;
 }
 
+static void touch_prepare(void)
+{
+    if(touch_ready) return;
+    uint32_t saved = touch_lock();
+    saved_pen_ctrl = PEN_CTRL;
+    saved_iic_ctrl = IIC_CTRL;
+    saved_iic_int = IIC_INT;
+    saved_iic_low = IIC_LOW;
+    saved_iic_high = IIC_HIGH;
+    iic_budget = IIC_LIMIT;
+    (void)touch_command(0x72);
+    uint16_t discard;
+    (void)touch_command(0xc0);
+    (void)touch_read_word(&discard);
+    PEN_CTRL = (PEN_CTRL & ~3) | 2;
+    touch_ready = 1;
+    touch_unlock(saved);
+}
+
+void touch_exword_quit(void)
+{
+    if(!touch_ready) return;
+    uint32_t saved = touch_lock();
+    iic_budget = IIC_LIMIT;
+    (void)touch_command(0x70);
+    IIC_INT = 0;
+    IIC_CTRL = 0;
+    IIC_STAT &= 0xf1;
+    IIC_LOW = saved_iic_low;
+    IIC_HIGH = saved_iic_high;
+    IIC_CTRL = saved_iic_ctrl;
+    PEN_CTRL = saved_pen_ctrl;
+    IIC_INT = saved_iic_int;
+    touch_state.down = touch_state.rejected = 0;
+    touch_ready = 0;
+    touch_unlock(saved);
+}
+
 static int filter_samples(uint16_t samples[5], int tolerance,
     int low, int high, int *value)
 {
@@ -234,6 +281,7 @@ static int clamp_screen(int p, int size)
 
 key_event_t touch_scan(void)
 {
+    touch_prepare();
     key_event_t ev = { .type = KEYEV_NONE };
     int raw_x = 0, raw_y = 0;
     int down = 0;
@@ -245,9 +293,13 @@ key_event_t touch_scan(void)
            pair atomic so OS sampling cannot switch channels between words. */
         for(int attempt = 0; attempt < 2; attempt++) {
             uint32_t saved = touch_lock();
+            iic_budget = IIC_LIMIT;
             int x_ok = touch_axis(0xc4, 0x50, 10, 0xff5, &raw_x);
-            int y_ok = touch_axis(0xd4, 0x70, 14, 0xff1, &raw_y);
+            int y_ok = iic_budget > 0 &&
+                touch_axis(0xd4, 0x70, 14, 0xff1, &raw_y);
             uint16_t discard;
+            /* opportunity to re-enable PENIRQ */
+            if(iic_budget == 0) iic_budget = IIC_LIMIT / 10;
             int powerdown_ok = touch_command(0xc0) && touch_read_word(&discard);
             debug_scan.pen_down = pen_down();
             touch_unlock(saved);
@@ -258,11 +310,13 @@ key_event_t touch_scan(void)
            last point intact; the next successful sample continues the line. */
         if(!down && debug_scan.pen_down) {
             debug_scan.rejected_scans++;
-            return ev;
+            /* ROM active-stroke terminates after repeated failures, stuck-low PENIRQ will not continue stroke */
+            if(++touch_state.rejected < 2) return ev;
         }
     }
 
     if(down) {
+        touch_state.rejected = 0;
         int x = normalize_raw(raw_x, touch_state.xmin, touch_state.xmax,
             EX_X_TARGET, EX_X_MARGIN, touch_state.xflip);
         int y = normalize_raw(raw_y, touch_state.ymin, touch_state.ymax,
@@ -289,6 +343,7 @@ key_event_t touch_scan(void)
     else if(touch_state.down) {
         ev.type = KEYEV_TOUCH_UP;
     }
+    if(!debug_scan.pen_down) touch_state.rejected = 0;
 
     if(ev.type != KEYEV_NONE) {
         ev.x = touch_state.last_x;

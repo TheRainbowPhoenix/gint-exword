@@ -40,6 +40,8 @@ int keysc_tick(void)
     keysc_scan(scan);
     keydev_process_state(&exword_keyboard, scan);
     keydev_tick(&exword_keyboard, 7812);
+    /* Deliver keys before potentially slow touch conversions/timeouts. */
+    if(exword_keyboard.queue_next != exword_keyboard.queue_end) return 0;
     /* EX-word has no scan timer, sample on every poll */
     key_event_t ev = touch_scan();
     if(ev.type != KEYEV_NONE)
@@ -49,6 +51,9 @@ int keysc_tick(void)
 
 key_event_t pollevent(void)
 {
+    keysc_prepare();
+    if(exword_keyboard.queue_next != exword_keyboard.queue_end)
+        return keydev_unqueue_event(&exword_keyboard);
     keysc_tick();
     return keydev_unqueue_event(&exword_keyboard);
 }
