@@ -1,7 +1,7 @@
 //---
 //  gint:drivers:r61523 - Reneses R61523 driver
 //
-//  This driver is used to control the 16-bit color LCD of the fx-CP 400.
+//  This driver controls the 16-bit RGB display of the fx-CP 400 and EX-word.
 //---
 
 #ifndef GINT_DRIVERS_R61523
@@ -13,7 +13,7 @@ extern "C" {
 
 #include <gint/defs/types.h>
 
-/* r61523_display(): Update the entire display (320x528) */
+/* r61523_display(): Update the entire display. */
 void r61523_display(uint16_t *vram);
 
 /* r61523_display_rect(): Update a rectangle (both bounds included). */
