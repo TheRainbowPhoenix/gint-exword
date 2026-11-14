@@ -317,22 +317,36 @@ key_event_t touch_scan(void)
     debug_scan.valid = 0;
 
     if(debug_scan.pen_down) {
-        /* Bound retries, like the ROM's active-stroke sampling path. Keep the
-           pair atomic so OS sampling cannot switch channels between words. */
+        /* ROM combines two X/Y pairs per sample. */
         for(int attempt = 0; attempt < 2; attempt++) {
+            int sample_x = 0, sample_y = 0;
             touch_lock();
             iic_budget = IIC_LIMIT;
-            int x_ok = touch_axis(0xc4, 0x50, 10, 0xff5, &raw_x);
+            int x_ok = touch_axis(0xc4, 0x50, 10, 0xff5, &sample_x);
             int y_ok = iic_budget > 0 &&
-                touch_axis(0xd4, 0x70, 14, 0xff1, &raw_y);
+                touch_axis(0xd4, 0x70, 14, 0xff1, &sample_y);
             uint16_t discard;
             /* opportunity to re-enable PENIRQ */
             if(iic_budget == 0) iic_budget = IIC_LIMIT / 10;
             int powerdown_ok = touch_command(0xc0) && touch_read_word(&discard);
             debug_scan.pen_down = pen_down();
             touch_unlock();
-            down = x_ok && y_ok && powerdown_ok && debug_scan.pen_down;
-            if(down || !debug_scan.pen_down) break;
+            if(!debug_scan.pen_down) {
+                down = 0;
+                break;
+            }
+            if(x_ok && y_ok && powerdown_ok) {
+                if(!down) {
+                    raw_x = sample_x;
+                    raw_y = sample_y;
+                }
+                else if(sample_x - raw_x > -201 && sample_x - raw_x < 201 &&
+                        sample_y - raw_y > -201 && sample_y - raw_y < 201) {
+                    raw_x = (raw_x + sample_x) / 2;
+                    raw_y = (raw_y + sample_y) / 2;
+                }
+                down = 1;
+            }
         }
         /* A rejected conversion is not a pen release. Leave the stroke and
            last point intact; the next successful sample continues the line. */
@@ -363,10 +377,13 @@ key_event_t touch_scan(void)
         y = debug_scan.screen_y;
         if(!touch_state.down)
             ev.type = KEYEV_TOUCH_DOWN;
-        else if(x != touch_state.last_x || y != touch_state.last_y)
+        else if(x - touch_state.last_x <= -2 || x - touch_state.last_x >= 2 ||
+                y - touch_state.last_y <= -2 || y - touch_state.last_y >= 2)
             ev.type = KEYEV_TOUCH_DRAG;
-        touch_state.last_x = x;
-        touch_state.last_y = y;
+        if(ev.type != KEYEV_NONE) {
+            touch_state.last_x = x;
+            touch_state.last_y = y;
+        }
     }
     else if(touch_state.down) {
         ev.type = KEYEV_TOUCH_UP;
