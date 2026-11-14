@@ -117,6 +117,11 @@ jobs:
           import re
           pin = subprocess.check_output(['sh-elf-objdump', '-d',
               '--disassemble=_exword_pin', str(base/'gintt')], text=True)
+          assert '<_exword_pin>:' in pin
+          assert not re.search(r'\s(?:jsr|bsr|bsrf|jmp|braf)\s', pin), \
+              'Physical MMU routine must not call or jump to virtual code'
+          assert len(re.findall(r'\bicbi\b', pin)) >= 2, \
+              'Physical MMU routine needs instruction synchronization'
           assert '_exword_entry' in symbols and '_start' in symbols
           assert '_gint_world_switch_in' in symbols and '_drv_tmu' in symbols
           assert len(d01) > 128
