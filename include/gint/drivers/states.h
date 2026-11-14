@@ -41,12 +41,18 @@ typedef struct {
 typedef struct {
 	uint16_t IPR[12];
 	uint8_t MSK[13];
+	#if GINT_HW_EX
+	uint8_t IRQMSK;
+	#endif
 } intc_state_t;
 
 /* Memory Manager Unit (see mmu/mmu.c) */
 typedef struct {
 	uint32_t PASCR;
 	uint32_t IRMCR;
+	#if GINT_HW_EX
+	uint32_t MMUCR;
+	#endif
 } mmu_state_t;
 
 /* R61524 display (see r61524/r61524.c) */

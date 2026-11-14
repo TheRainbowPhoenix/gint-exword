@@ -31,10 +31,13 @@ extern "C" {
 #elif GINT_HW_CP
 #define DWIDTH 320
 #define DHEIGHT 528
+#elif GINT_HW_EX
+#define DWIDTH 528
+#define DHEIGHT 320
 #endif
 
 /* gint VRAM address. This value must always point to a 32-aligned buffer of
-   size 177408. Any function can use it freely to perform rendering or store
+   size DWIDTH * DHEIGHT * 2. Any function can use it freely to render or store
    data when not drawing. Triple buffering is already implemented in gint, see
    the dvram() function below.
 
@@ -108,6 +111,11 @@ void dsetvram(uint16_t *main, uint16_t *secondary);
 /* dgetvram() - Get VRAM addresses
    Returns the VRAM buffer addresses used to render on fx-CG 50. */
 void dgetvram(uint16_t **main, uint16_t **secondary);
+
+#if GINT_HW_EX
+/* Push an inclusive rectangle of the RAM framebuffer to the LCD. */
+void dupdate_rect(int x1, int y1, int x2, int y2);
+#endif
 
 
 //---

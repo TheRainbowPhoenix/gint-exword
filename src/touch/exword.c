@@ -1,0 +1,384 @@
+#include <gint/config.h>
+
+#if GINT_HW_EX
+
+#include <gint/drivers/touch.h>
+#include <gint/display.h>
+#include <gint/keyboard.h>
+#include <gint/cpu.h>
+#include <gint/drivers.h>
+#include <stdint.h>
+
+#define IIC_DATA  (*(volatile uint8_t *)0xa4470000)
+#define IIC_CTRL  (*(volatile uint8_t *)0xa4470004)
+#define IIC_STAT  (*(volatile uint8_t *)0xa4470008)
+#define IIC_INT   (*(volatile uint8_t *)0xa447000c)
+#define IIC_LOW   (*(volatile uint8_t *)0xa4470010)
+#define IIC_HIGH  (*(volatile uint8_t *)0xa4470014)
+#define PEN_PORT  (*(volatile uint8_t *)0xa4050134)
+#define PEN_CTRL  (*(volatile uint16_t *)0xa4050114)
+#define FRQCR     (*(volatile uint32_t *)0xa4150000)
+#define OS_TOUCH_CALIB ((volatile int32_t *)0xac000054)
+
+#define IIC_LIMIT 100000
+
+/* ROM32A LCD_ValidateSubDisplayWindow() fallback calibration. */
+#define EX_X_OFFSET 0x7e
+#define EX_Y_OFFSET 0xe9
+#define EX_X_SCALE  0x689
+#define EX_Y_SCALE  0xb17
+#define EX_X_TARGET 0x1fd
+#define EX_Y_TARGET 0x12f
+
+static struct exword_touch_debug debug_scan;
+static int touch_ready;
+static uint16_t saved_pen_ctrl;
+static uint8_t saved_iic_ctrl, saved_iic_int, saved_iic_low, saved_iic_high;
+static int iic_budget;
+static int calibration_ready;
+static struct exword_touch_calibration calibration = {
+    .x_offset = EX_X_OFFSET, .y_offset = EX_Y_OFFSET,
+    .x_scale = EX_X_SCALE, .y_scale = EX_Y_SCALE,
+};
+
+static void touch_lock(void)
+{
+    cpu_atomic_start();
+}
+
+static void touch_unlock(void)
+{
+    cpu_atomic_end();
+}
+
+static int pen_down(void)
+{
+    /* ROM32A Touch_IsPenDownDebounced(). */
+    for(int i = 0; i < 5; i++)
+        if(PEN_PORT & 1) return 0;
+    return 1;
+}
+
+static struct {
+    int xflip, yflip;
+    int last_x, last_y;
+    int down;
+    int rejected;
+} touch_state;
+
+static void load_calibration(void)
+{
+    if(calibration_ready) return;
+    struct exword_touch_calibration c = {
+        .x_offset = OS_TOUCH_CALIB[0], .y_offset = OS_TOUCH_CALIB[1],
+        .x_scale = OS_TOUCH_CALIB[2], .y_scale = OS_TOUCH_CALIB[3],
+        .source = EXWORD_TOUCH_CALIB_OS,
+    };
+    if(c.x_offset >= 0 && c.x_offset <= 0xfff &&
+       c.y_offset >= 0 && c.y_offset <= 0xfff &&
+       c.x_scale > 0 && c.y_scale > 0) calibration = c;
+    calibration_ready = 1;
+}
+
+void touch_exword_get_calibration(struct exword_touch_calibration *out)
+{
+    touch_lock();
+    load_calibration();
+    if(out) *out = calibration;
+    touch_unlock();
+}
+
+void touch_exword_get_last_scan(struct exword_touch_debug *out)
+{
+    if(out) *out = debug_scan;
+}
+
+void touch_exword_calibrate(int xmin, int xmax, int ymin, int ymax,
+    int xflip, int yflip)
+{
+    if(xmin >= xmax || ymin >= ymax) return;
+    int xscale = (xmax - xmin) * 256 / EX_X_TARGET;
+    int yscale = (ymax - ymin) * 256 / EX_Y_TARGET;
+    if(xscale <= 0 || yscale <= 0) return;
+    calibration = (struct exword_touch_calibration) {
+        .x_offset = xmin, .y_offset = ymin,
+        .x_scale = xscale, .y_scale = yscale,
+        .source = EXWORD_TOUCH_CALIB_CUSTOM,
+    };
+    calibration_ready = 1;
+    touch_state.xflip = xflip;
+    touch_state.yflip = yflip;
+}
+
+static int wait_flag(uint8_t flags)
+{
+    while(iic_budget > 0) {
+        iic_budget--;
+        uint8_t status = IIC_STAT;
+        /* Arbitration loss is a failed transaction, never a sample. */
+        if(status & 8) return 0;
+        if(status & flags) return 1;
+    }
+    return 0;
+}
+
+static int wait_idle(void)
+{
+    /* ROM32A IIC_WaitStop(): ICSR.4 is BUSY, wait for it to clear. */
+    while(iic_budget > 0) {
+        iic_budget--;
+        if(!(IIC_STAT & 0x10)) return 1;
+    }
+    return 0;
+}
+
+static void i2c_begin(void)
+{
+    IIC_CTRL |= 0x80;
+    if((FRQCR & 15) == 3) {
+        IIC_LOW = 0x12;
+        IIC_HIGH = 0x0c;
+    }
+    else {
+        IIC_LOW = 0x25;
+        IIC_HIGH = 0x19;
+    }
+    IIC_STAT &= 0xf1;
+}
+
+static int i2c_start(void)
+{
+    IIC_INT = 3;
+    IIC_CTRL = 0x94;
+    if(!wait_flag(1)) return 0;
+    IIC_INT = 2;
+    return 1;
+}
+
+static int i2c_send(uint8_t byte, uint8_t control)
+{
+    IIC_DATA = byte;
+    if(control) IIC_CTRL = control;
+    if(control == 0x81) {
+        IIC_STAT &= ~2;
+        if(!wait_flag(0x0a)) return 0;
+        /* ROM32A IIC_TransferByte(mode=2): enable DTE for RX. */
+        IIC_INT = 3;
+    }
+    IIC_STAT &= ~2;
+    return wait_flag(0x0a);
+}
+
+static void i2c_end(void)
+{
+    IIC_INT = 0;
+    IIC_LOW = 0;
+    IIC_HIGH = 0;
+    IIC_CTRL &= 0x7f;
+}
+
+static int touch_command(uint8_t command)
+{
+    i2c_begin();
+    if(!i2c_start() || !i2c_send(0x90, 0) ||
+       !i2c_send(command, 0x90)) {
+        i2c_end();
+        return 0;
+    }
+    IIC_STAT &= ~2;
+    int ok = wait_idle();
+    i2c_end();
+    return ok;
+}
+
+static int touch_read_word(uint16_t *out)
+{
+    uint8_t high, low;
+    i2c_begin();
+    if(!i2c_start() || !i2c_send(0x91, 0x81)) goto failed;
+    IIC_STAT &= ~2;
+    if(!wait_flag(1)) goto failed;
+    high = IIC_DATA;
+    if(!wait_flag(0x0a)) goto failed;
+    IIC_CTRL = 0xc0;
+    IIC_STAT &= ~2;
+    if(!wait_flag(1)) goto failed;
+    low = IIC_DATA;
+    i2c_end();
+    *out = ((uint16_t)high << 8) | low;
+    return 1;
+failed:
+    i2c_end();
+    return 0;
+}
+
+static void touch_prepare(void)
+{
+    if(touch_ready) return;
+    touch_lock();
+    load_calibration();
+    saved_pen_ctrl = PEN_CTRL;
+    saved_iic_ctrl = IIC_CTRL;
+    saved_iic_int = IIC_INT;
+    saved_iic_low = IIC_LOW;
+    saved_iic_high = IIC_HIGH;
+    iic_budget = IIC_LIMIT;
+    (void)touch_command(0x72);
+    uint16_t discard;
+    (void)touch_command(0xc0);
+    (void)touch_read_word(&discard);
+    PEN_CTRL = (PEN_CTRL & ~3) | 2;
+    touch_ready = 1;
+    touch_unlock();
+}
+
+void touch_exword_quit(void)
+{
+    if(!touch_ready) return;
+    touch_lock();
+    iic_budget = IIC_LIMIT;
+    (void)touch_command(0x70);
+    IIC_INT = 0;
+    IIC_CTRL = 0;
+    IIC_STAT &= 0xf1;
+    IIC_LOW = saved_iic_low;
+    IIC_HIGH = saved_iic_high;
+    IIC_CTRL = saved_iic_ctrl;
+    PEN_CTRL = saved_pen_ctrl;
+    IIC_INT = saved_iic_int;
+    touch_state.down = touch_state.rejected = 0;
+    touch_ready = 0;
+    touch_unlock();
+}
+
+gint_driver_t drv_touch = {
+    .name = "TOUCH",
+    .unbind = touch_exword_quit,
+    .flags = GINT_DRV_SHARED,
+};
+GINT_DECLARE_DRIVER(24, drv_touch);
+
+static int filter_samples(uint16_t samples[5], int tolerance,
+    int low, int high, int *value)
+{
+    int imin = 0, imax = 0;
+    for(int i = 1; i < 5; i++) {
+        if(samples[i] < samples[imin]) imin = i;
+        if(samples[i] > samples[imax]) imax = i;
+    }
+    int avg = -1, previous = -1;
+    for(int i = 0; i < 5; i++) {
+        if(i == imin || i == imax) continue;
+        if(samples[i] < low || samples[i] > high) return 0;
+        /* ROM compares successive retained samples, not their average. */
+        int delta = samples[i] - previous;
+        if(previous >= 0 && (delta > tolerance || delta < -tolerance))
+            return 0;
+        avg = (avg < 0) ? samples[i] : (avg + samples[i]) / 2;
+        previous = samples[i];
+    }
+    *value = avg;
+    return avg >= 0;
+}
+
+static int touch_axis(uint8_t command, int tolerance,
+    int low, int high, int *value)
+{
+    uint16_t samples[5], discard;
+    if(!touch_command(command) || !touch_read_word(&discard)) return 0;
+    for(int i = 0; i < 5; i++) {
+        if(!touch_read_word(&samples[i])) return 0;
+        samples[i] >>= 4;
+    }
+    return filter_samples(samples, tolerance, low, high, value);
+}
+
+static int normalize_raw(int n, int offset, int scale, int extent, int flip)
+{
+    /* calibration already extrapolates to pixel zero. */
+    int p = (n - offset) * 256 / scale;
+    return flip ? extent - p : p;
+}
+
+static int clamp_screen(int p, int size)
+{
+    if(p < 0) return 0;
+    if(p >= size) return size - 1;
+    return p;
+}
+
+key_event_t touch_scan(void)
+{
+    touch_prepare();
+    key_event_t ev = { .type = KEYEV_NONE };
+    int raw_x = 0, raw_y = 0;
+    int down = 0;
+    debug_scan.pen_down = pen_down();
+    debug_scan.valid = 0;
+
+    if(debug_scan.pen_down) {
+        /* Bound retries, like the ROM's active-stroke sampling path. Keep the
+           pair atomic so OS sampling cannot switch channels between words. */
+        for(int attempt = 0; attempt < 2; attempt++) {
+            touch_lock();
+            iic_budget = IIC_LIMIT;
+            int x_ok = touch_axis(0xc4, 0x50, 10, 0xff5, &raw_x);
+            int y_ok = iic_budget > 0 &&
+                touch_axis(0xd4, 0x70, 14, 0xff1, &raw_y);
+            uint16_t discard;
+            /* opportunity to re-enable PENIRQ */
+            if(iic_budget == 0) iic_budget = IIC_LIMIT / 10;
+            int powerdown_ok = touch_command(0xc0) && touch_read_word(&discard);
+            debug_scan.pen_down = pen_down();
+            touch_unlock();
+            down = x_ok && y_ok && powerdown_ok && debug_scan.pen_down;
+            if(down || !debug_scan.pen_down) break;
+        }
+        /* A rejected conversion is not a pen release. Leave the stroke and
+           last point intact; the next successful sample continues the line. */
+        if(!down && debug_scan.pen_down) {
+            debug_scan.rejected_scans++;
+            /* ROM active-stroke terminates after repeated failures, stuck-low PENIRQ will not continue stroke */
+            if(++touch_state.rejected < 2) return ev;
+        }
+    }
+
+    if(down) {
+        touch_state.rejected = 0;
+        int x = normalize_raw(raw_x, calibration.x_offset, calibration.x_scale,
+            EX_X_TARGET, touch_state.xflip);
+        int y = normalize_raw(raw_y, calibration.y_offset, calibration.y_scale,
+            EX_Y_TARGET, touch_state.yflip);
+
+        debug_scan.raw_x = raw_x;
+        debug_scan.raw_y = raw_y;
+        debug_scan.mapped_x = x;
+        debug_scan.mapped_y = y;
+        debug_scan.screen_x = clamp_screen(x, DWIDTH);
+        debug_scan.screen_y = clamp_screen(y, DHEIGHT);
+        debug_scan.valid = 1;
+        debug_scan.accepted_scans++;
+
+        x = debug_scan.screen_x;
+        y = debug_scan.screen_y;
+        if(!touch_state.down)
+            ev.type = KEYEV_TOUCH_DOWN;
+        else if(x != touch_state.last_x || y != touch_state.last_y)
+            ev.type = KEYEV_TOUCH_DRAG;
+        touch_state.last_x = x;
+        touch_state.last_y = y;
+    }
+    else if(touch_state.down) {
+        ev.type = KEYEV_TOUCH_UP;
+    }
+    if(!debug_scan.pen_down) touch_state.rejected = 0;
+
+    if(ev.type != KEYEV_NONE) {
+        ev.x = touch_state.last_x;
+        ev.y = touch_state.last_y;
+    }
+    touch_state.down = down;
+    return ev;
+}
+
+#endif

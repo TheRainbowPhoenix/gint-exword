@@ -61,7 +61,37 @@ key_event_t touch_scan(void);
 void touch_get_last_scan(struct _touch_adraw *raw,
     struct _touch_adconv *conv, struct _touch_addots *dots);
 
-#endif /* GINT_HW_CP */
+#elif GINT_HW_EX
+
+struct exword_touch_debug {
+    int raw_x, raw_y;
+    int mapped_x, mapped_y;
+    int screen_x, screen_y;
+    int pen_down, valid;
+    unsigned accepted_scans, rejected_scans;
+};
+
+enum {
+    EXWORD_TOUCH_CALIB_FALLBACK,
+    EXWORD_TOUCH_CALIB_OS,
+    EXWORD_TOUCH_CALIB_CUSTOM,
+};
+
+struct exword_touch_calibration {
+    int x_offset, y_offset;
+    int x_scale, y_scale; /* raw units per pixel, multiplied by 256 */
+    int source;
+};
+
+key_event_t touch_scan(void);
+void touch_exword_calibrate(int xmin, int xmax, int ymin, int ymax,
+    int xflip, int yflip);
+void touch_exword_get_last_scan(struct exword_touch_debug *out);
+void touch_exword_get_calibration(struct exword_touch_calibration *out);
+/* Restore OS pen/I2C configuration before returning from a hosted add-in. */
+void touch_exword_quit(void);
+
+#endif /* GINT_HW_CP || GINT_HW_EX */
 
 #ifdef __cplusplus
 }

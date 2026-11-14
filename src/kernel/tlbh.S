@@ -4,6 +4,72 @@
 .section .gint.tlbh, "ax"
 .align 4
 
+#if GINT_OS_EX
+
+_gint_tlbh:
+	mov.l .tea, r0
+	mov.l @r0, r0
+	mov.l .page_mask, r1
+	and r1, r0
+	mov.l .pteh, r1
+	mov.l @r1, r2
+	extu.b r2, r2
+	or r0, r2
+	mov.l r2, @r1
+	mov.l .rom_start, r1
+	cmp/hs r1, r0
+	bf .bad_address
+	mov.l .rom_end, r2
+	cmp/hs r2, r0
+	bf .rom_page
+	mov.l .ram_start, r1
+	cmp/hs r1, r0
+	bf .bad_address
+	mov.l .ram_end, r2
+	cmp/hs r2, r0
+	bt .bad_address
+	mov.l _gint_tlbh_exword_ram, r2
+	mov.w .ram_flags, r3
+	bra .map_page
+	nop
+.rom_page:
+	mov.l _gint_tlbh_exword_rom, r2
+	mov.w .rom_flags, r3
+.map_page:
+	sub r1, r0
+	add r2, r0
+	or r3, r0
+	mov.l .ptel, r1
+	mov.l r0, @r1
+	ldtlb
+	nop
+	rte
+	nop
+.bad_address:
+	stc vbr, r0
+	mov #1, r1
+	shll8 r1
+	add r1, r0
+	jmp @r0
+	nop
+
+.balign 4
+.tea: .long 0xff00000c
+.pteh: .long 0xff000000
+.ptel: .long 0xff000004
+.page_mask: .long 0xfffff000
+.rom_start: .long 0x70000000
+.rom_end: .long 0x70000000 + _srom
+.ram_start: .long 0x74000000
+.ram_end: .long 0x74008000
+.global _gint_tlbh_exword_rom, _gint_tlbh_exword_ram
+_gint_tlbh_exword_rom: .long 0
+_gint_tlbh_exword_ram: .long 0
+.rom_flags: .word 0x15c
+.ram_flags: .word 0x17c
+
+#else
+
 #if GINT_OS_FX
 # define SYSCALL_TABLE 0x80010070
 # define SYSCALL_TLBH 3
@@ -86,4 +152,6 @@ panic:
 	.long	0x00300000 + _srom
 .syscall:
 	.long	SYSCALL_TABLE
+#endif
+
 #endif

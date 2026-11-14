@@ -262,6 +262,11 @@ set(SOURCES
   src/touch/driver.c
 )
 
+if("${FXSDK_PLATFORM_LONG}" STREQUAL "exword")
+  add_subdirectory(src/exword)
+  return()
+endif()
+
 set(ASSETS_FX src/font5x7.png src/gdb/icons-i1msb.png)
 set(ASSETS_CG src/font8x9.png src/gdb/icons-rgb565.png)
 set(ASSETS_CP ${ASSETS_CG})

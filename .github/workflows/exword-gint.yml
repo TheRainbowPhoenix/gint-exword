@@ -1,0 +1,163 @@
+name: EX-word gint GINTT
+
+on:
+  push:
+    branches: [dev, feature/exword-runtime-bridge]
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gintt:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/therainbowphoenix/gint-docker:main
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install fxSDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth=1 --branch fix/exword-data-load-alignment https://github.com/TheRainbowPhoenix/fxsdk-exword.git /tmp/fxsdk-src
+          cmake -S /tmp/fxsdk-src -B /tmp/fxsdk-build \
+            -DCMAKE_INSTALL_PREFIX=/tmp/fxsdk-exword \
+            -DFXLINK_DISABLE_SDL2=ON -DFXLINK_DISABLE_UDISKS2=ON
+          cmake --build /tmp/fxsdk-build --parallel 2
+          cmake --install /tmp/fxsdk-build
+          git clone --depth=1 https://github.com/brijohn/elf2d01.git /tmp/elf2d01
+          cc -O2 /tmp/elf2d01/elf2d01.c -o /tmp/fxsdk-exword/bin/elf2d01
+
+      - name: Check converted test assets
+        run: python3 .github/tests_files/exword/check_assets.py /tmp/fxsdk-src
+
+      - name: Build and install gint
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="/tmp/fxsdk-exword/bin:$PATH"
+          cmake -S . -B /tmp/gint-build \
+            -DCMAKE_TOOLCHAIN_FILE=/tmp/fxsdk-exword/lib/cmake/fxsdk/EXWORD.cmake \
+            -DCMAKE_INSTALL_PREFIX=/tmp/gint-exword \
+            -DCMAKE_MODULE_PATH=/tmp/fxsdk-exword/lib/cmake/fxsdk
+          cmake --build /tmp/gint-build --parallel 2
+          cmake --install /tmp/gint-build
+          test -s /tmp/gint-exword/lib/libgint-exword.a
+          sh-elf-nm /tmp/gint-exword/lib/libgint-exword.a | grep -E '_r61523_display_rect$'
+          sh-elf-nm /tmp/gint-exword/lib/libgint-exword.a | grep -E '_pollevent$'
+          sh-elf-nm --defined-only /tmp/gint-exword/lib/libgint-exword.a > /tmp/gint-symbols.txt
+          for symbol in mmu_translate mmu_uram mmu_uram_size mmu_is_rom utlb_addr utlb_data itlb_addr itlb_data hw_detect gint; do
+            grep -E " _$symbol$" /tmp/gint-symbols.txt
+          done
+
+      - name: Build GINTT
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth=1 --branch main \
+            https://github.com/TheRainbowPhoenix/exword-xd-a8500-TEST.git /tmp/exword-metadata
+          export PATH="/tmp/fxsdk-exword/bin:$PATH"
+          mkdir -p /tmp/gint-exword-project
+          cp .github/tests_files/exword/CMakeLists.txt /tmp/gint-exword-project/CMakeLists.txt
+          cp .github/tests_files/exword/*.{c,h,png,txt} /tmp/gint-exword-project/
+          cd /tmp/gint-exword-project
+          fxsdk build-exword -c -- \
+            -DCMAKE_PREFIX_PATH=/tmp/gint-exword \
+            "-DCMAKE_MODULE_PATH=/tmp/gint-exword/lib/cmake/fxsdk;/tmp/fxsdk-exword/lib/cmake/fxsdk" \
+            -DEXWORD_FXSDK_TESTS=/tmp/fxsdk-src/.github/tests_files/a8500 \
+            -DEXWORD_METADATA_SOURCE=/tmp/exword-metadata
+          fxsdk build-exword
+          test -s build-exword/gintt.d01
+          test -s build-exword/mmu-link
+
+      - name: Validate GINTT packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base = Path('/tmp/gint-exword-project/build-exword')
+          symbols = subprocess.check_output(
+              ['sh-elf-nm', str(base / 'gintt')], text=True)
+          addresses = {}
+          aligned = {}
+          for line in symbols.splitlines():
+              fields = line.split()
+              if len(fields) == 3 and fields[2] in ('_etext', '_rdata', '_edata'):
+                  addresses[fields[2]] = int(fields[0], 16)
+              if len(fields) == 3 and (fields[2] in (
+                  '_gint_font8x9', '_test_font', '_test_rgb565', '_test_rgb565a',
+                  '_test_p4_rgb565', '_test_p4_rgb565a', '_test_p8_rgb565',
+                  '_test_p8_rgb565a')):
+                  aligned[fields[2]] = int(fields[0], 16)
+          assert len(addresses) == 3, addresses
+          assert all(value % 4 == 0 for value in addresses.values()), addresses
+          assert len(aligned) == 8, aligned
+          assert all(value % 4 == 0 for value in aligned.values()), aligned
+          elf = (base / 'gintt').read_bytes()
+          import struct
+          header = struct.unpack_from('>16sHHIIIIIHHHHHH', elf)
+          assert header[0][:6] == b'\x7fELF\x01\x02'
+          sections = [struct.unpack_from('>10I', elf, header[6] + i*header[11])
+                      for i in range(header[12])]
+          names = sections[header[13]]
+          names = elf[names[4]:names[4]+names[5]]
+          data = next(section for section in sections
+                      if names[section[0]:].split(b'\0', 1)[0] == b'.data')
+          d01 = (base / 'gintt.d01').read_bytes()
+          offset = addresses['_etext'] - 0x70000000
+          size = addresses['_edata'] - addresses['_rdata']
+          assert d01[offset:offset+size] == elf[data[4]:data[4]+size], \
+              'D01 initialized data disagrees with startup copy source'
+          assembly = subprocess.check_output(['sh-elf-objdump', '-d', str(base/'gintt')], text=True)
+          import re
+          pin = subprocess.check_output(['sh-elf-objdump', '-d',
+              '--disassemble=_exword_pin', str(base/'gintt')], text=True)
+          assert '<_exword_pin>:' in pin
+          assert not re.search(r'\s(?:jsr|bsr|bsrf|jmp|braf)\s', pin), \
+              'Physical MMU routine must not call or jump to virtual code'
+          assert len(re.findall(r'\bicbi\b', pin)) >= 2, \
+              'Physical MMU routine needs instruction synchronization'
+          assert '_exword_entry' in symbols and '_start' in symbols
+          assert '_gint_world_switch_in' in symbols and '_drv_tmu' in symbols
+          assert len(d01) > 128
+          assert d01[:16] == b'CASIODICPLUGIN10'
+          assert d01[16:22] == b'gintt\x00'
+          for locale in ('ja', 'cn'):
+              directory = base / 'packages' / locale / 'GINTT'
+              assert (directory / 'gintt.d01').read_bytes() == d01
+              assert (directory / 'fileinfo.cji').is_file()
+              metadata = list(directory.glob('*.htm'))
+              assert metadata
+              for path in metadata:
+                  assert b'@APP' not in path.read_bytes()
+          print('GINTT OK:', len(d01), 'bytes')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gintt-ja
+          path: /tmp/gint-exword-project/build-exword/packages/ja/
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gintt-cn
+          path: /tmp/gint-exword-project/build-exword/packages/cn/
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gintt-debug
+          path: |
+            /tmp/gint-exword-project/build-exword/gintt
+            /tmp/gint-exword-project/build-exword/gintt.map
+          if-no-files-found: warn
+          retention-days: 30

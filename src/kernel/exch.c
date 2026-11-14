@@ -210,8 +210,12 @@ GNORETURN static void gint_default_panic(GUNUSED uint32_t code)
 			abort();
 		if(has_released && menu)
 			gint_osmenu();
+		#if !GINT_OS_EX
 		if(has_released && f1 && f6)
 			__Reset();
+		#else
+		(void)f1; (void)f6;
+		#endif
 		if(!exit && !menu && !f1 && !f6)
 			has_released = true;
 

@@ -181,6 +181,21 @@ void hw_detect(void)
 	gint[HWURAM] = 0;
 }
 
+#elif GINT_HW_EX
+
+void hw_detect(void)
+{
+	memset(gint, 0, sizeof gint);
+	gint[HWMPU] = HWMPU_SH7305;
+	gint[HWCPUVR] = PVR;
+	gint[HWCPUPR] = PRR;
+	gint[HWCALC] = HWCALC_EXWORD;
+	gint[HWFS] = HWFS_NONE;
+	gint[HWRAM] = 0;
+	gint[HWROM] = 0;
+	utlb_mapped_memory(NULL, NULL);
+}
+
 #else
 #error unknown hardware type for hw_detect
 #endif

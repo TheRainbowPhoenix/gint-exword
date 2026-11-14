@@ -5,6 +5,7 @@
 #include <gint/hardware.h>
 #include <gint/cpu.h>
 #include <gint/mpu/intc.h>
+#include <gint/defs/util.h>
 
 #include <string.h>
 
@@ -25,6 +26,8 @@ sh7305_intc_t const SH7305_INTC = {
 	.IPR		= (void *)0xa4080000,
 	.MSK		= (void *)0xa4080080,
 	.MSKCLR		= (void *)0xa40800c0,
+	.IRQMSK         = (void *)0xa4140044,
+	.IRQMSKCLR      = (void *)0xa4140064,
 	.USERIMASK	= (void *)0xa4700000,
 };
 
@@ -201,6 +204,10 @@ bool intc_handler_function(int event_code, gint_call_t function)
 
 static void configure(void)
 {
+	#if GINT_HW_EX
+	*SH7305_INTC.IRQMSK = 0xff;
+	synco();
+	#endif
 	/* Just disable everything, drivers will enable what they support */
 	if(isSH3()) for(int i = 0; i < 8; i++)
 		*(SH7705_INTC.IPR[i]) = 0x0000;
@@ -223,6 +230,9 @@ static void hsave(intc_state_t *s)
 		uint8_t *IMR = (void *)SH7305_INTC.MSK;
 		for(int i = 0; i < 13; i++, IMR += 4)
 			s->MSK[i] = *IMR;
+		#if GINT_HW_EX
+		s->IRQMSK = *SH7305_INTC.IRQMSK;
+		#endif
 	}
 }
 
@@ -246,6 +256,11 @@ static void hrestore(intc_state_t const *s)
 			*IMCR = 0xff;
 			*IMR = s->MSK[i];
 		}
+		#if GINT_HW_EX
+		*SH7305_INTC.IRQMSK = 0xff;
+		*SH7305_INTC.IRQMSKCLR = (uint8_t)~s->IRQMSK;
+		synco();
+		#endif
 	}
 }
 

@@ -5,6 +5,8 @@
 # define DWIDTH 396
 #elif GINT_HW_CP
 # define DWIDTH 320
+#elif GINT_HW_EX
+# define DWIDTH 528
 #endif
 
 .global _topti_glyph_fg_bg

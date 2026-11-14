@@ -1,3 +1,133 @@
+#include <gint/config.h>
+
+#if GINT_HW_EX
+#include <gint/keyboard.h>
+#include <gint/drivers/keydev.h>
+#include <gint/drivers/touch.h>
+#include <string.h>
+
+static keydev_t exword_keyboard;
+static int exword_keyboard_ready;
+static void keysc_prepare(void);
+static getkey_feature_t exword_feature;
+
+getkey_feature_t getkey_feature_function(void) { return exword_feature; }
+void getkey_set_feature_function(getkey_feature_t function)
+{
+    exword_feature = function;
+}
+
+keydev_t *keydev_std(void)
+{
+    keysc_prepare();
+    return &exword_keyboard;
+}
+
+static void keysc_scan(uint8_t scan[12])
+{
+    volatile uint16_t const *keys = (void *)0xa44b0000;
+    for(int i = 0; i < 6; i++) {
+        uint16_t word = keys[i];
+        scan[2 * i] = word & 0xff;
+        scan[2 * i + 1] = word >> 8;
+    }
+}
+
+static void keysc_prepare(void)
+{
+    if(exword_keyboard_ready) return;
+    keydev_init(&exword_keyboard);
+    keysc_scan(exword_keyboard.state_now);
+    memcpy(exword_keyboard.state_queue, exword_keyboard.state_now, 12);
+    exword_keyboard_ready = 1;
+}
+
+int keysc_tick(void)
+{
+    uint8_t scan[12];
+    keysc_prepare();
+    keysc_scan(scan);
+    keydev_process_state(&exword_keyboard, scan);
+    keydev_tick(&exword_keyboard, 7812);
+    /* Deliver keys before potentially slow touch conversions/timeouts. */
+    if(exword_keyboard.queue_next != exword_keyboard.queue_end) return 0;
+    /* EX-word has no scan timer, sample on every poll */
+    key_event_t ev = touch_scan();
+    if(ev.type != KEYEV_NONE)
+        keydev_queue_event(&exword_keyboard, ev);
+    return 0;
+}
+
+key_event_t pollevent(void)
+{
+    keysc_prepare();
+    if(exword_keyboard.queue_next != exword_keyboard.queue_end)
+        return keydev_unqueue_event(&exword_keyboard);
+    keysc_tick();
+    return keydev_unqueue_event(&exword_keyboard);
+}
+
+key_event_t waitevent(volatile int *timeout)
+{
+    for(;;) {
+        key_event_t ev = pollevent();
+        if(ev.type != KEYEV_NONE || (timeout && *timeout))
+            return ev;
+    }
+}
+
+void clearevents(void)
+{
+    while(pollevent().type != KEYEV_NONE);
+}
+
+void cleareventflips(void)
+{
+    keysc_prepare();
+    keydev_clear_flips(&exword_keyboard);
+}
+
+int keydown(int key)
+{
+    keysc_prepare();
+    return keydev_keydown(&exword_keyboard, key);
+}
+
+int keypressed(int key)
+{
+    keysc_prepare();
+    return keydev_keypressed(&exword_keyboard, key);
+}
+
+int keyreleased(int key)
+{
+    keysc_prepare();
+    return keydev_keyreleased(&exword_keyboard, key);
+}
+
+key_event_t getkey(void)
+{
+    for(;;) {
+        key_event_t ev = waitevent(NULL);
+        if(ev.type == KEYEV_DOWN) return ev;
+    }
+}
+
+key_event_t getkey_opt(int opt, volatile int *timeout)
+{
+    (void)opt;
+    for(;;) {
+        key_event_t ev = waitevent(timeout);
+        if(ev.type == KEYEV_NONE || ev.type == KEYEV_DOWN)
+            return ev;
+    }
+}
+
+int keysc_scan_frequency(void) { return 128; }
+uint32_t keysc_scan_frequency_us(void) { return 7812; }
+void keysc_set_scan_frequency(int frequency) { (void)frequency; }
+
+#else
 //---
 //	gint:keysc - The SH7305 and I/O Key Scan Interfaces
 //---
@@ -167,3 +297,5 @@ gint_driver_t drv_keysc = {
 	.configure  = configure,
 };
 GINT_DECLARE_DRIVER(23, drv_keysc);
+
+#endif /* GINT_HW_EX */

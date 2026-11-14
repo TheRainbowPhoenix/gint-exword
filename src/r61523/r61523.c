@@ -9,8 +9,9 @@
 #include <gint/video.h>
 #include <gint/image.h>
 #include <gint/config.h>
+#include <gint/display.h>
 
-#if GINT_HW_CP
+#if GINT_HW_CP || GINT_HW_EX
 
 /* Registers */
 #define REG_HRANGE                0x2a
@@ -102,13 +103,16 @@ void r61523_identify(
 
 void r61523_win_set(int x1, int x2, int y1, int y2)
 {
-    if (r61523_variant != 0x16 || r61523_variant != 0x52)
+#if GINT_HW_EX
+    y1 += 40;
+    y2 += 40;
+#else
+    if (r61523_variant != 0x16 && r61523_variant != 0x52)
     {
-        /* R61523 has a 360x640 area; the CP-400 uses the top-right corner
-         * for its 320x528 display, so skip over the first 40 columns */
         x1 += 40;
         x2 += 40;
     }
+#endif
 
     uint16_t volatile *DISPLAY = (void *)0xb4000000;
 
@@ -139,19 +143,23 @@ void r61523_win_set(int x1, int x2, int y1, int y2)
 
 void r61523_display(uint16_t *vram)
 {
-    r61523_win_set(0, 319, 0, 527);
+    r61523_win_set(0, DWIDTH - 1, 0, DHEIGHT - 1);
     select(44);
 
     int row_offset = 0;
     uint16_t volatile *DISPLAY = (void *)0xb4000000;
 
-    for(int y = 0; y < 528; y++) {
+    for(int y = 0; y < DHEIGHT; y++) {
         uint16_t *r5 = (void *)vram + row_offset;
 
-        for(int x = 0; x < 320; x++)
+        for(int x = 0; x < DWIDTH; x++) {
             *DISPLAY = *r5++;
+#if GINT_HW_EX
+            synco();
+#endif
+        }
 
-        row_offset += 2 * 320;
+        row_offset += 2 * DWIDTH;
     }
 }
 
@@ -162,19 +170,56 @@ void r61523_display_rect(
     r61523_win_set(xmin, xmax, ymin, ymax);
     select(44);
 
-    vram += 320 * ymin + xmin;
+    vram += DWIDTH * ymin + xmin;
     uint16_t volatile *DISPLAY = (void *)0xb4000000;
 
     for(int y = 0; y < ymax - ymin + 1; y++) {
-        for(int x = 0; x < xmax - xmin + 1; x++)
+        for(int x = 0; x < xmax - xmin + 1; x++) {
             *DISPLAY = vram[x];
-        vram += 320;
+#if GINT_HW_EX
+            synco();
+#endif
+        }
+        vram += DWIDTH;
+    }
+}
+
+void r61523_fill_rect(int x1, int y1, int x2, int y2, uint16_t color)
+{
+    if(x1 < 0) x1 = 0;
+    if(y1 < 0) y1 = 0;
+    if(x2 >= DWIDTH) x2 = DWIDTH - 1;
+    if(y2 >= DHEIGHT) y2 = DHEIGHT - 1;
+    if(x1 > x2 || y1 > y2) return;
+    r61523_win_set(x1, x2, y1, y2);
+    select(REG_DATA);
+    int count = (x2-x1+1) * (y2-y1+1);
+    while(count--) {
+        *DISPLAY = color;
+#if GINT_HW_EX
+        synco();
+#endif
+    }
+}
+
+void r61523_display_row(uint16_t const *row, int y)
+{
+    if(!row || (unsigned)y >= DHEIGHT)
+        return;
+
+    r61523_win_set(0, DWIDTH - 1, y, y);
+    select(REG_DATA);
+    for(int x = 0; x < DWIDTH; x++) {
+        *DISPLAY = row[x];
+#if GINT_HW_EX
+        synco();
+#endif
     }
 }
 
 void r61523_set_pixel(int x, int y, int color)
 {
-    if((unsigned)x >= 320 || (unsigned)y >= 528)
+    if((unsigned)x >= DWIDTH || (unsigned)y >= DHEIGHT)
         return;
 
     // dma_transfer_wait(0);
@@ -182,6 +227,9 @@ void r61523_set_pixel(int x, int y, int color)
     select(44);
     uint16_t volatile *DISPLAY = (void *)0xb4000000;
     *DISPLAY = color;
+#if GINT_HW_EX
+    synco();
+#endif
 }
 
 static bool r61523_update(int x, int y, image_t const *fb, int flags)
@@ -196,11 +244,11 @@ static bool r61523_update(int x, int y, image_t const *fb, int flags)
     uint h = fb->height;
 
     // TODO: r61523_update: sub-rectangle support
-    if(x != 0 || y != 0 || w != 320 || h != 528)
+    if(x != 0 || y != 0 || w != DWIDTH || h != DHEIGHT)
         return false;
 
     // TODO: r61523_update: stride support!
-    if(fb->stride != 320 * 2)
+    if(fb->stride != DWIDTH * 2)
         return false;
 
     r61523_display(fb->data);
@@ -214,7 +262,9 @@ static bool r61523_update(int x, int y, image_t const *fb, int flags)
 /* constructor() - determine which variant of screen we have */
 static void constructor(void)
 {
+    #if GINT_HW_CP
     r61523_identify(NULL, NULL, &r61523_variant);
+    #endif
 }
 
 /* As far as I can tell there's no way to read the current window from the
@@ -231,7 +281,7 @@ GINT_DECLARE_DRIVER(26, drv_r61523);
 
 static video_mode_t r61523_modes[] = {
     /* Standard full-screen full-color mode */
-    { 320, 528, IMAGE_RGB565, -1 },
+    { DWIDTH, DHEIGHT, IMAGE_RGB565, -1 },
     { 0 }
 };
 
@@ -246,4 +296,4 @@ video_interface_t r61523_video = {
     .update          = r61523_update,
 };
 
-#endif /* GINT_HW_CP */
+#endif /* GINT_HW_CP || GINT_HW_EX */
