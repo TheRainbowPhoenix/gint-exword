@@ -244,3 +244,31 @@ gint_driver_t drv_mmu = {
 	.state_size   = sizeof(mmu_state_t),
 };
 GINT_DECLARE_DRIVER(02, drv_mmu);
+
+#if GINT_HW_EX
+int mmu_exword_prepare(void)
+{
+	extern uint32_t srom;
+	uint32_t lengths[2] = { (uint32_t)&srom, 0x8000 };
+	uint32_t bases[2] = { 0x70000000, 0x74000000 };
+	if(lengths[0] <= 0x80 || lengths[0] > 0x20000) return 0;
+
+	for(int region = 0; region < 2; region++) {
+		for(uint32_t offset = 0; offset < lengths[region]; offset += 4096) {
+			volatile uint8_t byte = *(volatile uint8_t *)(bases[region] + offset);
+			(void)byte;
+		}
+	}
+	for(int region = 0; region < 2; region++) {
+		uint32_t physical = mmu_translate(bases[region], NULL);
+		if(physical == (uint32_t)-1) return 0;
+		for(uint32_t offset = 0; offset < lengths[region]; offset += 4096) {
+			uint32_t size;
+			if(mmu_translate(bases[region] + offset, &size) != physical + offset ||
+				size != 4096) return 0;
+		}
+	}
+	gint[HWURAM] = 0x8000;
+	return 1;
+}
+#endif

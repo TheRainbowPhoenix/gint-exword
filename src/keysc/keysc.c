@@ -123,12 +123,6 @@ key_event_t getkey_opt(int opt, volatile int *timeout)
     }
 }
 
-/* The hosted EX-word keyboard has no gint timer driver yet. */
-void sleep(void)
-{
-    keysc_tick();
-}
-
 int keysc_scan_frequency(void) { return 128; }
 uint32_t keysc_scan_frequency_us(void) { return 7812; }
 void keysc_set_scan_frequency(int frequency) { (void)frequency; }

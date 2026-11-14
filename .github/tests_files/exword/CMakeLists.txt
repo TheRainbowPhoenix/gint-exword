@@ -17,9 +17,8 @@ endif()
 
 add_executable(gintt
   "${CMAKE_CURRENT_SOURCE_DIR}/main.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/test.c" ${ASSETS}
-  "${EXWORD_FXSDK_TESTS}/crt0.S")
-add_executable(mmu-link mmu_link.c "${EXWORD_FXSDK_TESTS}/crt0.S")
+  "${CMAKE_CURRENT_SOURCE_DIR}/test.c" ${ASSETS})
+add_executable(mmu-link mmu_link.c)
 
 foreach(target gintt mmu-link)
   target_compile_options(${target} PRIVATE
@@ -27,11 +26,8 @@ foreach(target gintt mmu-link)
     -fno-pic -fno-pie -fno-stack-protector)
   target_link_options(${target} PRIVATE
     -mb -m4a-nofpu -nostdlib -no-pie
-    "-Wl,-T,${EXWORD_FXSDK_TESTS}/exword.ld"
     -Wl,--build-id=none -Wl,--no-warn-rwx-segments
     "-Wl,-Map,${CMAKE_CURRENT_BINARY_DIR}/${target}.map")
-  set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS
-    "${EXWORD_FXSDK_TESTS}/exword.ld")
   target_link_libraries(${target} PRIVATE Gint::Gint)
 endforeach()
 generate_d01(TARGET gintt OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/gintt.d01"

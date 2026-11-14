@@ -1,5 +1,6 @@
 #include <gint/display.h>
 #include <gint/drivers/r61523.h>
+#include <gint/drivers/touch.h>
 
 #ifndef GINT_EXWORD_VRAM_ADDRESS
 #define GINT_EXWORD_VRAM_ADDRESS 0xac200000
@@ -26,4 +27,14 @@ void dupdate_rect(int x1, int y1, int x2, int y2)
     if(y2 >= DHEIGHT) y2 = DHEIGHT-1;
     if(x1 > x2 || y1 > y2) return;
     r61523_display_rect(gint_vram, x1, x2, y1, y2);
+}
+
+bool dvram_init(void)
+{
+    return true;
+}
+
+void dvram_quit(void)
+{
+    touch_exword_quit();
 }

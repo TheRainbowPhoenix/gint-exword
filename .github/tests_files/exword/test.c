@@ -2,9 +2,7 @@
 #include <gint/display.h>
 #include <gint/image.h>
 #include <gint/cpu.h>
-#include <gint/mpu/cpg.h>
-#include <gint/mpu/power.h>
-#include <gint/mpu/tmu.h>
+#include <gint/timer.h>
 
 extern image_t test_rgb565, test_rgb565a;
 extern image_t test_p4_rgb565, test_p4_rgb565a;
@@ -12,73 +10,38 @@ extern image_t test_p8_rgb565, test_p8_rgb565a;
 extern font_t test_font;
 
 static int channel = -1;
-static uint32_t saved_cor, saved_cnt, previous, ticks_per_second;
-static uint16_t saved_cr;
-static int saved_stop;
-static uint64_t elapsed;
+static volatile unsigned clock_seconds;
 static unsigned displayed = (unsigned)-1;
 static unsigned char converted_pixels[40 * 40 * 2] __attribute__((aligned(4)));
+
+static int clock_tick(void)
+{
+    clock_seconds++;
+    return TIMER_CONTINUE;
+}
 
 static int clock_start(void)
 {
     if(channel >= 0) return 1;
-    uint32_t base = 32768;
-    if(SH7305_CPG.PLLCR.FLLE) {
-        unsigned fll = SH7305_CPG.FLLFRQ.FLF;
-        if(SH7305_CPG.FLLFRQ.SELXM == 1) fll >>= 1;
-        base *= fll;
-    }
-    if(SH7305_CPG.PLLCR.PLLE) base *= SH7305_CPG.FRQCR.STC + 1;
-    ticks_per_second = (base >> (SH7305_CPG.FRQCR.P1FC + 1)) / 256;
-    if(!ticks_per_second) return 0;
-    cpu_atomic_start();
-    saved_stop = SH7305_POWER.MSTPCR0.TMU0;
-    SH7305_POWER.MSTPCR0.TMU0 = 0;
-    (void)SH7305_POWER.MSTPCR0.lword;
-    for(int i = 2; i >= 0; i--) {
-        if(!(SH7305_TMU.TSTR & (1 << i)) && !SH7305_TMU.TMU[i].TCR.UNIE) {
-            channel = i;
-            break;
-        }
-    }
-    if(channel >= 0) {
-        tmu_t *t = &SH7305_TMU.TMU[channel];
-        saved_cor = t->TCOR;
-        saved_cnt = t->TCNT;
-        saved_cr = t->TCR.word;
-        t->TCR.word = 3;
-        t->TCOR = t->TCNT = 0xffffffff;
-        previous = t->TCNT;
-        SH7305_TMU.TSTR |= 1 << channel;
-        elapsed = 0;
-        displayed = (unsigned)-1;
-    }
-    else SH7305_POWER.MSTPCR0.TMU0 = saved_stop;
-    cpu_atomic_end();
-    return channel >= 0;
+    clock_seconds = 0;
+    displayed = (unsigned)-1;
+    channel = timer_configure(TIMER_TMU, 1000000, GINT_CALL(clock_tick));
+    if(channel < 0) return 0;
+    timer_start(channel);
+    return 1;
 }
 
 void test_clock_stop(void)
 {
     if(channel < 0) return;
-    cpu_atomic_start();
-    SH7305_TMU.TSTR &= ~(1 << channel);
-    tmu_t *t = &SH7305_TMU.TMU[channel];
-    t->TCOR = saved_cor;
-    t->TCNT = saved_cnt;
-    t->TCR.word = saved_cr;
-    if(!(SH7305_TMU.TSTR & 7)) SH7305_POWER.MSTPCR0.TMU0 = saved_stop;
+    timer_stop(channel);
     channel = -1;
-    cpu_atomic_end();
 }
 
 void test_clock_update(void)
 {
     if(channel < 0) return;
-    uint32_t now = SH7305_TMU.TMU[channel].TCNT;
-    elapsed += (uint32_t)(previous - now);
-    previous = now;
-    unsigned seconds = elapsed / ticks_per_second;
+    unsigned seconds = clock_seconds;
     if(seconds == displayed) return;
     displayed = seconds;
     unsigned minutes = seconds / 60;

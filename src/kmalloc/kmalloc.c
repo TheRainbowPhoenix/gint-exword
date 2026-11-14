@@ -17,9 +17,11 @@ static kmalloc_arena_t *arenas[KMALLOC_ARENA_MAX] = { 0 };
 /* kmalloc_init(): Initialize the dynamic allocator */
 void kmalloc_init(void)
 {
+	#if !GINT_HW_EX
 	/* Provide the OS heap */
 	extern kmalloc_arena_t kmalloc_arena_osheap;
 	arenas[KMALLOC_ARENA_MAX - 1] = &kmalloc_arena_osheap;
+	#endif
 }
 
 //---

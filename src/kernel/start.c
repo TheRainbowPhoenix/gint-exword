@@ -44,7 +44,7 @@ void gint_setrestart(int restart)
 {
 	/* No restart on the machines for which there is no return-to-menu, i.e. on
 	   fx-CP and on the fx-CG 100. */
-	gint_restart = restart && !GINT_OS_CP && gint[HWCALC] != HWCALC_FXCG100;
+	gint_restart = restart && !GINT_OS_CP && !GINT_OS_EX && gint[HWCALC] != HWCALC_FXCG100;
 }
 
 /* Return value of main() */
@@ -99,7 +99,7 @@ void gint_load_onchip_sections(void)
 	/* Do not load data to ILRAM, XRAM or YRAM on SH3 - the areas don't
 	   exist. If you use them, you're responsible! */
 	/* Do not load data on HH3 either. The loader did so already. */
-	if(!isSH3() && !GINT_OS_CP)
+	if(!isSH3() && !GINT_OS_CP && !GINT_OS_EX)
 	{
 		/* Clear the areas so that we have less to save in case of a
 		   return to menu leading to a poweroff. */
@@ -159,12 +159,20 @@ static int start2(int load_type, u32 *load_info)
 	regclr(&rbss, &sbss);
 	#endif
 
+	#if GINT_OS_EX
+	if(!mmu_exword_prepare()) return -2;
+	#endif
+
 	gint_load_onchip_sections();
 
 	#if !GINT_OS_CP
 	/* Copy permanently-mapped code to start of user RAM (this section is
 	   only used on fx-9860G; on fx-CG 50 it's fixed in ILRAM) */
 	void *rgmapped = mmu_uram();
+	#if GINT_OS_EX
+	extern uint32_t gint_region_mapped;
+	rgmapped += (uint32_t)&gint_region_mapped - 0x74000000;
+	#endif
 	regcpy(&lgmapped, &sgmapped, rgmapped);
 
 	/* Relocate references to this code */
@@ -172,6 +180,9 @@ static int start2(int load_type, u32 *load_info)
 	for(uint i = 0; i < (uint32_t)&sreloc / 4; i++)
 	{
 		fixups[i] += (uint32_t)rgmapped;
+		#if GINT_OS_EX
+		fixups[i] -= (uint32_t)&lgmapped;
+		#endif
 	}
 	#endif
 
@@ -229,3 +240,10 @@ void _Exit(int rc)
 	gint_exitcode = rc;
 	longjmp(gint_exitbuf, 1);
 }
+
+#if GINT_OS_EX
+void abort(void)
+{
+	_Exit(EXIT_FAILURE);
+}
+#endif
