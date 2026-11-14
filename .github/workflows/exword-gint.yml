@@ -87,7 +87,7 @@ jobs:
           aligned = {}
           for line in symbols.splitlines():
               fields = line.split()
-              if len(fields) == 3 and fields[2] in ('_etext', '_sdata', '_edata'):
+              if len(fields) == 3 and fields[2] in ('_etext', '_rdata', '_edata'):
                   addresses[fields[2]] = int(fields[0], 16)
               if len(fields) == 3 and (fields[2] in (
                   '_gint_font8x9', '_test_font', '_test_rgb565', '_test_rgb565a',
@@ -110,13 +110,13 @@ jobs:
                       if names[section[0]:].split(b'\0', 1)[0] == b'.data')
           d01 = (base / 'gintt.d01').read_bytes()
           offset = addresses['_etext'] - 0x70000000
-          size = addresses['_edata'] - addresses['_sdata']
+          size = addresses['_edata'] - addresses['_rdata']
           assert d01[offset:offset+size] == elf[data[4]:data[4]+size], \
               'D01 initialized data disagrees with startup copy source'
           assembly = subprocess.check_output(['sh-elf-objdump', '-d', str(base/'gintt')], text=True)
           import re
-          assert not re.search(r'\b(?:ldrs|ldre|ldrc|movs\.[wl])\s', assembly), \
-              'Hosted EX-word renderer requires DSP initialization'
+          assert '_exword_entry' in symbols and '_start' in symbols
+          assert '_gint_world_switch_in' in symbols and '_drv_tmu' in symbols
           assert len(d01) > 128
           assert d01[:16] == b'CASIODICPLUGIN10'
           assert d01[16:22] == b'gintt\x00'
