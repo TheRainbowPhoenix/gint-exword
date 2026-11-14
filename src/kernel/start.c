@@ -244,6 +244,6 @@ void _Exit(int rc)
 #if GINT_OS_EX
 void abort(void)
 {
-	_Exit(EXIT_FAILURE);
+	_Exit(-2);
 }
 #endif

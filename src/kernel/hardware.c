@@ -185,6 +185,7 @@ void hw_detect(void)
 
 void hw_detect(void)
 {
+	memset(gint, 0, sizeof gint);
 	gint[HWMPU] = HWMPU_SH7305;
 	gint[HWCPUVR] = PVR;
 	gint[HWCPUPR] = PRR;

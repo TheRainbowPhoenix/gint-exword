@@ -12,7 +12,10 @@ _gint_tlbh:
 	mov.l .page_mask, r1
 	and r1, r0
 	mov.l .pteh, r1
-	mov.l r0, @r1
+	mov.l @r1, r2
+	extu.b r2, r2
+	or r0, r2
+	mov.l r2, @r1
 	mov.l .rom_start, r1
 	cmp/hs r1, r0
 	bf .bad_address
