@@ -115,7 +115,7 @@ static int wait_flag(uint8_t flags)
     while(iic_budget > 0) {
         iic_budget--;
         uint8_t status = IIC_STAT;
-        /* Arbitration loss is a failed transaction, never a sample. */
+        /* Arbitration loss on failed transaction. */
         if(status & 8) return 0;
         if(status & flags) return 1;
     }
@@ -124,7 +124,7 @@ static int wait_flag(uint8_t flags)
 
 static int wait_idle(void)
 {
-    /* ROM32A IIC_WaitStop(): ICSR.4 is BUSY, wait for it to clear. */
+    /* ROM32A IIC_WaitStop(): wait for ICSR.4 "BUSY"  to clear. */
     while(iic_budget > 0) {
         iic_budget--;
         if(!(IIC_STAT & 0x10)) return 1;
@@ -204,6 +204,7 @@ static int touch_read_word(uint16_t *out)
     IIC_STAT &= ~2;
     if(!wait_flag(1)) goto failed;
     low = IIC_DATA;
+    if(!wait_idle()) goto failed;
     i2c_end();
     *out = ((uint16_t)high << 8) | low;
     return 1;
@@ -348,11 +349,10 @@ key_event_t touch_scan(void)
                 down = 1;
             }
         }
-        /* A rejected conversion is not a pen release. Leave the stroke and
-           last point intact; the next successful sample continues the line. */
+        /* ignore rejected conversion, the next successful sample will continue the line until pen up. */
         if(!down && debug_scan.pen_down) {
             debug_scan.rejected_scans++;
-            /* ROM active-stroke terminates after repeated failures, stuck-low PENIRQ will not continue stroke */
+            /* ROM32A: active-stroke terminates after repeated failures */
             if(++touch_state.rejected < 2) return ev;
         }
     }
