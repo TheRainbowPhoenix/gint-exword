@@ -67,7 +67,7 @@ static void *onchip_save_buffer = NULL;
 void gint_world_switch_in(gint_world_t world_os, gint_world_t world_addin)
 {
 	#if GINT_OS_EX
-	if(!mmu_exword_prepare()) gint_panic(0x1040);
+	if(!mmu_exword_prepare(0)) gint_panic(0x1040);
 	#endif
 
 	/* Unbind from the OS driver and complete foreign asynchronous tasks */

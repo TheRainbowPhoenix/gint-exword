@@ -42,6 +42,7 @@ _gint_tlbh:
 	mov.l .ptel, r1
 	mov.l r0, @r1
 	ldtlb
+	nop
 	rte
 	nop
 .bad_address:

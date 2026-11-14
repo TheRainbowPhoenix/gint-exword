@@ -47,6 +47,9 @@ typedef struct {
 typedef struct {
 	uint32_t PASCR;
 	uint32_t IRMCR;
+	#if GINT_HW_EX
+	uint32_t MMUCR;
+	#endif
 } mmu_state_t;
 
 /* R61524 display (see r61524/r61524.c) */

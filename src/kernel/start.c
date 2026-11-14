@@ -163,7 +163,7 @@ static int start2(int load_type, u32 *load_info)
 	#endif
 
 	#if GINT_OS_EX
-	if(load_type == -1 || !mmu_exword_prepare()) {
+	if(load_type == -1 || !mmu_exword_prepare((uint32_t)load_info)) {
 		exword_boot_error(load_type == -1 ? "Entry RAM mapping" : "MMU setup");
 		return -2;
 	}

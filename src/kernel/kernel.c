@@ -126,7 +126,7 @@ void kinit(u32 *load_info)
 		(uint32_t)&gint_tlbh_exword_rom - (uint32_t)&gint_tlbh_start);
 	uint32_t *ram_base = (void *)(VBR + 0x400 +
 		(uint32_t)&gint_tlbh_exword_ram - (uint32_t)&gint_tlbh_start);
-	*rom_base = mmu_translate(0x70000000, NULL);
+	*rom_base = mmu_exword_rom();
 	*ram_base = (uint32_t)mmu_uram() & 0x1fffffff;
 	#endif
 
