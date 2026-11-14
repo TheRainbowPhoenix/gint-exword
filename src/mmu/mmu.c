@@ -174,7 +174,7 @@ void utlb_mapped_memory(uint32_t *p_rom, uint32_t *p_ram)
 		int sz = ((data->SZ1 << 1) | data->SZ2) << 3;
 		int size = 1 << ((0x14100c0a >> sz) & 0xff);
 
-		uint32_t src = addr->VPN << 10;
+		uint32_t src = (addr->VPN << 10) & ~(size - 1u);
 		#if GINT_HW_EX
 		if(src >= 0x70000000 && src < 0x70020000) rom += size;
 		if(src >= 0x74000000 && src < 0x74008000) ram += size;
@@ -198,13 +198,14 @@ uint32_t utlb_translate(uint32_t page, uint32_t *size)
 		const volatile utlb_data_t *data = utlb_data(E);
 		if(!addr->V || !data->V) continue;
 
-		if((uint32_t)addr->VPN << 10 == page)
+		int sz = ((data->SZ1 << 1) | data->SZ2) << 3;
+		uint32_t bytes = 1u << ((0x14100c0au >> sz) & 0xff);
+		uint32_t mask = bytes - 1;
+		if(((uint32_t)addr->VPN << 10 & ~mask) == page)
 		{
-			/* Same magic formula as utlb_mapped_memory() */
-			int sz = ((data->SZ1 << 1) | data->SZ2) << 3;
-			if(size) *size = 1 << ((0x14100c0a >> sz) & 0xff);
+			if(size) *size = bytes;
 
-			return data->PPN << 10;
+			return (data->PPN << 10) & ~mask;
 		}
 	}
 	return -1;
@@ -242,7 +243,7 @@ static __attribute__((noinline)) void exword_pin(uint32_t ram, uint32_t control)
 	uint32_t boundary = (control >> 18) & 63;
 	for(int i = 0; i < 64; i++) {
 		uint32_t a = addresses[i * 64];
-		uint32_t page = a & 0xfffffc00;
+		uint32_t page = a & 0xfffff000;
 		if(page >= 0x74000000 && page < 0x74008000)
 			addresses[i * 64] = a & ~0x100u;
 	}
@@ -317,18 +318,18 @@ static uint32_t exword_image_base(uint32_t length)
 	for(int i = 0; i < 64; i++) {
 		utlb_addr_t a = *(volatile utlb_addr_t const *)utlb_addr(i);
 		utlb_data_t d = *(volatile utlb_data_t const *)utlb_data(i);
-		uint32_t page = a.VPN << 10;
+		uint32_t page = (a.VPN << 10) & 0xfffff000u;
 		if(a.V && d.V && !d.SZ1 && d.SZ2 && page >= 0x70000000 &&
 			page - 0x70000000 < length)
-			return (d.PPN << 10) - (page - 0x70000000);
+			return ((d.PPN << 10) & 0x1ffff000u) - (page - 0x70000000);
 	}
 	for(int i = 0; i < 4; i++) {
 		itlb_addr_t a = *(volatile itlb_addr_t const *)itlb_addr(i);
 		itlb_data_t d = *(volatile itlb_data_t const *)itlb_data(i);
-		uint32_t page = a.VPN << 10;
+		uint32_t page = (a.VPN << 10) & 0xfffff000u;
 		if(a.V && d.V && !d.SZ1 && d.SZ0 && page >= 0x70000000 &&
 			page - 0x70000000 < length)
-			return (d.PPN << 10) - (page - 0x70000000);
+			return ((d.PPN << 10) & 0x1ffff000u) - (page - 0x70000000);
 	}
 	return (uint32_t)-1;
 }
@@ -356,12 +357,12 @@ int mmu_exword_prepare(uint32_t uram)
 	for(int i = 0; valid && i < 64; i++) {
 		utlb_addr_t a = *(volatile utlb_addr_t const *)utlb_addr(i);
 		utlb_data_t d = *(volatile utlb_data_t const *)utlb_data(i);
-		uint32_t page = a.VPN << 10;
+		uint32_t page = (a.VPN << 10) & 0xfffff000u;
 		if(!a.V || !d.V || page < 0x74000000 || page >= 0x74008000)
 			continue;
 		mmu_exword_error[0] = page;
 		mmu_exword_error[1] = exword_ram + page - 0x74000000;
-		mmu_exword_error[2] = d.PPN << 10;
+		mmu_exword_error[2] = (d.PPN << 10) & 0x1ffff000u;
 		int shift = ((d.SZ1 << 1) | d.SZ2) << 3;
 		mmu_exword_error[3] = 1u << ((0x14100c0au >> shift) & 255);
 		valid = i < (int)available && mmu_exword_error[3] == 4096 &&

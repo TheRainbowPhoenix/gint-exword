@@ -28,7 +28,8 @@ void exword_boot_error(char const *stage)
     dtext(12, 12, C_RED, "gint startup failed");
     dtext(12, 36, C_BLACK, stage);
     hex(64, "Virtual page", mmu_exword_error[0]);
-    hex(84, "Expected physical", mmu_exword_error[1]);
+    hex(84, mmu_exword_error[0] == 0x70000000 && !mmu_exword_error[3]
+        ? "Image bytes" : "Expected physical", mmu_exword_error[1]);
     hex(104, "Actual physical", mmu_exword_error[2]);
     hex(124, "Page size", mmu_exword_error[3]);
     hex(144, "MMUCR", SH7305_MMU.MMUCR.lword);
