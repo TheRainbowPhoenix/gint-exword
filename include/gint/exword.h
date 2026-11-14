@@ -22,4 +22,6 @@ int exword_sys_findfirst(char const *, int *, char *, unsigned long *);
 int exword_sys_findnext(int, char *, unsigned long *);
 int exword_sys_findclose(int);
 
+void exword_boot_error(char const *stage);
+
 #endif

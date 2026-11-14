@@ -9,6 +9,9 @@
 #include <gint/gint.h>
 #include <gint/hardware.h>
 #include <gint/exc.h>
+#if GINT_OS_EX
+#include <gint/exword.h>
+#endif
 #include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
@@ -160,7 +163,10 @@ static int start2(int load_type, u32 *load_info)
 	#endif
 
 	#if GINT_OS_EX
-	if(!mmu_exword_prepare()) return -2;
+	if(load_type == -1 || !mmu_exword_prepare()) {
+		exword_boot_error(load_type == -1 ? "Entry RAM mapping" : "MMU setup");
+		return -2;
+	}
 	#endif
 
 	gint_load_onchip_sections();

@@ -30,7 +30,10 @@ _exword_entry:
     bra .restore
     nop
 .failed:
-    mov #-2, r0
+    mov.l .start, r1
+    mov #-1, r4
+    jsr @r1
+    mov #0, r5
 .restore:
     mov.l .save_start, r1
     mov.l @r1+, r8

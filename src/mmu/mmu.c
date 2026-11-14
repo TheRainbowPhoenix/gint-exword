@@ -20,6 +20,10 @@ uint32_t mmu_translate(uint32_t page, uint32_t *size)
 /* mmu_uram(): Get pointer to physical start of user RAM */
 void *mmu_uram(void)
 {
+	#if GINT_HW_EX
+	volatile uint8_t byte = *(volatile uint8_t *)0x74000000;
+	(void)byte;
+	#endif
 	/* Use P1 access */
 	return (void *)(mmu_translate(GINT_HW_EX ? 0x74000000 : 0x08100000, NULL)
 		| 0x80000000);
@@ -246,29 +250,58 @@ gint_driver_t drv_mmu = {
 GINT_DECLARE_DRIVER(02, drv_mmu);
 
 #if GINT_HW_EX
+uint32_t mmu_exword_error[4];
+
 int mmu_exword_prepare(void)
 {
 	extern uint32_t srom;
 	uint32_t lengths[2] = { (uint32_t)&srom, 0x8000 };
 	uint32_t bases[2] = { 0x70000000, 0x74000000 };
+	uint32_t physical[2];
+	mmu_exword_error[0] = 0;
+	mmu_exword_error[1] = lengths[0];
+	mmu_exword_error[2] = 0;
+	mmu_exword_error[3] = 0;
 	if(lengths[0] <= 0x80 || lengths[0] > 0x20000) return 0;
 
 	for(int region = 0; region < 2; region++) {
 		for(uint32_t offset = 0; offset < lengths[region]; offset += 4096) {
+			uint32_t size = 0;
 			volatile uint8_t byte = *(volatile uint8_t *)(bases[region] + offset);
 			(void)byte;
-		}
-	}
-	for(int region = 0; region < 2; region++) {
-		uint32_t physical = mmu_translate(bases[region], NULL);
-		if(physical == (uint32_t)-1) return 0;
-		for(uint32_t offset = 0; offset < lengths[region]; offset += 4096) {
-			uint32_t size;
-			if(mmu_translate(bases[region] + offset, &size) != physical + offset ||
+			uint32_t actual = mmu_translate(bases[region] + offset, &size);
+			if(!offset) physical[region] = actual;
+			mmu_exword_error[0] = bases[region] + offset;
+			mmu_exword_error[1] = physical[region] + offset;
+			mmu_exword_error[2] = actual;
+			mmu_exword_error[3] = size;
+			if(actual == (uint32_t)-1 || actual != physical[region] + offset ||
 				size != 4096) return 0;
 		}
 	}
-	gint[HWURAM] = 0x8000;
-	return 1;
+	for(int attempt = 0; attempt < 64; attempt++) {
+		int resident = 1;
+		for(int region = 0; region < 2; region++) {
+			for(uint32_t offset = 0; offset < lengths[region]; offset += 4096) {
+				uint32_t size = 0;
+				uint32_t actual = mmu_translate(bases[region] + offset, &size);
+				if(actual != physical[region] + offset || size != 4096) {
+					mmu_exword_error[0] = bases[region] + offset;
+					mmu_exword_error[1] = physical[region] + offset;
+					mmu_exword_error[2] = actual;
+					mmu_exword_error[3] = size;
+					if(actual != (uint32_t)-1) return 0;
+					resident = 0;
+					volatile uint8_t byte = *(volatile uint8_t *)(bases[region] + offset);
+					(void)byte;
+				}
+			}
+		}
+		if(resident) {
+			gint[HWURAM] = 0x8000;
+			return 1;
+		}
+	}
+	return 0;
 }
 #endif
