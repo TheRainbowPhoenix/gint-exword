@@ -116,6 +116,7 @@ jobs:
           assembly = subprocess.check_output(['sh-elf-objdump', '-d', str(base/'gintt')], text=True)
           import re
           pin = subprocess.check_output(['sh-elf-objdump', '-d',
+              '--disassemble=_exword_pin', str(base/'gintt')], text=True)
           assert '_exword_entry' in symbols and '_start' in symbols
           assert '_gint_world_switch_in' in symbols and '_drv_tmu' in symbols
           assert len(d01) > 128
