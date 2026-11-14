@@ -41,6 +41,9 @@ typedef struct {
 typedef struct {
 	uint16_t IPR[12];
 	uint8_t MSK[13];
+	#if GINT_HW_EX
+	uint8_t IRQMSK;
+	#endif
 } intc_state_t;
 
 /* Memory Manager Unit (see mmu/mmu.c) */

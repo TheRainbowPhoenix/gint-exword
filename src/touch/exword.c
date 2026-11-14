@@ -5,6 +5,8 @@
 #include <gint/drivers/touch.h>
 #include <gint/display.h>
 #include <gint/keyboard.h>
+#include <gint/cpu.h>
+#include <gint/drivers.h>
 #include <stdint.h>
 
 #define IIC_DATA  (*(volatile uint8_t *)0xa4470000)
@@ -39,21 +41,14 @@ static struct exword_touch_calibration calibration = {
     .x_scale = EX_X_SCALE, .y_scale = EX_Y_SCALE,
 };
 
-/* Hosted add-ins retain the OS interrupt handlers. In particular, an OS pen
-   handler must not change the ADC channel while we acquire an X/Y pair.
-   ROM32A WriteCommand/ReadWord also save SR and set BL around their I/O. */
-static uint32_t touch_lock(void)
+static void touch_lock(void)
 {
-    uint32_t saved, blocked;
-    __asm__ volatile("stc sr,%0" : "=r"(saved));
-    blocked = saved | 0x10000000;
-    __asm__ volatile("ldc %0,sr" :: "r"(blocked) : "memory");
-    return saved;
+    cpu_atomic_start();
 }
 
-static void touch_unlock(uint32_t saved)
+static void touch_unlock(void)
 {
-    __asm__ volatile("ldc %0,sr" :: "r"(saved) : "memory");
+    cpu_atomic_end();
 }
 
 static int pen_down(void)
@@ -87,10 +82,10 @@ static void load_calibration(void)
 
 void touch_exword_get_calibration(struct exword_touch_calibration *out)
 {
-    uint32_t saved = touch_lock();
+    touch_lock();
     load_calibration();
     if(out) *out = calibration;
-    touch_unlock(saved);
+    touch_unlock();
 }
 
 void touch_exword_get_last_scan(struct exword_touch_debug *out)
@@ -220,7 +215,7 @@ failed:
 static void touch_prepare(void)
 {
     if(touch_ready) return;
-    uint32_t saved = touch_lock();
+    touch_lock();
     load_calibration();
     saved_pen_ctrl = PEN_CTRL;
     saved_iic_ctrl = IIC_CTRL;
@@ -234,13 +229,13 @@ static void touch_prepare(void)
     (void)touch_read_word(&discard);
     PEN_CTRL = (PEN_CTRL & ~3) | 2;
     touch_ready = 1;
-    touch_unlock(saved);
+    touch_unlock();
 }
 
 void touch_exword_quit(void)
 {
     if(!touch_ready) return;
-    uint32_t saved = touch_lock();
+    touch_lock();
     iic_budget = IIC_LIMIT;
     (void)touch_command(0x70);
     IIC_INT = 0;
@@ -253,8 +248,15 @@ void touch_exword_quit(void)
     IIC_INT = saved_iic_int;
     touch_state.down = touch_state.rejected = 0;
     touch_ready = 0;
-    touch_unlock(saved);
+    touch_unlock();
 }
+
+gint_driver_t drv_touch = {
+    .name = "TOUCH",
+    .unbind = touch_exword_quit,
+    .flags = GINT_DRV_SHARED,
+};
+GINT_DECLARE_DRIVER(24, drv_touch);
 
 static int filter_samples(uint16_t samples[5], int tolerance,
     int low, int high, int *value)
@@ -318,7 +320,7 @@ key_event_t touch_scan(void)
         /* Bound retries, like the ROM's active-stroke sampling path. Keep the
            pair atomic so OS sampling cannot switch channels between words. */
         for(int attempt = 0; attempt < 2; attempt++) {
-            uint32_t saved = touch_lock();
+            touch_lock();
             iic_budget = IIC_LIMIT;
             int x_ok = touch_axis(0xc4, 0x50, 10, 0xff5, &raw_x);
             int y_ok = iic_budget > 0 &&
@@ -328,7 +330,7 @@ key_event_t touch_scan(void)
             if(iic_budget == 0) iic_budget = IIC_LIMIT / 10;
             int powerdown_ok = touch_command(0xc0) && touch_read_word(&discard);
             debug_scan.pen_down = pen_down();
-            touch_unlock(saved);
+            touch_unlock();
             down = x_ok && y_ok && powerdown_ok && debug_scan.pen_down;
             if(down || !debug_scan.pen_down) break;
         }

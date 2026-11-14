@@ -287,6 +287,8 @@ typedef struct
 	/* Interrupt mask & mask clear registers */
 	sh7305_intc_masks_t		*MSK;
 	sh7305_intc_masks_t		*MSKCLR;
+	volatile uint8_t *IRQMSK;
+	volatile uint8_t *IRQMSKCLR;
 
 	/* Other registers */
 	sh7305_intc_userimask_t		*USERIMASK;
