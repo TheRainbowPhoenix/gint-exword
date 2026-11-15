@@ -19,7 +19,7 @@
 #define ROM_MID  0x080000u
 #define ROM_LAST (ROM_SIZE - 1u)
 #define ROM_PATH "\\\\drv0\\SHPRB\\romprobe.bin"
-#define ROM_SD_PATH "\\\\crd0\\SHPRB\\romprobe.bin"
+#define ROM_SD_PATH "\\\\drv0\\SHPRB\\romprobe.bin"
 #define RESULTS_PATH "\\\\crd0\\results.txt"
 
 static uint8_t read_buffer[1024];
