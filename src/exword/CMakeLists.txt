@@ -12,7 +12,7 @@ set(FONT "${PROJECT_SOURCE_DIR}/src/font8x9.png")
 fxconv_declare_assets(${FONT} WITH_METADATA)
 
 set(KERNEL_SOURCES ${SOURCES})
-list(FILTER KERNEL_SOURCES INCLUDE REGEX "^src/(cpu|cpg|dma|intc|kernel|kmalloc|mmu|prof|rtc|tmu)/|^src/fxlibc_hal[.]c$|^src/fs/(fs|read|write|lseek|close)[.]c$")
+list(FILTER KERNEL_SOURCES INCLUDE REGEX "^src/(cpu|cpg|dma|intc|kernel|kmalloc|mmu|prof|rtc|tmu|usb)/|^src/fxlibc_hal[.]c$|^src/fs/(fs|read|write|lseek|close)[.]c$")
 list(REMOVE_ITEM KERNEL_SOURCES src/kmalloc/arena_osheap.c src/kernel/hhk3_start.c)
 list(TRANSFORM KERNEL_SOURCES PREPEND "${PROJECT_SOURCE_DIR}/")
 

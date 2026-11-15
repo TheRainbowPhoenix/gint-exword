@@ -154,13 +154,13 @@ void r61523_display(uint16_t *vram)
 
         for(int x = 0; x < DWIDTH; x++) {
             *DISPLAY = *r5++;
-#if GINT_HW_EX
-            synco();
-#endif
         }
 
         row_offset += 2 * DWIDTH;
     }
+#if GINT_HW_EX
+    synco();
+#endif
 }
 
 void r61523_display_rect(
@@ -176,12 +176,12 @@ void r61523_display_rect(
     for(int y = 0; y < ymax - ymin + 1; y++) {
         for(int x = 0; x < xmax - xmin + 1; x++) {
             *DISPLAY = vram[x];
-#if GINT_HW_EX
-            synco();
-#endif
         }
         vram += DWIDTH;
     }
+#if GINT_HW_EX
+    synco();
+#endif
 }
 
 void r61523_fill_rect(int x1, int y1, int x2, int y2, uint16_t color)
@@ -196,10 +196,10 @@ void r61523_fill_rect(int x1, int y1, int x2, int y2, uint16_t color)
     int count = (x2-x1+1) * (y2-y1+1);
     while(count--) {
         *DISPLAY = color;
-#if GINT_HW_EX
-        synco();
-#endif
     }
+#if GINT_HW_EX
+    synco();
+#endif
 }
 
 void r61523_display_row(uint16_t const *row, int y)
@@ -211,10 +211,10 @@ void r61523_display_row(uint16_t const *row, int y)
     select(REG_DATA);
     for(int x = 0; x < DWIDTH; x++) {
         *DISPLAY = row[x];
-#if GINT_HW_EX
-        synco();
-#endif
     }
+#if GINT_HW_EX
+    synco();
+#endif
 }
 
 void r61523_set_pixel(int x, int y, int color)

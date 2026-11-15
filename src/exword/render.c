@@ -3,7 +3,7 @@
 #include <gint/drivers/touch.h>
 
 #ifndef GINT_EXWORD_VRAM_ADDRESS
-#define GINT_EXWORD_VRAM_ADDRESS 0xac200000
+#define GINT_EXWORD_VRAM_ADDRESS 0x8c200000
 #endif
 
 uint16_t *gint_vram = (void *)GINT_EXWORD_VRAM_ADDRESS;

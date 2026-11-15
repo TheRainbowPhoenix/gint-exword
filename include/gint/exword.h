@@ -4,6 +4,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+void exword_sys_get_bios_version(char *model, uint8_t *build_date,
+	uint16_t *version);
+int exword_sys_get_os_version(char *model, uint8_t *build_date,
+	uint16_t *version);
+
 int exword_sys_sdformat(void);
 int exword_sys_totaldiskspace(char const *, unsigned long *);
 int exword_sys_freediskspace(char const *, unsigned long *);

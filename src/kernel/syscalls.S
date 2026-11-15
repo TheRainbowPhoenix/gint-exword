@@ -340,6 +340,11 @@ _BFile_Seek:
 
 #if GINT_OS_EX
 
+.global _exword_sys_get_bios_version
+_exword_sys_get_bios_version: syscall_(0, system_table)
+.global _exword_sys_get_os_version
+_exword_sys_get_os_version: syscall_(1, system_table)
+
 .global _exword_sys_sdformat
 _exword_sys_sdformat: syscall(0x31)
 .global _exword_sys_totaldiskspace
@@ -376,6 +381,8 @@ _exword_sys_findnext: syscall(0x40)
 _exword_sys_findclose: syscall(0x41)
 
 .balign 4
+system_table:
+	.long 0xfd800344
 syscall_table:
 	.long 0x74000000
 
