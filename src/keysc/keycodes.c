@@ -1,3 +1,4 @@
+#include <gint/config.h>
 #include <gint/keyboard.h>
 
 /* keycode_function(): Identify keys F1 .. F6 */
