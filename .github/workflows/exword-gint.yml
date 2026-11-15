@@ -90,9 +90,7 @@ jobs:
           python3 .github/tests_files/exword/make_romprobe.py /tmp/shprb/romprobe.bin
           for locale in ja cn; do
             cp /tmp/shprb/romprobe.bin /tmp/shprb/build-exword/packages/$locale/SHPRB/
-            cp .github/tests_files/exword/PROBE-LICENSE /tmp/shprb/build-exword/packages/$locale/SHPRB/
           done
-          # python3 .github/tests_files/exword/check_kernel_elf.py /tmp/shprb/build-exword/shprb /tmp/shprb/build-exword/shprb.d01
 
       - uses: actions/upload-artifact@v4
         with:
