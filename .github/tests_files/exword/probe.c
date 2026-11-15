@@ -18,9 +18,10 @@
 #define ROM_SIZE 0x180000u
 #define ROM_MID  0x080000u
 #define ROM_LAST (ROM_SIZE - 1u)
-#define ROM_PATH "\\\\drv0\\SHPRB\\romprobe.bin"
-#define ROM_SD_PATH "\\\\drv0\\SHPRB\\romprobe.bin"
-#define RESULTS_PATH "\\\\crd0\\results.txt"
+// \\\\crd0\\CASIO\\SHPRB\\_CONTENT\\romprobe.bin
+#define ROM_PATH "\\\\drv0\\CASIO\\SHPRB\\_CONTENT\\romprobe.bin"
+#define ROM_SD_PATH "\\\\crd0\\CASIO\\romprobe.bin"
+#define RESULTS_PATH "\\\\crd0\\CASIO\\results.txt"
 
 static uint8_t read_buffer[1024];
 
@@ -65,10 +66,10 @@ static int translate_any(uint32_t va, int at_enabled,
     return 0;
 }
 
-static void next_page(void)
+static int next_page(void)
 {
     dupdate();
-    getkey();
+    return getkey().key != KEY_EXIT;
 }
 
 static int check_rom(rom_result_t *r)
@@ -289,7 +290,7 @@ int main(void)
     dprint(1, 23, C_BLACK, "PRR %08X", prr);
     dprint(1, 33, C_BLACK, "CVR %08X", cvr);
     dprint(1, 43, C_BLACK, "CPID %08X", cpidr);
-    next_page();
+    if(!next_page()) return 0;
 
     title("USER RAM / MMU");
     dprint(1, 13, C_BLACK, "MMUCR %08X", mmucr);
@@ -299,7 +300,7 @@ int main(void)
     dprint(1, 43, C_BLACK, "SIZE %u", ram_size);
     dprint(1, 53, C_BLACK, "PG %u %s", ram_pg,
         ram_ok ? "OK" : "NONE");
-    next_page();
+    if(!next_page()) return 0;
 
     title("SH7305 CLOCKS");
     dprint(1, 13, C_BLACK, "FRQ %08X", frqcr);
@@ -307,42 +308,42 @@ int main(void)
     dprint(1, 33, C_BLACK, "FLL %08X", fllfrq);
     dprint(1, 43, C_BLACK, "I %u", f->Iphi_f);
     dprint(1, 53, C_BLACK, "B%u P%u", f->Bphi_f, f->Pphi_f);
-    next_page();
+    if(!next_page()) return 0;
 
     title("CODE MAP");
     dprint(1, 13, C_BLACK, "VA %08X", code_va);
     dprint(1, 25, C_BLACK, "PA %08X", code_pa);
     dprint(1, 37, C_BLACK, "P1 %08X", code_p1);
     dprint(1, 49, C_BLACK, "PG %u", code_pg);
-    next_page();
+    if(!next_page()) return 0;
 
     title("P1 CODE TEST");
     dprint(1, 15, C_BLACK, "VA %08X", va_word);
     dprint(1, 29, C_BLACK, "P1 %08X", p1_word);
     dprint(1, 45, C_BLACK, "MATCH %s",
         code_ok && va_word == p1_word ? "YES" : "NO");
-    next_page();
+    if(!next_page()) return 0;
 
     title("ROM 1.5M START");
     dtext(1, 13, C_BLACK, "FILE SHPRB/romprobe.bin");
     dtext(1, 25, C_BLACK, "OFFSET 00000000");
     dtext(1, 37, C_BLACK, "EXPECTED 5A");
     dprint(1, 49, C_BLACK, "MATCH %s", rom.markers[0] ? "YES" : "NO");
-    next_page();
+    if(!next_page()) return 0;
 
     title("ROM 1.5M MID");
     dtext(1, 13, C_BLACK, "FILE SHPRB/romprobe.bin");
     dtext(1, 25, C_BLACK, "OFFSET 00080000");
     dtext(1, 37, C_BLACK, "EXPECTED A5");
     dprint(1, 49, C_BLACK, "MATCH %s", rom.markers[1] ? "YES" : "NO");
-    next_page();
+    if(!next_page()) return 0;
 
     title("ROM 1.5M END");
     dtext(1, 13, C_BLACK, "FILE SHPRB/romprobe.bin");
     dtext(1, 25, C_BLACK, "OFFSET 0017FFFF");
     dtext(1, 37, C_BLACK, "EXPECTED 3C");
     dprint(1, 49, C_BLACK, "MATCH %s", rom.markers[2] ? "YES" : "NO");
-    next_page();
+    if(!next_page()) return 0;
 
     title("EXTERNAL ROM TEST");
     dprint(1, 13, C_BLACK, "SIZE %u", ROM_SIZE);
@@ -350,14 +351,14 @@ int main(void)
     dprint(1, 33, C_BLACK, "LEN %s", rom.size_ok ? "OK" : "BAD");
     dprint(1, 43, C_BLACK, "READ %u", rom.read_bytes);
     dprint(1, 53, C_BLACK, "DATA %s", rom.complete ? "PASS" : "FAIL");
-    next_page();
+    if(!next_page()) return 0;
 
     title("RESULTS FILE");
     dtext(1, 13, C_BLACK, "SD /results.txt");
     dtext(1, 25, C_BLACK, "Storage root (crd0)");
     dprint(1, 43, C_BLACK, "SAVE %s (%d)",
         save_status == 0 ? "OK" : "FAILED", save_status);
-    next_page();
+    if(!next_page()) return 0;
 
     return 1;
 }
