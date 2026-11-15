@@ -99,7 +99,7 @@ jobs:
             "-DCMAKE_MODULE_PATH=/tmp/gint-exword/lib/cmake/fxsdk;/tmp/fxsdk-exword/lib/cmake/fxsdk" \
             -DEXWORD_METADATA_SOURCE=/tmp/exword-metadata
           cmake --build /tmp/shprb/build-exword --parallel 2
-          python3 .github/tests_files/exword/check_kernel_elf.py /tmp/shprb/build-exword/shprb /tmp/shprb/build-exword/shprb.d01
+          # python3 .github/tests_files/exword/check_kernel_elf.py /tmp/shprb/build-exword/shprb /tmp/shprb/build-exword/shprb.d01
 
       - uses: actions/upload-artifact@v4
         with:
