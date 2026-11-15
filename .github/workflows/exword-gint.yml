@@ -77,21 +77,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git clone https://codeberg.org/cacioandpepe/sh7305-probe.git /tmp/shprb
-          git -C /tmp/shprb checkout 6d01e72a4dc07cb8b762c2f29dccaceeb0b3bd37
+          mkdir -p /tmp/shprb/src
           cp .github/tests_files/exword/probe.cmake /tmp/shprb/CMakeLists.txt
-          python3 - <<'PY'
-          from pathlib import Path
-          for name in ('main.c', 'romblob.c'):
-              path = Path('/tmp/shprb/src') / name
-              source = path.read_text()
-              for old, new in (
-                  ('0x180000', '0x10000'), ('0x080000', '0x008000'),
-                  ('0x17ffff', '0x00ffff'), ('0x08100000', '0x74000000'),
-                  ('1.5M', '64K'), ('SIZE 1572864', 'SIZE 65536')):
-                  source = source.replace(old, new)
-              path.write_text(source)
-          PY
+          cp .github/tests_files/exword/probe.c /tmp/shprb/src/main.c
           export PATH="/tmp/fxsdk-exword/bin:$PATH"
           cmake -S /tmp/shprb -B /tmp/shprb/build-exword \
             -DCMAKE_TOOLCHAIN_FILE=/tmp/fxsdk-exword/lib/cmake/fxsdk/EXWORD.cmake \
@@ -99,6 +87,11 @@ jobs:
             "-DCMAKE_MODULE_PATH=/tmp/gint-exword/lib/cmake/fxsdk;/tmp/fxsdk-exword/lib/cmake/fxsdk" \
             -DEXWORD_METADATA_SOURCE=/tmp/exword-metadata
           cmake --build /tmp/shprb/build-exword --parallel 2
+          python3 .github/tests_files/exword/make_romprobe.py /tmp/shprb/romprobe.bin
+          for locale in ja cn; do
+            cp /tmp/shprb/romprobe.bin /tmp/shprb/build-exword/packages/$locale/SHPRB/
+            cp .github/tests_files/exword/PROBE-LICENSE /tmp/shprb/build-exword/packages/$locale/SHPRB/
+          done
           # python3 .github/tests_files/exword/check_kernel_elf.py /tmp/shprb/build-exword/shprb /tmp/shprb/build-exword/shprb.d01
 
       - uses: actions/upload-artifact@v4

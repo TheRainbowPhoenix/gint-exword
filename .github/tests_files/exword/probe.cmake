@@ -4,7 +4,7 @@ include(GenerateD01)
 include(GenerateEXWORDPackage)
 find_package(Gint 2.11 REQUIRED)
 
-add_executable(shprb src/main.c src/romblob.c)
+add_executable(shprb src/main.c)
 target_compile_options(shprb PRIVATE
   -Wall -Wextra -mb -m4a-nofpu -Os -ffreestanding -fno-builtin
   -fno-pic -fno-pie -fno-stack-protector)
