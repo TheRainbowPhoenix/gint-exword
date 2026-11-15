@@ -25,7 +25,7 @@ SECTIONS
     _gint_heap_end = ORIGIN(stack);
     _gint_stack_end = ORIGIN(stack) + LENGTH(stack);
 
-    .text : {
+    .text ORIGIN(rom) : {
         _stext = .;
         KEEP(*(.text.exword.entry))
         *(.text.entry)
