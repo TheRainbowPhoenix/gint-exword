@@ -10,6 +10,11 @@ int keycode_function(int keycode)
 /* keycode_digit(): Identify keys 0 .. 9 */
 int keycode_digit(int keycode)
 {
+#if GINT_HW_EX
+	if(keycode >= KEY_EX_Q && keycode <= KEY_EX_P)
+		return (keycode - KEY_EX_Q + 1) % 10;
+	return -1;
+#else
 	int row = keycode >> 4;
 	int col = keycode & 0xf;
 
@@ -20,4 +25,5 @@ int keycode_digit(int keycode)
 	if(digit >= 1 && digit <= 9) return digit;
 
 	return -1;
+#endif
 }
