@@ -24,10 +24,12 @@ add_library(gint-exword STATIC
   "${PROJECT_SOURCE_DIR}/src/keysc/keycodes.c"
   "${PROJECT_SOURCE_DIR}/src/keysc/keysc.c"
   "${PROJECT_SOURCE_DIR}/src/touch/exword.c"
+  "${PROJECT_SOURCE_DIR}/src/fs/fugue/util.c"
+  "${PROJECT_SOURCE_DIR}/src/spu/spu.c"
   "${PROJECT_SOURCE_DIR}/src/render-cg/topti-asm.S"
   ${RENDER_SOURCES} ${FONT}
   "${PROJECT_SOURCE_DIR}/src/image/image_linear.S"
-  ${KERNEL_SOURCES} entry.S boot.c render.c image.c)
+  ${KERNEL_SOURCES} entry.S boot.c render.c image.c bfile.c)
 
 target_compile_definitions(gint-exword PUBLIC FXEXWORD TARGET_EXWORD)
 set(GINT_EXWORD_VRAM_ADDRESS "0xac200000" CACHE STRING
