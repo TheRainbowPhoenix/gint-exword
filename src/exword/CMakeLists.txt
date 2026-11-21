@@ -54,3 +54,29 @@ install(FILES "${PROJECT_SOURCE_DIR}/cmake/FindGint.cmake"
   DESTINATION lib/cmake/fxsdk)
 
 install(FILES exword.ld DESTINATION lib/cmake/fxsdk)
+
+# Software-only gint for an Edelweiss payload. Kernel/driver services are
+# imported from the resident launcher; never install a second kernel or VBR.
+add_library(gint-edl STATIC
+  ${RENDER_SOURCES} ${FONT}
+  "${PROJECT_SOURCE_DIR}/src/render-cg/topti-asm.S"
+  "${PROJECT_SOURCE_DIR}/src/image/image_linear.S"
+  "${PROJECT_SOURCE_DIR}/src/kmalloc/kmalloc.c"
+  "${PROJECT_SOURCE_DIR}/src/kmalloc/arena_gint.c"
+  "${PROJECT_SOURCE_DIR}/src/keysc/keydev.c"
+  "${PROJECT_SOURCE_DIR}/src/keysc/keydown_all.c"
+  "${PROJECT_SOURCE_DIR}/src/keysc/keydown_any.c"
+  "${PROJECT_SOURCE_DIR}/src/keysc/keycodes.c"
+  "${PROJECT_SOURCE_DIR}/src/fs/fugue/util.c"
+  "${PROJECT_SOURCE_DIR}/src/fxlibc_hal.c"
+  image.c render.c bfile.c)
+target_compile_definitions(gint-edl PUBLIC FXEXWORD TARGET_EXWORD GINT_EDL)
+target_compile_definitions(gint-edl PRIVATE GINT_EXWORD_VRAM_ADDRESS=${GINT_EXWORD_VRAM_ADDRESS})
+target_compile_options(gint-edl PRIVATE -mb -m4a-nofpu -Os -fstrict-volatile-bitfields
+  -ffreestanding -fno-builtin -ffunction-sections -fdata-sections -Wall -Wextra
+  $<$<COMPILE_LANGUAGE:ASM>:-Wa,--dsp>)
+target_include_directories(gint-edl PUBLIC
+  "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+  "$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>"
+  "$<INSTALL_INTERFACE:include>")
+install(TARGETS gint-edl ARCHIVE DESTINATION lib)
