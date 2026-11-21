@@ -2,6 +2,18 @@
 .global _exword_entry
 
 _exword_entry:
+    /* EX-word passes an invocation block in r4. Mode 1 is a special OS
+       invocation, not an app launch; match Gnuboy EX and return -1 without
+       initializing gint or touching the display. */
+    mov.l @r4, r0
+    mov #1, r1
+    cmp/eq r1, r0
+    bf .normal_entry
+    mov #-1, r0
+    rts
+    nop
+
+.normal_entry:
     mov.l .save_end, r1
     stc.l gbr, @-r1
     sts.l pr, @-r1
