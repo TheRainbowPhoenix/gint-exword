@@ -5,6 +5,7 @@
 #include "kernel.h"
 
 #include <string.h>
+#include <stdlib.h>
 
 int   __Timer_Install(int id, void (*handler)(void), int delay);
 int   __Timer_Start(int id);
@@ -15,7 +16,7 @@ int   __GetKeyWait(int *col,int *row,int type,int time,int menu,uint16_t *key);
 void  __ClearKeyBuffer(void); /* ? */
 void __SetQuitHandler(void (*callback)(void));
 
-#if !GINT_OS_CP
+#if !GINT_OS_CP && !GINT_OS_EX
 static int __osmenu_id;
 
 static void __osmenu_handler(void)
@@ -101,7 +102,7 @@ void gint_osmenu_native(void)
 #endif
 
 // TODO: OS menu on fx-CP
-#if !GINT_OS_CP
+#if !GINT_OS_CP && !GINT_OS_EX
 	__ClearKeyBuffer();
 	gint_copy_vram();
 
@@ -140,7 +141,11 @@ void gint_osmenu_native(void)
 /* gint_osmenu() - switch out of gint and call the calculator's main menu */
 void gint_osmenu(void)
 {
+	#if GINT_OS_EX
+	_Exit(-2);
+	#else
 	gint_world_switch(GINT_CALL(gint_osmenu_native));
+	#endif
 }
 
 static gint_call_t __gcall;
@@ -160,7 +165,7 @@ static void __sethandler()
 {
 	(void)__handler;
 // TODO: Quit handler on fx-CP
-#if !GINT_OS_CP
+#if !GINT_OS_CP && !GINT_OS_EX
 	__SetQuitHandler((void *)__handler);
 #endif
 }

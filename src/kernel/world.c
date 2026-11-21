@@ -5,6 +5,7 @@
 #include <gint/defs/call.h>
 #include <gint/hardware.h>
 #include <gint/display.h>
+#include <gint/mmu.h>
 #include "kernel.h"
 
 #include <stdlib.h>
@@ -65,6 +66,10 @@ static void *onchip_save_buffer = NULL;
 
 void gint_world_switch_in(gint_world_t world_os, gint_world_t world_addin)
 {
+	#if GINT_OS_EX
+	if(!mmu_exword_prepare(0)) gint_panic(0x1040);
+	#endif
+
 	/* Unbind from the OS driver and complete foreign asynchronous tasks */
 	for(int i = gint_driver_count() - 1; i >= 0; i--)
 	{
@@ -218,7 +223,7 @@ int gint_get_onchip_save_mode(void **ptr)
 
 void gint_copy_vram(void)
 {
-	#if !GINT_OS_CP
+	#if !GINT_OS_CP && !GINT_OS_EX
 	void *__GetVRAMAddress(void);
 	#endif
 
@@ -249,7 +254,7 @@ void gint_copy_vram(void)
 void gint_poweroff(GUNUSED bool show_logo)
 {
 // TODO: Power off on fx-CP
-#if !GINT_OS_CP
+#if !GINT_OS_CP && !GINT_OS_EX
 	void __PowerOff(int show_logo);
 	gint_copy_vram();
 	gint_world_switch(GINT_CALL(__PowerOff, (int)show_logo));

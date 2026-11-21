@@ -3,6 +3,9 @@
 #include <gint/display.h>
 #include <gint/hardware.h>
 #include <gint/cpu.h>
+#if GINT_HW_EX
+#include <gint/exword.h>
+#endif
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -179,6 +182,7 @@ static char const * const str_CALC[] = {
 	[HWCALC_FXCG_MANAGER]  = "fx-CG Manager",
 	[HWCALC_FX9860G_SLIM]  = "fx-9860G Slim",
 	[HWCALC_FXCP400]       = "fx-CP 400",
+	[HWCALC_EXWORD]        = "EX-word",
 };
 
 static void execute_command(char const *cmd)
@@ -188,7 +192,20 @@ static void execute_command(char const *cmd)
 		usb_fxlink_text(text, 0);
 	}
 	if(!strncmp(cmd, "identify", 8)) {
-#if GINT_OS_FX
+#if GINT_OS_EX
+		char const *serial_number = "unknown";
+		char OS_version[8] = "unknown";
+		char BC_version[8] = "unknown";
+		uint16_t version;
+
+		exword_sys_get_bios_version(NULL, NULL, &version);
+		snprintf(BC_version, sizeof BC_version, "%u.%02u",
+			version >> 8, version & 0xff);
+		if(exword_sys_get_os_version(NULL, NULL, &version)) {
+			snprintf(OS_version, sizeof OS_version, "%u.%02u",
+				version >> 8, version & 0xff);
+		}
+#elif GINT_OS_FX
 		char const *serial_number = (void *)0x8000ffd0;
 		char const *OS_version = (void *)0x80010020;
 		char const *BC_version = (void *)0x8000ffb0;

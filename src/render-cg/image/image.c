@@ -50,6 +50,9 @@ bool gint_image_mkcmd(struct gint_image_box *box, image_t const *img,
 	int effects, bool left_edge, bool right_edge,
 	struct gint_image_cmd *cmd, struct dwindow const *window)
 {
+#if GINT_HW_EX
+	left_edge = right_edge = false;
+#endif
 	/* Convert the old DIMAGE_NOCLIP flag */
 	if(effects & DIMAGE_NOCLIP)
 		effects |= IMAGE_NOCLIP;

@@ -1,0 +1,38 @@
+rgb565.png:
+  type: bopti-image
+  name: test_rgb565
+  profile: rgb565
+
+rgb565a.png:
+  type: bopti-image
+  name: test_rgb565a
+  profile: rgb565a
+
+p4_rgb565.png:
+  type: bopti-image
+  name: test_p4_rgb565
+  profile: p4_rgb565
+
+p4_rgb565a.png:
+  type: bopti-image
+  name: test_p4_rgb565a
+  profile: p4_rgb565a
+
+p8_rgb565.png:
+  type: bopti-image
+  name: test_p8_rgb565
+  profile: p8_rgb565
+
+p8_rgb565a.png:
+  type: bopti-image
+  name: test_p8_rgb565a
+  profile: p8_rgb565a
+
+font.png:
+  type: font
+  name: test_font
+  charset: ascii
+  grid.size: 5x7
+  grid.padding: 1
+  grid.border: 0
+  line-distance: 8

@@ -22,6 +22,10 @@
 extern gint_driver_t drv_intc, drv_cpu;
 GUNUSED gint_driver_t *gint_required_cpu = &drv_cpu;
 GUNUSED gint_driver_t *gint_required_intc = &drv_intc;
+#if GINT_HW_EX
+extern gint_driver_t drv_tmu;
+GUNUSED gint_driver_t *gint_required_tmu = &drv_tmu;
+#endif
 
 /* World buffers for the OS and gint */
 gint_world_t gint_world_os = NULL;
@@ -91,6 +95,15 @@ void kinit(u32 *load_info)
 	uint32_t VBR = (uint32_t)&gint_region_vbr - 0x100;
 	#endif
 
+	#if GINT_HW_EX
+	extern uint32_t gint_region_vbr, gint_heap_end;
+	uint32_t VBR = (uint32_t)mmu_uram() +
+		((uint32_t)&gint_region_vbr - 0x74000000) - 0x100;
+	uint32_t uram_end = (uint32_t)mmu_uram() +
+		((uint32_t)&gint_heap_end - 0x74000000);
+	gint_stack_top = (void *)uram_end;
+	#endif
+
 	/* Event handler entry points */
 	extern uint32_t gint_exch_start;
 	extern uint32_t gint_exch_end;
@@ -107,6 +120,16 @@ void kinit(u32 *load_info)
 	memcpy((void *)VBR + 0x400, gint_tlbh, tlbh_size);
 	memcpy((void *)VBR + 0x600, inth_entry, isSH3() ? 64 : 32);
 
+	#if GINT_HW_EX
+	extern uint32_t gint_tlbh_exword_rom, gint_tlbh_exword_ram;
+	uint32_t *rom_base = (void *)(VBR + 0x400 +
+		(uint32_t)&gint_tlbh_exword_rom - (uint32_t)&gint_tlbh_start);
+	uint32_t *ram_base = (void *)(VBR + 0x400 +
+		(uint32_t)&gint_tlbh_exword_ram - (uint32_t)&gint_tlbh_start);
+	*rom_base = mmu_exword_rom();
+	*ram_base = (uint32_t)mmu_uram() & 0x1fffffff;
+	#endif
+
 	/* Initialize memory allocators */
 	kmalloc_init();
 
@@ -116,7 +139,8 @@ void kinit(u32 *load_info)
 	extern uint32_t euram;
 	static_ram.name = "_uram";
 	static_ram.is_default = isSH4();
-	static_ram.start = mmu_uram() + ((uint32_t)&euram - 0x08100000);
+	static_ram.start = mmu_uram() + ((uint32_t)&euram -
+		(GINT_HW_EX ? 0x74000000 : 0x08100000));
 	static_ram.end = (void *)uram_end;
 	kmalloc_init_arena(&static_ram, true);
 	kmalloc_add_arena(&static_ram);

@@ -46,7 +46,7 @@ void hw_detect(void);
 # define isSH3() (gint[HWMPU] & 1)
 # define isSH4() (!isSH3())
 # define isSlim() (gint[HWCALC] == HWCALC_FX9860G_SLIM)
-#elif GINT_HW_CG || GINT_HW_CP
+#elif GINT_HW_CG || GINT_HW_CP || GINT_HW_EX
 # define isSH3() 0
 # define isSH4() 1
 # define isSlim() 0
@@ -113,6 +113,7 @@ void hw_detect(void);
 #define HWCALC_FXCP400       8
 /* fx-CG 100, successor to the CG-50 in the Prizm family. Also Graph Math+ */
 #define HWCALC_FXCG100       9
+#define HWCALC_EXWORD        10
 
 /*
 **  Keyboard

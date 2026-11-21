@@ -9,6 +9,7 @@
 extern "C" {
 #endif
 
+#include <gint/config.h>
 #include <gint/mpu/mmu.h>
 #include <stdbool.h>
 
@@ -33,6 +34,11 @@ uint32_t mmu_translate(uint32_t page, uint32_t *size);
    interrupts are processed with SR.BL=1. However, the location is highly
    platform-dependent. */
 void *mmu_uram(void);
+
+#if GINT_HW_EX
+int mmu_exword_prepare(uint32_t uram);
+uint32_t mmu_exword_rom(void);
+#endif
 
 /* mmu_uram_size(): Get size of user RAM area
 

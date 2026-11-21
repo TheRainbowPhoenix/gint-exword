@@ -19,17 +19,28 @@
 # define GINT_HW_FX 1
 # define GINT_HW_CG 0
 # define GINT_HW_CP 0
+# define GINT_HW_EX 0
 # define GINT_HW_SWITCH(FX,CG,CP) (FX)
 #elif defined(FXCG50)
 # define GINT_HW_FX 0
 # define GINT_HW_CG 1
 # define GINT_HW_CP 0
+# define GINT_HW_EX 0
 # define GINT_HW_SWITCH(FX,CG,CP) (CG)
 #elif defined(FXCP)
 # define GINT_HW_FX 0
 # define GINT_HW_CG 0
 # define GINT_HW_CP 1
+# define GINT_HW_EX 0
 # define GINT_HW_SWITCH(FX,CG,CP) (CP)
+#elif defined(FXEXWORD) || defined(TARGET_EXWORD)
+# define GINT_HW_FX 0
+# define GINT_HW_CG 0
+# define GINT_HW_CP 0
+# define GINT_HW_EX 1
+# define GINT_HW_SWITCH(FX,CG,CP) (CP)
+#else
+# error Unknown gint hardware target
 #endif
 
 /* Shorthand to simplify definitions below. Won't be needed for long. */
@@ -44,6 +55,7 @@
 #define GINT_OS_FX GINT_HW_FX
 #define GINT_OS_CG GINT_HW_CG
 #define GINT_OS_CP GINT_HW_CP
+#define GINT_OS_EX GINT_HW_EX
 #define GINT_OS_SWITCH GINT_HW_SWITCH
 
 /* GINT_NO_OS_STACK: Disables using a chunk of the OS stack as a heap. The top
@@ -78,7 +90,7 @@
 /* GINT_RENDER_{MONO,RGB}: Enable the mono/rgb rendering API.
    Currently these are exclusive. */
 #define GINT_RENDER_MONO (GINT_HW_FX || GINT_FX9860G_G3A)
-#define GINT_RENDER_RGB ((GINT_HW_CG || GINT_HW_CP) && !GINT_FX9860G_G3A)
+#define GINT_RENDER_RGB ((GINT_HW_CG || GINT_HW_CP || GINT_HW_EX) && !GINT_FX9860G_G3A)
 
 /* Macros for specifying HHK binary metadata fields. Here because this header
    is guaranteed to be included with every gint header. */
