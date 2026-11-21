@@ -2,7 +2,7 @@ name: EX-word gint GINTT
 
 on:
   push:
-    branches: [dev, feature/exword-runtime-bridge]
+    branches: [dev, exword, feature/exword-runtime-bridge]
   pull_request:
     branches: [dev]
   workflow_dispatch:
@@ -22,7 +22,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git clone --depth=1 --branch fix/exword-data-load-alignment https://github.com/TheRainbowPhoenix/fxsdk-exword.git /tmp/fxsdk-src
+          git clone --depth=1 --branch exword https://github.com/TheRainbowPhoenix/fxsdk-exword.git /tmp/fxsdk-src
           cmake -S /tmp/fxsdk-src -B /tmp/fxsdk-build \
             -DCMAKE_INSTALL_PREFIX=/tmp/fxsdk-exword \
             -DFXLINK_DISABLE_SDL2=ON -DFXLINK_DISABLE_UDISKS2=ON
@@ -46,6 +46,9 @@ jobs:
           cmake --build /tmp/gint-build --parallel 2
           cmake --install /tmp/gint-build
           test -s /tmp/gint-exword/lib/libgint-exword.a
+          test -s /tmp/gint-exword/lib/libgint-edl.a
+          sh-elf-nm -g --defined-only /tmp/gint-exword/lib/libgint-edl.a > /tmp/gint-edl-symbols.txt
+          ! grep -E ' [TDB] _(exword_entry|gint_kernel_install|mmu_exword_prepare)$' /tmp/gint-edl-symbols.txt
           sh-elf-nm /tmp/gint-exword/lib/libgint-exword.a | grep -E '_r61523_display_rect$'
           sh-elf-nm /tmp/gint-exword/lib/libgint-exword.a | grep -E '_pollevent$'
           sh-elf-nm --defined-only /tmp/gint-exword/lib/libgint-exword.a > /tmp/gint-symbols.txt
