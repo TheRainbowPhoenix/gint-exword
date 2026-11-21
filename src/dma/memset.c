@@ -1,4 +1,15 @@
 #include <gint/dma.h>
+#include <gint/config.h>
+
+#if GINT_HW_EX
+/* Keep EX-word on-chip RAM owned by the native OS. */
+void *dma_memset(void *dst,uint32_t pattern,size_t size)
+{
+    uint32_t *out=dst;
+    for(size_t i=0;i<size/4;i++) out[i]=pattern;
+    return dst;
+}
+#else
 
 /* Allocate a 32-byte buffer in ILRAM */
 GALIGNED(32) GILRAM static uint32_t ILbuf[8];
@@ -28,3 +39,5 @@ void *dma_memset(void *dst, uint32_t l, size_t size)
 		DMA_INC);
 	return dst;
 }
+
+#endif
